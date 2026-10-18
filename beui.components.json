@@ -1,0 +1,343 @@
+{
+  "mcp": "https://mcp.beui.dev/mcp",
+  "components": [
+    {
+      "slug": "animated-sidebar",
+      "source": "https://beui.dev/components/motion/animated-sidebar",
+      "files": [
+        "components/motion/animated-sidebar.tsx",
+        "components/motion/shared-layout-bg.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "button",
+      "source": "https://beui.dev/components/motion/button",
+      "files": [
+        "components/motion/button/index.tsx",
+        "components/motion/button/base.tsx",
+        "components/motion/button/stateful.tsx",
+        "components/motion/button/magnetic.tsx",
+        "components/motion/button/metallic.tsx",
+        "lib/ease.ts",
+        "lib/hooks/use-hover-capable.ts",
+        "lib/utils.ts",
+        "components/motion/magnetic.tsx"
+      ]
+    },
+    {
+      "slug": "tabs",
+      "source": "https://beui.dev/components/motion/tabs",
+      "files": [
+        "components/motion/tabs.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "input",
+      "source": "https://beui.dev/components/motion/input",
+      "files": [
+        "components/motion/input.tsx",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "switch",
+      "source": "https://beui.dev/components/motion/switch",
+      "files": [
+        "components/motion/switch.tsx",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "checkbox",
+      "source": "https://beui.dev/components/motion/checkbox",
+      "files": [
+        "components/motion/checkbox.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "center-morph-modal",
+      "source": "https://beui.dev/components/motion/center-morph-modal",
+      "files": [
+        "components/motion/center-morph-modal.tsx",
+        "lib/ease.ts",
+        "lib/presence-gate.tsx",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "drawer",
+      "source": "https://beui.dev/components/motion/drawer",
+      "files": [
+        "components/motion/drawer.tsx",
+        "lib/ease.ts",
+        "lib/presence-gate.tsx",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "table",
+      "source": "https://beui.dev/components/motion/table",
+      "files": [
+        "components/motion/table/index.tsx",
+        "components/motion/table/editable-cell.tsx",
+        "components/motion/table/row-handle.tsx",
+        "components/motion/table/skeleton-rows.tsx",
+        "components/motion/table/table-header.tsx",
+        "components/motion/table/types.ts",
+        "components/motion/table/use-column-reorder.ts",
+        "components/motion/table/use-column-resize.ts",
+        "components/motion/table/use-column-sort.ts",
+        "components/motion/table/use-row-selection.ts",
+        "components/motion/table/utils.ts",
+        "components/motion/checkbox.tsx",
+        "lib/utils.ts",
+        "components/motion/table/table-menu.tsx",
+        "lib/ease.ts",
+        "lib/touch.ts"
+      ]
+    },
+    {
+      "slug": "card",
+      "source": "https://beui.dev/components/motion/card",
+      "files": [
+        "components/motion/card.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts",
+        "components/motion/button/index.tsx",
+        "components/motion/checkbox.tsx",
+        "components/motion/switch.tsx",
+        "components/motion/button/base.tsx",
+        "components/motion/button/magnetic.tsx",
+        "components/motion/button/metallic.tsx",
+        "components/motion/button/stateful.tsx",
+        "lib/hooks/use-hover-capable.ts",
+        "components/motion/magnetic.tsx"
+      ]
+    },
+    {
+      "slug": "select",
+      "source": "https://beui.dev/components/motion/select",
+      "files": [
+        "components/motion/select.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "animated-toast-stack",
+      "source": "https://beui.dev/components/motion/animated-toast-stack",
+      "files": [
+        "components/motion/animated-toast-stack.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "animated-badge",
+      "source": "https://beui.dev/components/motion/animated-badge",
+      "files": [
+        "components/motion/animated-badge.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "tooltip",
+      "source": "https://beui.dev/components/motion/tooltip",
+      "files": [
+        "components/motion/tooltip.tsx",
+        "components/motion/tooltip/grace.ts",
+        "components/motion/tooltip/positioner.tsx",
+        "components/motion/tooltip/use-position.ts",
+        "components/motion/tooltip-surface.tsx",
+        "lib/hooks/use-dismiss.ts",
+        "lib/hooks/use-hover-gesture.ts",
+        "lib/hooks/use-tap-gesture.ts",
+        "lib/utils.ts",
+        "lib/ease.ts",
+        "lib/touch.ts"
+      ]
+    },
+    {
+      "slug": "breadcrumb",
+      "source": "https://beui.dev/components/motion/breadcrumb",
+      "files": [
+        "components/motion/breadcrumb.tsx",
+        "components/motion/popover-morph.tsx",
+        "lib/ease.ts",
+        "lib/hooks/use-hover-capable.ts",
+        "lib/utils.ts",
+        "components/motion/popover-position.ts"
+      ]
+    },
+    {
+      "slug": "action-swap-blur",
+      "source": "https://beui.dev/r/action-swap-blur.json",
+      "files": [
+        "components/motion/action-swap-blur.tsx",
+        "components/motion/action-swap.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "alert",
+      "source": "https://beui.dev/r/alert.json",
+      "files": [
+        "components/motion/alert.tsx",
+        "lib/ease.ts",
+        "lib/presence-gate.tsx",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "bouncy-accordion",
+      "source": "https://beui.dev/r/bouncy-accordion.json",
+      "files": [
+        "components/motion/bouncy-accordion.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "collapsible",
+      "source": "https://beui.dev/r/collapsible.json",
+      "files": [
+        "components/motion/collapsible.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "dock",
+      "source": "https://beui.dev/r/dock.json",
+      "files": [
+        "components/motion/dock.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "expandable-tabs",
+      "source": "https://beui.dev/r/expandable-tabs.json",
+      "files": [
+        "components/motion/expandable-tabs.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "file-tree",
+      "source": "https://beui.dev/r/file-tree.json",
+      "files": [
+        "components/motion/file-tree.tsx",
+        "components/motion/shared-layout-bg.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "file-upload",
+      "source": "https://beui.dev/r/file-upload.json",
+      "files": [
+        "components/motion/file-upload.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "loader",
+      "source": "https://beui.dev/r/loader.json",
+      "files": [
+        "components/motion/loader.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "morphing-search",
+      "source": "https://beui.dev/r/morphing-search.json",
+      "files": [
+        "components/motion/morphing-search.tsx",
+        "lib/ease.ts",
+        "lib/hooks/use-on-open.ts",
+        "lib/hooks/use-row-cursor.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "multi-select",
+      "source": "https://beui.dev/r/multi-select.json",
+      "files": [
+        "components/motion/multi-select/index.tsx",
+        "components/motion/multi-select/context.tsx",
+        "components/motion/multi-select/trigger.tsx",
+        "components/motion/multi-select/content.tsx",
+        "components/motion/multi-select/list.tsx",
+        "components/motion/combobox/use-active-option.ts",
+        "lib/utils.ts",
+        "lib/ease.ts",
+        "components/motion/popover-position.ts"
+      ]
+    },
+    {
+      "slug": "notification-stack",
+      "source": "https://beui.dev/r/notification-stack.json",
+      "files": [
+        "components/motion/notification-stack.tsx",
+        "components/motion/action-swap.tsx",
+        "lib/ease.ts",
+        "lib/hooks/use-dismiss.ts",
+        "lib/hooks/use-hover-gesture.ts",
+        "lib/hooks/use-tap-gesture.ts",
+        "lib/utils.ts",
+        "lib/touch.ts"
+      ]
+    },
+    {
+      "slug": "overflow-actions",
+      "source": "https://beui.dev/r/overflow-actions.json",
+      "files": [
+        "components/motion/overflow-actions.tsx",
+        "lib/ease.ts",
+        "lib/hooks/use-hover-capable.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "scroll-progress",
+      "source": "https://beui.dev/r/scroll-progress.json",
+      "files": [
+        "components/motion/scroll-progress.tsx",
+        "components/motion/smooth-scroll.tsx",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "sortable-stack",
+      "source": "https://beui.dev/r/sortable-stack.json",
+      "files": [
+        "components/motion/sortable-list.tsx",
+        "components/motion/sortable-stack.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    },
+    {
+      "slug": "text-reveal",
+      "source": "https://beui.dev/r/text-reveal.json",
+      "files": [
+        "components/motion/text-reveal.tsx",
+        "lib/ease.ts",
+        "lib/utils.ts"
+      ]
+    }
+  ],
+  "retrievedAt": "2026-10-18"
+}

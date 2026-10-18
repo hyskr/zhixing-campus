@@ -1,0 +1,1 @@
+declare module 'gm-crypto' {export const SM2:{encrypt:(data:string,key:string,options:{inputEncoding:string;outputEncoding:string})=>string;generateKeyPair:()=>{privateKey:string;publicKey:string};decrypt:(data:string,key:string,options:{inputEncoding:string;outputEncoding:string})=>string}}
