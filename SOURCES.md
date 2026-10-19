@@ -98,3 +98,7 @@ v0.6.0 的侧栏、按钮、标签页、表单控件、弹层、课程抽屉、�
 ## 邮箱滚动与入口会话衔接
 
 `Mail.tsx` 与 `styles.css` 为收件列表和摘要阅读区提供独立的有界滚动区域。`service.ts` 的 `openSchoolPage` 复用已有登录恢复流程；`campus.rs` 在打开网页前更新 MIS 和目标平台 Cookie。教务及智慧课程衔接分别沿用 `ensure_aa` 与 `quick_login::enter_from_mis`，上游参考文件见前文登录与平台会话条目。
+
+## AA 网页授权与 Cookie 衔接
+
+AA 网页入口使用 MIS `/module/module/10/`，在 WebView 内完成浏览器侧的 SSO。原生 `ensure_aa` 以 `/notice/item/` 及登录表单检查确认认证结果；完成地址参考上表 `MISService.swift` 与 `SchoolLoginProtocol.kt`。`campus.rs::school_webview_cookies` 只导出有效 Cookie，保留域、路径、HttpOnly、SameSite 与绝对到期时间，不重新使用相对 Max-Age。

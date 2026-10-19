@@ -352,18 +352,22 @@ async fn finish_login(
         .insert(username, pending.session);
     Ok(profile)
 }
+fn authenticated_aa_page(url: &Url, body: &str) -> bool {
+    url.host_str() == Some("aa.bjtu.edu.cn")
+        && url.path().trim_end_matches('/') == "/notice/item"
+        && !parsers::expired_page(body)
+}
+// 参考 AA 认证完成地址与 MIS 跳转表单：
+// https://github.com/fish2lab/bjtu-cli/blob/8a39d48d326ac195360c3564c9576d8a067aad03/Sources/bjtu/Services/MISService.swift
 async fn ensure_aa(session: &Session) -> Result<(), String> {
     let module_url = format!("{MIS}/module/module/10/");
     let response = get(session, &module_url, Some(&format!("{MIS}/home/"))).await?;
-    if response.url().host_str() == Some("aa.bjtu.edu.cn") {
-        return Ok(());
-    }
-    if is_login_url(response.url()) {
-        return Err(AUTH_EXPIRED.into());
-    }
     let base = response.url().clone();
     let body = response.text().await.map_err(network_error)?;
-    if parsers::expired_page(&body) {
+    if authenticated_aa_page(&base, &body) {
+        return Ok(());
+    }
+    if is_login_url(&base) || parsers::expired_page(&body) {
         return Err(AUTH_EXPIRED.into());
     }
     let action = Html::parse_document(&body)
@@ -374,7 +378,9 @@ async fn ensure_aa(session: &Session) -> Result<(), String> {
         .ok_or("教务系统未提供登录跳转，请稍后重试")?;
     let target = base.join(&action).map_err(|_| "教务跳转地址无效")?;
     let response = get(session, target.as_str(), Some(&module_url)).await?;
-    if response.url().host_str() != Some("aa.bjtu.edu.cn") {
+    let final_url = response.url().clone();
+    let body = response.text().await.map_err(network_error)?;
+    if !authenticated_aa_page(&final_url, &body) {
         return Err(AUTH_EXPIRED.into());
     }
     Ok(())
@@ -1035,6 +1041,26 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn academic_login_requires_authenticated_home_not_just_aa_host() {
+        assert!(authenticated_aa_page(
+            &Url::parse("https://aa.bjtu.edu.cn/notice/item/?page=1").unwrap(),
+            "<h1>教务通知</h1>"
+        ));
+        assert!(!authenticated_aa_page(
+            &Url::parse("https://aa.bjtu.edu.cn/login/").unwrap(),
+            "<h1>登录</h1>"
+        ));
+        assert!(!authenticated_aa_page(
+            &Url::parse("https://aa.bjtu.edu.cn/notice/item/").unwrap(),
+            "<input type='password'>"
+        ));
+        assert!(!authenticated_aa_page(
+            &Url::parse("https://mis.bjtu.edu.cn/home/").unwrap(),
+            "<h1>MIS</h1>"
+        ));
+    }
+
     use super::*;
     #[test]
     fn session_cookies_survive_restart_and_accounts_stay_separate() {

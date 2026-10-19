@@ -73,7 +73,28 @@ pub async fn inbox(session: &Session) -> Result<Value, String> {
     Ok(result)
 }
 pub fn shortcut(name: &str) -> Option<&'static str> {
-    match name{"mis"=>Some("https://mis.bjtu.edu.cn/home/"),"academic"=>Some("https://aa.bjtu.edu.cn/"),"courses"=>Some("https://mis.bjtu.edu.cn/module/module/28/"),"vpn"=>Some("https://webvpn.bjtu.edu.cn/"),"recharge"=>Some("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"),"sso"=>Some("https://sso.bjtu.edu.cn/sso/login?service=https%3A%2F%2Fuc.bjtu.edu.cn%2Fuser%2Flogin&pageName=login"),_=>None}
+    match name{"mis"=>Some("https://mis.bjtu.edu.cn/home/"),"academic"=>Some("https://mis.bjtu.edu.cn/module/module/10/"),"courses"=>Some("https://mis.bjtu.edu.cn/module/module/28/"),"vpn"=>Some("https://webvpn.bjtu.edu.cn/"),"recharge"=>Some("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"),"sso"=>Some("https://sso.bjtu.edu.cn/sso/login?service=https%3A%2F%2Fuc.bjtu.edu.cn%2Fuser%2Flogin&pageName=login"),_=>None}
+}
+// 保留 CookieStore 计算的绝对过期时间，避免导入旧 Max-Age 时延长有效期。
+fn school_webview_cookies(store: &CookieStore) -> Vec<tauri::webview::Cookie<'static>> {
+    store
+        .iter_unexpired()
+        .filter_map(|source| {
+            let mut cookie = tauri::webview::Cookie::parse(source.to_string())
+                .ok()?
+                .into_owned();
+            if let Some(domain) = source.domain.as_cow() {
+                cookie.set_domain(domain.into_owned());
+            }
+            cookie.set_path(source.path.as_ref().to_string());
+            cookie.set_max_age(None);
+            match source.expires {
+                cookie_store::CookieExpiration::AtUtc(time) => cookie.set_expires(time),
+                cookie_store::CookieExpiration::SessionEnd => cookie.unset_expires(),
+            }
+            Some(cookie)
+        })
+        .collect()
 }
 // 入口导航前刷新 MIS 与目标平台的 Cookie，随后由网页窗口接收更新后的会话。
 async fn refresh_school_session(session: &Session, target: &str) -> Result<(), String> {
@@ -136,22 +157,7 @@ pub async fn open_school_page(
     };
     save_session(&state, &username, &session)?;
     // Cookies are installed before navigating to the school page.
-    let cookies: Vec<_> = session
-        .cookies
-        .lock()
-        .map_err(|e| e.to_string())?
-        .iter_any()
-        .filter_map(|c| {
-            let mut cookie = tauri::webview::Cookie::parse(c.to_string())
-                .ok()?
-                .into_owned();
-            if let Some(domain) = c.domain.as_cow() {
-                cookie.set_domain(domain.into_owned());
-            }
-            cookie.set_path(c.path.as_ref().to_string());
-            Some(cookie)
-        })
-        .collect();
+    let cookies = school_webview_cookies(&*session.cookies.lock().map_err(|e| e.to_string())?);
     let directory = state
         .directory
         .parent()
@@ -420,6 +426,48 @@ pub async fn prime_mail_baseline(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn academic_window_uses_mis_sso_and_only_live_cookies() {
+        assert_eq!(
+            shortcut("academic"),
+            Some("https://mis.bjtu.edu.cn/module/module/10/")
+        );
+        let url = Url::parse("https://aa.bjtu.edu.cn/notice/item/").unwrap();
+        let mut store = CookieStore::default();
+        store
+            .parse("sessionid=current; Path=/; HttpOnly; SameSite=Lax", &url)
+            .unwrap();
+        store
+            .parse("csrftoken=csrf; Path=/; Max-Age=3600", &url)
+            .unwrap();
+        let mut expired =
+            cookie_store::Cookie::parse("obsolete=gone; Path=/; Max-Age=60", &url).unwrap();
+        expired.expire();
+        let mut saved = store.iter_any().cloned().collect::<Vec<_>>();
+        saved.push(expired);
+        let store = CookieStore::from_cookies(
+            saved.into_iter().map(Ok::<_, std::convert::Infallible>),
+            true,
+        )
+        .unwrap();
+        assert_eq!(store.iter_any().count(), 3);
+        let cookies = school_webview_cookies(&store);
+        assert_eq!(cookies.len(), 2);
+        assert!(cookies.iter().all(|cookie| cookie.name() != "obsolete"));
+        let session = cookies
+            .iter()
+            .find(|cookie| cookie.name() == "sessionid")
+            .unwrap();
+        assert_eq!(session.domain(), Some("aa.bjtu.edu.cn"));
+        assert_eq!(session.http_only(), Some(true));
+        let csrf = cookies
+            .iter()
+            .find(|cookie| cookie.name() == "csrftoken")
+            .unwrap();
+        assert!(csrf.max_age().is_none());
+        assert!(csrf.expires_datetime().is_some());
+    }
+
     use super::*;
     #[test]
     fn new_mail_notifications_ignore_baseline_and_read_messages() {
