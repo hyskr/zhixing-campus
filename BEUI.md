@@ -16,7 +16,7 @@
 | Select | [select](https://beui.dev/components/motion/select) | 作业筛选、认证方式、凭据模式、并行数与回放课程选择 |
 | Switch | [switch](https://beui.dev/components/motion/switch) | 连接、上传复用、通知和自动重连设置 |
 | Checkbox | [checkbox](https://beui.dev/components/motion/checkbox) | 资源、设备、附件多选 |
-| Card | [card](https://beui.dev/components/motion/card) | `Pages.tsx`、`UpdatesPopover.tsx`：首页与更新面板 |
+| Card | [card](https://beui.dev/components/motion/card) | `HomeDashboard.tsx`、`UpdatesPopover.tsx`：首页四个信息区与更新面板 |
 | Table | [table](https://beui.dev/components/motion/table) | `Pages.tsx`：可排序成绩表与虚拟滚动 |
 | Center Morph Modal | [center-morph-modal](https://beui.dev/components/motion/center-morph-modal) | `ui.tsx`：登录、成绩、作业详情、确认与文件预览 |
 | Drawer | [drawer](https://beui.dev/components/motion/drawer) | `ui.tsx`、`CourseDrawer.tsx`：课程详情侧栏 |
@@ -49,7 +49,7 @@
 ## 本项目设计
 
 - Codex 风格的中性浅色工作台、石墨文字与紧凑分组导航。
-- 所有页面使用单行标题；首页以待办和课程为主栏，今日课表与可排序快捷入口放在右侧，超出摘要容量通过完整页面查看。
+- 所有页面使用单行标题；首页固定展示邮箱、作业、校园动态和今日课表，可排序快捷入口放在底部，超出摘要容量通过完整页面查看。
 - 首页和课表在 1040 × 720 及以上桌面窗口适配一屏；课表七个时段等高，同格课程水平并列，完整信息通过 Tooltip 和课程侧栏查看。
 - 设置仅在内容超出时内部滚动；页面禁用滚动边界回弹。
 - 资料页左侧为课程文件树，右侧展示选中文件的详情与操作；文件类型有独立图标。
@@ -85,3 +85,9 @@ bun run tauri build --bundles app
 ## 0.9.0 邮件阅读与写信
 
 `Mail.tsx` 使用 Checkbox 多选、Button 标记已读与回复、Loader 显示完整正文读取状态。`MailCompose.tsx` 使用 FileUpload 选择／拖入多附件、上传状态与失败重试，Input 编辑地址与主题，Center Morph Modal 承载写信和发送核对。操作结果使用全局浮动 Toast。
+
+## 0.10.0 外观与首页
+
+- `HomeDashboard.tsx`：Card 承载四个固定信息区，AnimatedBadge 显示邮箱未读数，Button 提供入口，底部保留 Sortable List。
+- `AppearanceSettings.tsx`：Button 作为可选择的风格卡片，使用 aria-pressed 表达当前选择。外观令牌由 `appearance.css` 覆盖，复用现有 BeUI 组件。
+- 侧栏将邮箱放在首页之后，未读数即时更新；动态中的邮件可跳转到具体正文。

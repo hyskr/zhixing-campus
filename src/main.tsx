@@ -7,6 +7,7 @@ import { FilePreviewProvider } from "./FilePreview";
 import { DownloadsProvider } from "./Downloads";
 import { PreferencesProvider } from "./preferences";
 import "./styles.css";
+import "./appearance.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

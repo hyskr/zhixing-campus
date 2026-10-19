@@ -1,0 +1,141 @@
+/* Claude App 的暖纸色与排版方向；知行经典使用 styles.css 中的默认令牌。
+ * https://academy.claude.com/tutorials/navigating-the-claude-desktop-app
+ */
+:root[data-appearance="claude"] {
+  --background: #faf9f5;
+  --foreground: #302f2c;
+  --card: #fffefa;
+  --primary: #b95638;
+  --muted: #eeece5;
+  --muted-foreground: #716e66;
+  --border: #e3dfd5;
+  --canvas: #faf9f5;
+  --text: #302f2c;
+  --sub: #77746c;
+  --claude-sidebar: #f0eee6;
+  --color-popover: var(--card);
+  --color-ring: #b95638;
+}
+[data-appearance="claude"] body,
+[data-appearance="claude"] .app-shell,
+[data-appearance="claude"] .main-shell,
+[data-appearance="claude"] .main-content {
+  background: var(--background);
+  color: var(--foreground);
+}
+[data-appearance="claude"] .campus-sidebar-panel,
+[data-appearance="claude"] .campus-sidebar-header,
+[data-appearance="claude"] .campus-sidebar-footer {
+  background: var(--claude-sidebar) !important;
+  border-color: var(--border) !important;
+}
+[data-appearance="claude"] .campus-nav-link {
+  color: #625f56 !important;
+  border-radius: 8px;
+}
+[data-appearance="claude"] .campus-nav-link[data-active="true"],
+[data-appearance="claude"] .campus-nav-link[aria-current="page"] {
+  background: #e4e0d5 !important;
+  color: #332f29 !important;
+}
+[data-appearance="claude"] .brand-symbol {
+  background: #b95638;
+  color: #fffaf2;
+  border-radius: 9px;
+}
+[data-appearance="claude"] .topbar {
+  background: #faf9f5;
+  border-color: var(--border);
+}
+[data-appearance="claude"] .page-heading h1,
+[data-appearance="claude"] .home-heading h1,
+[data-appearance="claude"] .modal-heading h2 {
+  font-family: Georgia, "Iowan Old Style", "Songti SC", "STSong", SimSun, serif;
+  font-weight: 500;
+  letter-spacing: -0.5px;
+  color: #37322c;
+}
+[data-appearance="claude"] .home-heading h1 {
+  font-size: 25px;
+}
+[data-appearance="claude"] .surface,
+[data-appearance="claude"] .grade-panel,
+[data-appearance="claude"] .resource-main,
+[data-appearance="claude"] .resource-detail-panel,
+[data-appearance="claude"] .file-space,
+[data-appearance="claude"] .campus-modal,
+[data-appearance="claude"] .mail-workspace,
+[data-appearance="claude"] .mail-index,
+[data-appearance="claude"] .mail-reader,
+[data-appearance="claude"] .settings-section,
+[data-appearance="claude"] .dashboard-panel {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--foreground);
+}
+[data-appearance="claude"] .mail-folder-rail,
+[data-appearance="claude"] .mail-message-list,
+[data-appearance="claude"] .resource-course-list,
+[data-appearance="claude"] .campus-file-tree,
+[data-appearance="claude"] .resource-explorer-tree {
+  background: #f5f3ed !important;
+}
+[data-appearance="claude"] .mail-list-item.selected,
+[data-appearance="claude"] .mail-folder-item.active,
+[data-appearance="claude"] .resource-course-item.active,
+[data-appearance="claude"] .account-switcher {
+  background: #eae6dc !important;
+  color: #3c352d !important;
+}
+[data-appearance="claude"] .home-summary {
+  background: #f1eee6;
+  border-color: var(--border);
+  border-radius: 10px;
+}
+[data-appearance="claude"] .home-summary strong,
+[data-appearance="claude"] .dashboard-mail-dot,
+[data-appearance="claude"] .dashboard-course-time {
+  color: #b95638;
+}
+[data-appearance="claude"] .dashboard-mail-dot {
+  background: #b95638;
+}
+[data-appearance="claude"] .dashboard-panel header h2 > svg,
+[data-appearance="claude"] .appearance-heading > svg {
+  color: #ae5339;
+}
+[data-appearance="claude"] .dashboard-category.mail {
+  background: #f4e2d8;
+  color: #98452e;
+}
+[data-appearance="claude"] .dashboard-rows > button:hover,
+[data-appearance="claude"] .dashboard-footer {
+  background: #f0ece3;
+}
+[data-appearance="claude"] .campus-nav-link:hover,
+[data-appearance="claude"] .home-quick-sort li:hover {
+  background: #e9e5da !important;
+}
+[data-appearance="claude"] .grades-table th,
+[data-appearance="claude"] .rooms-table thead th,
+[data-appearance="claude"] .course-schedule thead th {
+  background: #eeebe3 !important;
+  color: #5e594f !important;
+}
+[data-appearance="claude"] .campus-settings-group,
+[data-appearance="claude"] .resource-explorer {
+  border-color: var(--border) !important;
+  background: var(--card) !important;
+}
+[data-appearance="claude"] .home-heading p,
+[data-appearance="claude"] .page-heading p,
+[data-appearance="claude"] .breadcrumb {
+  color: #777167;
+}
+[data-appearance="claude"] .nav-count {
+  background: #e3ddcf;
+  color: #6b513e;
+}
+[data-appearance="claude"] .status-dot {
+  background: #b95638;
+}

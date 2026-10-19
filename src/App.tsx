@@ -1,3 +1,4 @@
+import { makeDemoMail } from "./demo";
 import Classrooms from "./Classrooms";
 import UpdatesPopover from "./UpdatesPopover";
 import { FeedbackAlerts, useFeedback } from "./ui";
@@ -67,6 +68,7 @@ import {
   navItems,
   type Account,
   type Page,
+  type Change,
   type Resource,
   type Replay,
   type HomeworkPatch,
@@ -77,6 +79,10 @@ export default function App() {
   const { tasks: downloadTasks } = useDownloads();
   const now = useNow();
   const [page, setPage] = useState<Page>("overview");
+  const [mailTarget, setMailTarget] = useState<{
+    id: string;
+    folder: "inbox" | "sent";
+  } | null>(null);
   const [deviceView, setDeviceView] = useState(false);
   const [courseName, setCourseName] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -113,11 +119,34 @@ export default function App() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
   const navigate = (next: Page) => {
+    setMailTarget(null);
     setPage(next);
     setQuery("");
     window.scrollTo(0, 0);
   };
+  function openMail(id?: string, folder: "inbox" | "sent" = "inbox") {
+    setMailTarget(id ? { id, folder } : null);
+    setPage("mail");
+    setQuery("");
+  }
+  function openChange(change: Change) {
+    setNotificationsOpen(false);
+    setDialog(null);
+    if (change.category === "邮箱") {
+      openMail(change.messageId, change.mailFolder ?? "inbox");
+      return;
+    }
+    const destination: Record<string, Page> = {
+      作业: "homework",
+      成绩: "grades",
+      课表: "schedule",
+      资料: "resources",
+    };
+    if (destination[change.category]) navigate(destination[change.category]);
+    else setDialog("changes");
+  }
   const switchAccount = (id: string) => {
+    setMailTarget(null);
     setCourseName(null);
     setStore((s) => ({ ...s, activeId: id }));
     setAccountMenu(false);
@@ -157,12 +186,13 @@ export default function App() {
                 ...s,
                 data: {
                   ...s.data,
-                  [payload.accountId]: {
-                    ...s.data[payload.accountId],
+                  [payload.accountId]: applySync(s.data[payload.accountId], {
+                    scope: "mail",
                     mailInbox: payload.mail.rows,
                     mailCount: payload.mail.unread,
                     mailTotal: payload.mail.total,
-                  },
+                    failures: [],
+                  }),
                 },
               }
             : s,
@@ -440,6 +470,7 @@ export default function App() {
     >
       <CampusSidebar
         page={page}
+        unread={data.mailCount}
         account={account}
         accounts={store.accounts}
         navigate={navigate}
@@ -528,19 +559,7 @@ export default function App() {
                 changes={data.changes}
                 trigger={notificationsTrigger}
                 onClose={() => setNotificationsOpen(false)}
-                onSelect={(change) => {
-                  setNotificationsOpen(false);
-                  const destinations: Record<string, Page> = {
-                    作业: "homework",
-                    成绩: "grades",
-                    课表: "schedule",
-                    资料: "resources",
-                    邮箱: "mail",
-                  };
-                  if (destinations[change.category])
-                    navigate(destinations[change.category]);
-                  else setDialog("changes");
-                }}
+                onSelect={openChange}
                 onViewAll={() => {
                   setNotificationsOpen(false);
                   setDialog("changes");
@@ -620,7 +639,8 @@ export default function App() {
                   data={data}
                   navigate={navigate}
                   showChanges={() => setDialog("changes")}
-                  showMail={() => navigate("mail")}
+                  showMail={openMail}
+                  onChange={openChange}
                   onHomeworkUpdate={retryCourse}
                   onCourse={setCourseName}
                 />
@@ -684,67 +704,11 @@ export default function App() {
                     })
                   }
                   onLoginRequired={() => setLogin({ studentId: account.id })}
+                  target={mailTarget ?? undefined}
                   rows={
                     data.mailInbox ??
                     (account.demo
-                      ? [
-                          {
-                            id: "mail-demo-1",
-                            subject: "课程教学安排通知",
-                            from: "教务办公室",
-                            summary:
-                              "请同学们查看本周课程与教学安排。教学周和教室安排请以教务平台公布的信息为准。",
-                            date: new Date().toISOString(),
-                            read: false,
-                            attached: true,
-                          },
-                          {
-                            id: "mail-demo-2",
-                            subject: "实验课程资料已更新",
-                            from: "计算机网络课程组",
-                            summary:
-                              "本周的实验指导书和参考资料已上传至智慧课程平台，请课前阅读并准备实验环境。",
-                            date: new Date(
-                              Date.now() - 3600000 * 5,
-                            ).toISOString(),
-                            read: false,
-                            attached: false,
-                          },
-                          {
-                            id: "mail-demo-3",
-                            subject: "校园网服务提醒",
-                            from: "信息中心",
-                            summary:
-                              "校园网服务将于周末进行例行维护，相关说明可在学校官网查看。",
-                            date: new Date(Date.now() - 86400000).toISOString(),
-                            read: false,
-                            attached: false,
-                          },
-                          {
-                            id: "mail-demo-4",
-                            subject: "课程成绩发布",
-                            from: "教务处",
-                            summary:
-                              "本学期部分课程成绩已发布，请通过教务系统查看成绩和学分详情。",
-                            date: new Date(
-                              Date.now() - 86400000 * 2,
-                            ).toISOString(),
-                            read: true,
-                            attached: false,
-                          },
-                          {
-                            id: "mail-demo-5",
-                            subject: "图书馆借阅到期提示",
-                            from: "图书馆",
-                            summary:
-                              "您借阅的图书即将到期，可登录图书馆系统续借或按时归还。",
-                            date: new Date(
-                              Date.now() - 86400000 * 4,
-                            ).toISOString(),
-                            read: true,
-                            attached: false,
-                          },
-                        ]
+                      ? makeDemoMail(account.id === "demo-chen")
                       : [])
                   }
                   total={data.mailTotal}
@@ -758,11 +722,12 @@ export default function App() {
                             ...s,
                             data: {
                               ...s.data,
-                              [account.id]: {
-                                ...s.data[account.id],
+                              [account.id]: applySync(s.data[account.id], {
+                                scope: "mailSent",
                                 mailSent: result.rows,
                                 mailSentTotal: result.total,
-                              },
+                                failures: [],
+                              }),
                             },
                           }
                         : s,
@@ -860,7 +825,11 @@ export default function App() {
           <div className="changes-modal">
             {data.changes.length ? (
               data.changes.map((c) => (
-                <div className="change-row" key={c.id}>
+                <button
+                  className="change-row"
+                  key={c.id}
+                  onClick={() => openChange(c)}
+                >
                   <span
                     className={`soft-tag ${c.kind === "删除" ? "orange" : "blue"}`}
                   >
@@ -872,7 +841,7 @@ export default function App() {
                       {c.category} · {fullDate(c.time)}
                     </p>
                   </div>
-                </div>
+                </button>
               ))
             ) : (
               <p className="quiet-empty">目前没有新的数据变化。</p>

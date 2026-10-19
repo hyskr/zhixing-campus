@@ -16,6 +16,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Download, FolderUp, KeyRound, RefreshCw } from "lucide-react";
 import { PageHeading } from "./Pages";
 import MoreSettings from "./MoreSettings";
+import AppearanceSettings from "./AppearanceSettings";
 import { usePreferences } from "./preferences";
 import type { Account, Preferences } from "./types";
 export default function Settings({ account }: { account?: Account }) {
@@ -61,6 +62,7 @@ export default function Settings({ account }: { account?: Account }) {
         title="设置"
         description="按自己的习惯，让校园日常更顺手。"
       />
+      <AppearanceSettings />
       <SettingsGroups>
         <SettingsGroup
           id="login"

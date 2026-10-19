@@ -132,3 +132,81 @@ it("一项余额更新不清除另一项缓存", () => {
   });
   expect(next.balances).toEqual({ card: "128.50", network: "40.00" });
 });
+
+describe("邮箱动态", () => {
+  const row = {
+    id: "mail-one",
+    subject: "课程通知",
+    from: "教务",
+    summary: "安排",
+    date: "2026-10-19T08:00:00Z",
+    read: false,
+    attached: false,
+  };
+  it("首次仅建立邮件基线，新邮件进入动态且重复同步与已读变化不重复提醒", () => {
+    const first = applySync(
+      { ...emptyData(), changes: [] },
+      { scope: "mail", mailInbox: [row], failures: [] },
+    );
+    expect(first.changes).toEqual([]);
+    const second = applySync(first, {
+      scope: "mail",
+      mailInbox: [
+        {
+          ...row,
+          id: "mail-two",
+          subject: "新的课程安排",
+          date: "2026-10-19T09:00:00Z",
+        },
+        row,
+      ],
+      failures: [],
+    });
+    expect(second.changes).toHaveLength(1);
+    expect(second.changes[0]).toMatchObject({
+      category: "邮箱",
+      messageId: "mail-two",
+      mailFolder: "inbox",
+    });
+    const third = applySync(second, {
+      scope: "mail",
+      mailInbox: second.mailInbox!.map((item) => ({ ...item, read: true })),
+      failures: [],
+    });
+    expect(third.changes).toEqual(second.changes);
+  });
+  it("加载更早的已发送记录不会制造新动态", () => {
+    const old = { ...emptyData(), mailSent: [row], changes: [] };
+    const next = applySync(old, {
+      scope: "mail",
+      mailSent: [row, { ...row, id: "older", date: "2026-10-18T08:00:00Z" }],
+      failures: [],
+    });
+    expect(next.changes).toEqual([]);
+    const sent = applySync(next, {
+      scope: "mail",
+      mailSent: [
+        { ...row, id: "new-sent", date: "2026-10-19T09:00:00Z" },
+        ...next.mailSent!,
+      ],
+      failures: [],
+    });
+    expect(sent.changes[0]).toMatchObject({
+      category: "邮箱",
+      messageId: "new-sent",
+      mailFolder: "sent",
+    });
+  });
+});
+
+it("已发送缓存更新保留收件箱同步时间，避免触发重复刷新", () => {
+  const old = { ...emptyData(), syncedAt: { mail: "2026-10-19T08:00:00Z" } };
+  const next = applySync(old, {
+    scope: "mailSent",
+    mailSent: [],
+    mailSentTotal: 0,
+    failures: [],
+  });
+  expect(next.syncedAt?.mail).toBe(old.syncedAt.mail);
+  expect(next.syncedAt?.mailSent).toBeTruthy();
+});

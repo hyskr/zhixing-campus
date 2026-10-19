@@ -117,6 +117,34 @@ export function applySync(old: CampusData, result: SyncResult): CampusData {
           time,
         });
   }
+  for (const [field, folder] of [
+    ["mailInbox", "inbox"],
+    ["mailSent", "sent"],
+  ] as const) {
+    const next = result[field],
+      previous = old[field];
+    if (!next || !previous) continue;
+    const ids = new Set(previous.map((message) => message.id));
+    const timestamp = (value: string) =>
+      /^\d{10,13}$/.test(value)
+        ? Number(value) * (value.length === 10 ? 1000 : 1)
+        : Date.parse(value) || 0;
+    const newest = previous.reduce(
+      (latest, message) => Math.max(latest, timestamp(message.date)),
+      0,
+    );
+    for (const message of next)
+      if (!ids.has(message.id) && timestamp(message.date) >= newest)
+        changes.push({
+          id: `${field}-${message.id}-${time}`,
+          category: "邮箱",
+          kind: "新增",
+          title: `${folder === "inbox" ? "收到邮件" : "已发送"} · ${message.subject || "无主题"}`,
+          time,
+          messageId: message.id,
+          mailFolder: folder,
+        });
+  }
   const syncedAt = { ...old.syncedAt };
   for (const [field, key] of [
     ["grades", "grades"],
@@ -178,6 +206,10 @@ export function applySync(old: CampusData, result: SyncResult): CampusData {
           ...result.balances,
         }
       : old.balances,
-    changes: [...changes, ...old.changes].slice(0, 50),
+    changes: [
+      ...changes.filter((change) => change.category === "邮箱"),
+      ...changes.filter((change) => change.category !== "邮箱"),
+      ...old.changes,
+    ].slice(0, 50),
   };
 }

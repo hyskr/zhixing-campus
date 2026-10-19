@@ -1,3 +1,4 @@
+import type { MailMessage } from "./types";
 import type { Account, AppStore, CampusData, Course, Resource } from "./types";
 
 export const demoAccounts: Account[] = [
@@ -255,9 +256,20 @@ export function makeDemoData(second = false): CampusData {
       ],
     })),
     mailCount: second ? 1 : 3,
+    mailInbox: makeDemoMail(second),
+    mailTotal: 5,
     currentWeek: 7,
     lastSync: new Date().toISOString(),
     changes: [
+      {
+        id: "change-mail-demo",
+        category: "邮箱",
+        kind: "新增",
+        title: "收到邮件 · 课程教学安排通知",
+        time: new Date().toISOString(),
+        messageId: "mail-demo-1",
+        mailFolder: "inbox",
+      },
       {
         id: "ch1",
         category: "作业",
@@ -334,4 +346,55 @@ export function initialStore(): AppStore {
     activeId: demoAccounts[0].id,
     data: { "demo-lin": makeDemoData(), "demo-chen": makeDemoData(true) },
   };
+}
+
+export function makeDemoMail(second = false): MailMessage[] {
+  return [
+    {
+      id: "mail-demo-1",
+      subject: "课程教学安排通知",
+      from: "教务办公室",
+      summary:
+        "请查看本周课程与教学安排，教学周及教室以教务平台公布的信息为准。",
+      date: new Date().toISOString(),
+      read: false,
+      attached: true,
+    },
+    {
+      id: "mail-demo-2",
+      subject: "实验课程资料已更新",
+      from: "计算机网络课程组",
+      summary: "本周实验指导书和参考资料已上传，请课前阅读并准备实验环境。",
+      date: new Date(Date.now() - 3600000 * 5).toISOString(),
+      read: second,
+      attached: false,
+    },
+    {
+      id: "mail-demo-3",
+      subject: "校园网服务提醒",
+      from: "信息中心",
+      summary: "校园网服务将于周末例行维护，详见服务通知。",
+      date: new Date(Date.now() - 86400000).toISOString(),
+      read: second,
+      attached: false,
+    },
+    {
+      id: "mail-demo-4",
+      subject: "课程成绩发布",
+      from: "教务处",
+      summary: "部分课程成绩已发布，请查看成绩及学分详情。",
+      date: new Date(Date.now() - 86400000 * 2).toISOString(),
+      read: true,
+      attached: false,
+    },
+    {
+      id: "mail-demo-5",
+      subject: "图书馆借阅到期提示",
+      from: "图书馆",
+      summary: "您借阅的图书即将到期，可登录系统续借。",
+      date: new Date(Date.now() - 86400000 * 4).toISOString(),
+      read: true,
+      attached: false,
+    },
+  ];
 }

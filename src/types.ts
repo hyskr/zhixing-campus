@@ -143,6 +143,8 @@ export interface Change {
   id: string;
   category: string;
   kind: "新增" | "修改" | "删除";
+  messageId?: string;
+  mailFolder?: "inbox" | "sent";
   title: string;
   time: string;
 }
@@ -187,6 +189,8 @@ export interface SyncResult {
   scope?: string;
   mailInbox?: MailMessage[];
   mailTotal?: number;
+  mailSent?: MailMessage[];
+  mailSentTotal?: number;
   balances?: { card?: string; network?: string };
 }
 export const emptyData = (): CampusData => ({
@@ -251,6 +255,7 @@ export interface SpaceFile {
   inputTime: string;
 }
 export interface Preferences {
+  appearance: "classic" | "claude";
   quickLogin: boolean;
   resourcePort: number;
   downloadConcurrency: number;

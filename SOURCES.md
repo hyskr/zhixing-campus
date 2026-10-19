@@ -125,3 +125,9 @@ AA 网页入口使用 MIS `/module/module/10/`，在 WebView 内完成浏览器�
 ## 0.9.1 已发送
 
 `src-tauri/src/mailbox.rs` 的 `mail_sent` 使用 Coremail `mbox:listMessages` 与已发送 FID 3，参考 [KMP MailboxRemoteDataSource.kt](https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/data/mailbox/MailboxRemoteDataSource.kt) 和 [MailboxScreenModel.kt](https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/feature/mailbox/MailboxScreenModel.kt) 的文件夹编号。列表保留实际发件人、收件人、发送时间，分页与账号缓存由本项目实现。已发送详情复用现有正文和附件读取。
+
+## 0.10.0 可切换外观与首页
+
+Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.claude.com/tutorials/navigating-the-claude-desktop-app) 的视觉方向，使用本项目 CSS 令牌和系统字体实现，未引入 Claude 的组件代码、图标或字体文件。实现位于 `src/appearance.css`、`src/AppearanceSettings.tsx` 与 `src/preferences.tsx`。
+
+首页的四块信息区、邮箱优先级与邮件动态合并由本项目实现，位置为 `src/HomeDashboard.tsx`、`src/storage.ts`、`src/App.tsx`。`src/courseWeeks.ts` 保留原有教学周判断，用于首页与课表共享。

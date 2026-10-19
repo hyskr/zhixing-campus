@@ -2,12 +2,14 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useState,
   type ReactNode,
 } from "react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { Preferences } from "./types";
 export const defaultPreferences: Preferences = {
+  appearance: "classic",
   quickLogin: true,
   resourcePort: 1936,
   downloadConcurrency: 3,
@@ -48,6 +50,9 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       active = false;
     };
   }, []);
+  useLayoutEffect(() => {
+    document.documentElement.dataset.appearance = preferences.appearance;
+  }, [preferences.appearance]);
   async function save(next: Preferences) {
     if (isTauri()) await invoke("set_preferences", { preferences: next });
     else localStorage.setItem("zhixing.preferences", JSON.stringify(next));

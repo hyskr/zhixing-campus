@@ -34,6 +34,7 @@ export default function CampusSidebar({
   onAdd,
   pending,
   downloading,
+  unread,
 }: {
   page: Page;
   account?: Account;
@@ -43,8 +44,20 @@ export default function CampusSidebar({
   onAdd: () => void;
   pending: number;
   downloading: number;
+  unread: number;
 }) {
   const [menu, setMenu] = useState(false);
+  const mainItems = [
+    "overview",
+    "mail",
+    "schedule",
+    "homework",
+    "grades",
+    "resources",
+  ].map((id) => navItems.find((item) => item.id === id)!);
+  const tools = navItems.filter(
+    (item) => !mainItems.some((main) => main.id === item.id),
+  );
   return (
     <AnimatedSidebar ariaLabel="主导航" panelClassName="campus-sidebar-panel">
       <AnimatedSidebarHeader className="campus-sidebar-header">
@@ -68,9 +81,9 @@ export default function CampusSidebar({
       </AnimatedSidebarHeader>
       <AnimatedSidebarContent className="campus-sidebar-content">
         <AnimatedSidebarGroup>
-          <AnimatedSidebarGroupLabel>学习空间</AnimatedSidebarGroupLabel>
+          <AnimatedSidebarGroupLabel>学习与消息</AnimatedSidebarGroupLabel>
           <AnimatedSidebarMenu>
-            {navItems.slice(0, 5).map((item) => {
+            {mainItems.map((item) => {
               const Icon = icons[item.icon as keyof typeof icons];
               return (
                 <AnimatedSidebarMenuItem key={item.id}>
@@ -80,7 +93,14 @@ export default function CampusSidebar({
                     icon={<Icon size={18} strokeWidth={1.7} />}
                     onSelect={() => navigate(item.id)}
                     badge={
-                      item.id === "homework" && pending > 0 ? (
+                      item.id === "mail" && unread > 0 ? (
+                        <span
+                          className="nav-count mail-count"
+                          aria-label={`${unread} 封未读`}
+                        >
+                          {unread}
+                        </span>
+                      ) : item.id === "homework" && pending > 0 ? (
                         <span className="nav-count">{pending}</span>
                       ) : undefined
                     }
@@ -95,7 +115,7 @@ export default function CampusSidebar({
         <AnimatedSidebarGroup>
           <AnimatedSidebarGroupLabel>校园与工具</AnimatedSidebarGroupLabel>
           <AnimatedSidebarMenu>
-            {navItems.slice(5).map((item) => {
+            {tools.map((item) => {
               const Icon = icons[item.icon as keyof typeof icons];
               return (
                 <AnimatedSidebarMenuItem key={item.id}>

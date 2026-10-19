@@ -72,6 +72,7 @@ export default function Mail({
   sentTotal,
   onSentLoaded,
   refreshedAt,
+  target,
 }: {
   account: Account;
   rows?: MailMessage[];
@@ -83,8 +84,11 @@ export default function Mail({
   sentTotal?: number;
   onSentLoaded: (page: SentPage) => void;
   refreshedAt?: string;
+  target?: { id: string; folder: "inbox" | "sent" };
 }) {
-  const [folder, setFolder] = useState<"inbox" | "sent">("inbox");
+  const [folder, setFolder] = useState<"inbox" | "sent">(
+    target?.folder ?? "inbox",
+  );
   const [sentRevision, setSentRevision] = useState(0);
   const [moreBusy, setMoreBusy] = useState(false);
   const isSent = folder === "sent";
@@ -96,7 +100,9 @@ export default function Mail({
     setChecked([]);
     setQuery("");
   }
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    target?.id ?? null,
+  );
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [busy, setBusy] = useState(false);
@@ -113,6 +119,15 @@ export default function Mail({
   const [composing, setComposing] = useState(false);
   const [marking, setMarking] = useState(false);
 
+  useEffect(() => {
+    if (target) {
+      setFolder(target.folder);
+      setSelectedId(target.id);
+      setFilter("all");
+      setQuery("");
+      setChecked([]);
+    }
+  }, [target?.id, target?.folder]);
   useEffect(() => {
     if (!rows.length) {
       setBusy(true);
