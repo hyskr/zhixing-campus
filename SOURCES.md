@@ -121,3 +121,7 @@ AA 网页入口使用 MIS `/module/module/10/`，在 WebView 内完成浏览器�
 | 已读更新、分块上传与附件参数 | `src-tauri/src/mailbox.rs` | [Android CoremailProvider.kt](https://github.com/wan300/bjtu_mis_Android/blob/55ee861175a284925326b3e3f70aa672bb03d062/android/app/src/main/java/cn/edu/bjtu/mis/data/provider/CoremailProvider.kt)：`mbox:updateMessageInfos`、`upload:prepare`、2 MiB 分块上传和附件绑定字段。 |
 
 邮件正文使用独立沙箱阅读区域，附件衔接本项目已有预览与下载队列。有效邮箱会话先核对并复用，避免重新 SSO 更换 sid 导致写信编号失效。发送接口不自动重试；本地标记只在服务器读取或更新成功后修改。
+
+## 0.9.1 已发送
+
+`src-tauri/src/mailbox.rs` 的 `mail_sent` 使用 Coremail `mbox:listMessages` 与已发送 FID 3，参考 [KMP MailboxRemoteDataSource.kt](https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/data/mailbox/MailboxRemoteDataSource.kt) 和 [MailboxScreenModel.kt](https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/feature/mailbox/MailboxScreenModel.kt) 的文件夹编号。列表保留实际发件人、收件人、发送时间，分页与账号缓存由本项目实现。已发送详情复用现有正文和附件读取。

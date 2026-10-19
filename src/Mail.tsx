@@ -1,6 +1,8 @@
 import MailCompose from "./MailCompose";
 import {
   beginMail,
+  loadSent,
+  type SentPage,
   markMail,
   prepareMailHtml,
   readMail,
@@ -12,7 +14,7 @@ import { useFilePreview } from "./FilePreview";
 import { downloadFiles } from "./learning";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Loader } from "@/components/motion/loader";
-import { PenLine, Reply, Download, Eye, MailCheck } from "lucide-react";
+import { PenLine, Reply, Download, Eye, MailCheck, Send } from "lucide-react";
 import { useErrorState } from "./ui";
 // 页面布局参考：https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail.tsx
 // 邮件列表与阅读区参考：https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail-list.tsx
@@ -66,6 +68,10 @@ export default function Mail({
   onRefresh,
   onLoginRequired,
   onRead,
+  sentRows = [],
+  sentTotal,
+  onSentLoaded,
+  refreshedAt,
 }: {
   account: Account;
   rows?: MailMessage[];
@@ -73,7 +79,23 @@ export default function Mail({
   onRefresh: () => Promise<void>;
   onLoginRequired?: () => void;
   onRead: (ids: string[], read: boolean, displayedRows: MailMessage[]) => void;
+  sentRows?: MailMessage[];
+  sentTotal?: number;
+  onSentLoaded: (page: SentPage) => void;
+  refreshedAt?: string;
 }) {
+  const [folder, setFolder] = useState<"inbox" | "sent">("inbox");
+  const [sentRevision, setSentRevision] = useState(0);
+  const [moreBusy, setMoreBusy] = useState(false);
+  const isSent = folder === "sent";
+  const sourceRows = isSent ? sentRows : rows;
+  function chooseFolder(next: "inbox" | "sent", nextFilter = "all") {
+    setFolder(next);
+    setFilter(nextFilter);
+    setSelectedId(null);
+    setChecked([]);
+    setQuery("");
+  }
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -100,13 +122,48 @@ export default function Mail({
     }
   }, [account.id]);
 
+  useEffect(() => {
+    if (!isSent) return;
+    let active = true;
+    setBusy(true);
+    void loadSent(account)
+      .then((value) => {
+        if (active) onSentLoaded(value);
+      })
+      .catch((reason) => {
+        if (active) setError(String(reason));
+      })
+      .finally(() => {
+        if (active) setBusy(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [account.id, folder, sentRevision, refreshedAt]);
+  async function moreSent() {
+    if (moreBusy) return;
+    setMoreBusy(true);
+    try {
+      const next = await loadSent(account, sentRows.length);
+      const unique = new Map(
+        [...sentRows, ...next.rows].map((row) => [row.id, row]),
+      );
+      onSentLoaded({ rows: [...unique.values()], total: next.total });
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setMoreBusy(false);
+    }
+  }
   const unread = rows.filter((item) => !item.read).length;
-  const items = rows.filter(
+  const items = sourceRows.filter(
     (item) =>
       (filter !== "unread" || !item.read) &&
-      `${item.subject}${item.from}${item.summary}`.includes(query),
+      `${item.subject}${item.from}${item.to ?? ""}${item.summary}`.includes(
+        query,
+      ),
   );
-  const selected = rows.find((item) => item.id === selectedId);
+  const selected = sourceRows.find((item) => item.id === selectedId);
   useEffect(() => {
     if (!selected) return;
     let active = true;
@@ -117,7 +174,7 @@ export default function Mail({
       .then(async (value) => {
         if (!active) return;
         setDetail(value);
-        onRead([value.id], true, rows);
+        if (!isSent) onRead([value.id], true, rows);
         const html = await prepareMailHtml(account, value);
         if (active) setBody(html);
       })
@@ -133,7 +190,7 @@ export default function Mail({
     return () => {
       active = false;
     };
-  }, [account.id, selected?.id, revision]);
+  }, [account.id, selected?.id, folder, revision]);
   async function mark(ids: string[], read: boolean) {
     if (!ids.length || marking) return;
     setMarking(true);
@@ -183,7 +240,8 @@ export default function Mail({
     setBusy(true);
     setError("");
     try {
-      await onRefresh();
+      if (isSent) setSentRevision((value) => value + 1);
+      else await onRefresh();
     } catch (reason) {
       setError(String(reason));
     } finally {
@@ -220,20 +278,28 @@ export default function Mail({
           </Button>
           <span className="mail-folder-label">邮箱</span>
           <button
-            className={`mail-folder-item ${filter === "all" ? "active" : ""}`}
-            onClick={() => setFilter("all")}
+            className={`mail-folder-item ${!isSent && filter === "all" ? "active" : ""}`}
+            onClick={() => chooseFolder("inbox")}
           >
             <Inbox size={16} />
             <span>收件箱</span>
             <small>{total || rows.length}</small>
           </button>
           <button
-            className={`mail-folder-item ${filter === "unread" ? "active" : ""}`}
-            onClick={() => setFilter("unread")}
+            className={`mail-folder-item ${!isSent && filter === "unread" ? "active" : ""}`}
+            onClick={() => chooseFolder("inbox", "unread")}
           >
             <span className="mail-folder-unread-dot" />
             <span>未读邮件</span>
             <small>{unread}</small>
+          </button>
+          <button
+            className={`mail-folder-item ${isSent ? "active" : ""}`}
+            onClick={() => chooseFolder("sent")}
+          >
+            <Send size={16} />
+            <span>已发送</span>
+            <small>{sentTotal ?? "—"}</small>
           </button>
           <div className="mail-folder-end">
             <p>已读状态与学校邮箱同步。其他文件夹可在学校邮箱中查看。</p>
@@ -251,14 +317,16 @@ export default function Mail({
         <section className="mail-index" aria-label="邮件列表">
           <div className="mail-index-heading">
             <div>
-              <span className="home-section-kicker">INBOX</span>
-              <h2>收件箱</h2>
+              <span className="home-section-kicker">
+                {isSent ? "SENT" : "INBOX"}
+              </span>
+              <h2>{isSent ? "已发送" : "收件箱"}</h2>
             </div>
-            <Tooltip content="刷新收件箱">
+            <Tooltip content={isSent ? "刷新已发送" : "刷新收件箱"}>
               <Button
                 size="icon"
                 variant="ghost"
-                aria-label="刷新收件箱"
+                aria-label={isSent ? "刷新已发送" : "刷新收件箱"}
                 disabled={busy}
                 onClick={() => void refresh()}
               >
@@ -270,77 +338,92 @@ export default function Mail({
             <Input
               type="search"
               aria-label="搜索邮件"
-              placeholder="搜索主题、发件人或摘要"
+              placeholder={
+                isSent ? "搜索主题、收件人或摘要" : "搜索主题、发件人或摘要"
+              }
               value={query}
               onChange={setQuery}
               leftIcon={<Search size={15} />}
             />
           </div>
-          <Tabs
-            value={filter}
-            onValueChange={setFilter}
-            variant="underline"
-            className="mail-filter-tabs"
-          >
-            <TabsList>
-              <TabsTrigger value="all">全部邮件</TabsTrigger>
-              <TabsTrigger value="unread">
-                未读 <span className="mail-tab-count">{unread}</span>
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-          <div className="mail-batch-toolbar">
-            <Checkbox
-              aria-label="选择当前列表邮件"
-              checked={
-                items.length > 0 &&
-                items.every((item) => checked.includes(item.id))
-              }
-              onCheckedChange={(value) =>
-                setChecked(value ? items.map((item) => item.id) : [])
-              }
-            />
-            <span>
-              {checked.length ? `已选 ${checked.length} 封` : "选择邮件"}
-            </span>
-            {checked.length > 0 && (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={marking}
-                  onClick={() => void mark(checked, true)}
-                >
-                  标为已读
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={marking}
-                  onClick={() => void mark(checked, false)}
-                >
-                  标为未读
-                </Button>
-              </>
-            )}
-          </div>
+          {!isSent && (
+            <Tabs
+              value={filter}
+              onValueChange={setFilter}
+              variant="underline"
+              className="mail-filter-tabs"
+            >
+              <TabsList>
+                <TabsTrigger value="all">全部邮件</TabsTrigger>
+                <TabsTrigger value="unread">
+                  未读 <span className="mail-tab-count">{unread}</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {!isSent && (
+            <div className="mail-batch-toolbar">
+              <Checkbox
+                aria-label="选择当前列表邮件"
+                checked={
+                  items.length > 0 &&
+                  items.every((item) => checked.includes(item.id))
+                }
+                onCheckedChange={(value) =>
+                  setChecked(value ? items.map((item) => item.id) : [])
+                }
+              />
+              <span>
+                {checked.length ? `已选 ${checked.length} 封` : "选择邮件"}
+              </span>
+              {checked.length > 0 && (
+                <>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={marking}
+                    onClick={() => void mark(checked, true)}
+                  >
+                    标为已读
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={marking}
+                    onClick={() => void mark(checked, false)}
+                  >
+                    标为未读
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+          {isSent && (
+            <div className="mail-sent-caption">
+              已加载 {sentRows.length} / {sentTotal ?? "…"} 封
+            </div>
+          )}
           <div className="mail-message-list">
-            {busy && !rows.length ? (
-              <p className="quiet-empty">正在读取收件箱…</p>
+            {busy && !sourceRows.length ? (
+              <p className="quiet-empty">
+                {isSent ? "正在读取已发送…" : "正在读取收件箱…"}
+              </p>
             ) : items.length ? (
               items.map((message) => (
                 <div className="mail-selectable-row" key={message.id}>
-                  <Checkbox
-                    aria-label={`选择邮件 ${message.subject}`}
-                    checked={checked.includes(message.id)}
-                    onCheckedChange={(value) =>
-                      setChecked((ids) =>
-                        value
-                          ? [...ids, message.id]
-                          : ids.filter((id) => id !== message.id),
-                      )
-                    }
-                  />
+                  {!isSent && (
+                    <Checkbox
+                      aria-label={`选择邮件 ${message.subject}`}
+                      checked={checked.includes(message.id)}
+                      onCheckedChange={(value) =>
+                        setChecked((ids) =>
+                          value
+                            ? [...ids, message.id]
+                            : ids.filter((id) => id !== message.id),
+                        )
+                      }
+                    />
+                  )}
                   <button
                     className={`mail-list-item ${selected?.id === message.id ? "selected" : ""} ${message.read ? "read" : "unread"}`}
                     key={message.id}
@@ -351,7 +434,9 @@ export default function Mail({
                   >
                     <span className="mail-list-top">
                       <span className="mail-sender-name">
-                        {message.from || "未知发件人"}
+                        {isSent
+                          ? `收件人：${message.to || "未提供"}`
+                          : message.from || "未知发件人"}
                       </span>
                       <time>{listDate(message.date)}</time>
                     </span>
@@ -377,9 +462,24 @@ export default function Mail({
               <Empty
                 title={query ? "没有匹配的邮件" : "暂无邮件"}
                 detail={
-                  query ? "试试其他关键词。" : "刷新后显示学校邮箱收件箱。"
+                  query
+                    ? "试试其他关键词。"
+                    : isSent
+                      ? "刷新后显示学校邮箱的发送记录。"
+                      : "刷新后显示学校邮箱收件箱。"
                 }
               />
+            )}
+            {isSent && sentRows.length < (sentTotal ?? 0) && (
+              <Button
+                className="mail-load-more"
+                size="sm"
+                variant="ghost"
+                disabled={moreBusy || busy}
+                onClick={() => void moreSent()}
+              >
+                {moreBusy ? "正在加载…" : "加载更多发送记录"}
+              </Button>
             )}
           </div>
         </section>
@@ -393,26 +493,31 @@ export default function Mail({
                   size="sm"
                   showIcon={false}
                 >
-                  {selected.read ? "已读" : "未读"}
+                  {isSent ? "已发送" : selected.read ? "已读" : "未读"}
                 </AnimatedBadge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={marking}
-                  onClick={() => void mark([selected.id], !selected.read)}
-                >
-                  <MailCheck size={14} />
-                  {selected.read ? "标为未读" : "标为已读"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={reading || !detail || composing}
-                  onClick={() => detail && void compose(detail)}
-                >
-                  <Reply size={14} />
-                  回复
-                </Button>
+                {!isSent && (
+                  <>
+                    {" "}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={marking}
+                      onClick={() => void mark([selected.id], !selected.read)}
+                    >
+                      <MailCheck size={14} />
+                      {selected.read ? "标为未读" : "标为已读"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={reading || !detail || composing}
+                      onClick={() => detail && void compose(detail)}
+                    >
+                      <Reply size={14} />
+                      回复
+                    </Button>
+                  </>
+                )}
               </div>
               <h2>{selected.subject || "无主题"}</h2>
               <div className="mail-reader-sender">
@@ -521,7 +626,10 @@ export default function Mail({
           account={account}
           initial={draft}
           onClose={() => setDraft(null)}
-          onSent={() => void refresh()}
+          onSent={() => {
+            chooseFolder("sent");
+            setSentRevision((value) => value + 1);
+          }}
         />
       )}
     </div>

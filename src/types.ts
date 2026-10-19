@@ -161,6 +161,8 @@ export interface CampusData {
   syncedAt?: Record<string, string>;
   mailInbox?: MailMessage[];
   mailTotal?: number;
+  mailSent?: MailMessage[];
+  mailSentTotal?: number;
   balances?: { card: string; network: string };
 }
 export interface AppStore {
@@ -263,6 +265,7 @@ export interface Preferences {
 }
 
 export interface MailMessage {
+  to?: string;
   id: string;
   subject: string;
   from: string;

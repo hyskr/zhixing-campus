@@ -748,6 +748,26 @@ export default function App() {
                       : [])
                   }
                   total={data.mailTotal}
+                  sentRows={data.mailSent}
+                  sentTotal={data.mailSentTotal}
+                  refreshedAt={data.syncedAt?.mail}
+                  onSentLoaded={(result) =>
+                    setStore((s) =>
+                      s.data[account.id]
+                        ? {
+                            ...s,
+                            data: {
+                              ...s.data,
+                              [account.id]: {
+                                ...s.data[account.id],
+                                mailSent: result.rows,
+                                mailSentTotal: result.total,
+                              },
+                            },
+                          }
+                        : s,
+                    )
+                  }
                   onRefresh={() => sync(account, "mail")}
                 />
               )}

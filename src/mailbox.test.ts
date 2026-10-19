@@ -62,3 +62,13 @@ it("回复地址保留显示名称中的逗号", () => {
     recipients('"Zhang, San" <a@example.invalid>; b@example.invalid'),
   ).toEqual(['"Zhang, San" <a@example.invalid>', "b@example.invalid"]);
 });
+
+it("已发送分页使用独立接口和偏移，不混入收件箱", async () => {
+  const { loadSent } = await import("./mailbox");
+  call.mockResolvedValueOnce({ rows: [], total: 60 });
+  await loadSent(account, 50);
+  expect(call).toHaveBeenCalledWith("mail_sent", {
+    username: "test",
+    start: 50,
+  });
+});

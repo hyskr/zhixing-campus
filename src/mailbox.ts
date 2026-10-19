@@ -43,7 +43,7 @@ export async function readMail(
       id: message.id,
       subject: message.subject,
       from: [message.from],
-      to: ["demo@bjtu.edu.cn"],
+      to: [message.to ?? "demo@bjtu.edu.cn"],
       cc: [],
       html: `<h2>${DOMPurify.sanitize(message.subject, { ALLOWED_TAGS: [] })}</h2><p>${DOMPurify.sanitize(message.summary, { ALLOWED_TAGS: [] })}</p><p>这是一封演示邮件，可体验完整阅读、回复与已读同步界面。</p>`,
       attachments: message.attached
@@ -192,4 +192,42 @@ export async function prepareMailHtml(account: Account, detail: MailDetail) {
     }),
   );
   return mailDocument(doc.body.innerHTML);
+}
+
+export interface SentPage {
+  rows: MailMessage[];
+  total: number;
+}
+export async function loadSent(account: Account, start = 0): Promise<SentPage> {
+  if (account.demo)
+    return {
+      total: 2,
+      rows: start
+        ? []
+        : [
+            {
+              id: "sent-demo-1",
+              subject: "实验报告提交说明",
+              from: "demo@bjtu.edu.cn",
+              to: "课程教师 <teacher@example.invalid>",
+              summary: "老师您好，实验报告见附件。",
+              date: new Date().toISOString(),
+              read: true,
+              attached: true,
+            },
+            {
+              id: "sent-demo-2",
+              subject: "课程安排咨询",
+              from: "demo@bjtu.edu.cn",
+              to: "教务办公室 <office@example.invalid>",
+              summary: "您好，希望确认下周课程安排。",
+              date: new Date(Date.now() - 86400000).toISOString(),
+              read: true,
+              attached: false,
+            },
+          ],
+    };
+  return withCampusSession(account.id, () =>
+    invoke("mail_sent", { username: account.id, start }),
+  );
 }

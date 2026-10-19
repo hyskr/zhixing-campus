@@ -91,6 +91,28 @@ fn detail(root: &Value, mid: &str) -> Result<Value, String> {
         json!({"id":mid,"subject":mail["subject"],"from":strings(&mail["from"]),"to":strings(&mail["to"]),"cc":strings(&mail["cc"]),"html":mail["mainPartData"]["content"].as_str().unwrap_or(""),"attachments":attachments}),
     )
 }
+// 已发送使用 FID 3；mbox:listMessages 可返回收件人和发送时间。
+// https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/feature/mailbox/MailboxScreenModel.kt
+fn sent_page(root: &Value) -> Value {
+    let rows=root["var"].as_array().into_iter().flatten().map(|v|json!({
+        "id":string(&v["id"]),"subject":string(&v["subject"]),"from":strings(&v["from"]).join("；"),"to":strings(&v["to"]).join("；"),
+        "summary":string(&v["summary"]),"date":v["sentDate"].as_str().map(str::to_string).unwrap_or_else(||string(&v["sentDate"])),"read":true,
+        "attached":v["flags"]["attached"]==true||v["flags"]["inlineAttached"]==true
+    })).collect::<Vec<_>>();
+    json!({"total":root["total"].as_u64().unwrap_or(rows.len() as u64),"rows":rows})
+}
+#[tauri::command]
+pub async fn mail_sent(
+    username: String,
+    start: u32,
+    state: tauri::State<'_, CampusState>,
+) -> Result<Value, String> {
+    let session = get_session(&state, &username)?;
+    let sid = campus::mail_session(&session).await?;
+    let root=json_call(&session,&sid,"mbox:listMessages",json!({"fid":3,"start":start,"limit":50,"summaryWindowSize":100,"mode":"count","order":"date","desc":true,"returnTotal":true,"returnTag":false,"mboxa":"","topFirst":true})).await?;
+    save_session(&state, &username, &session)?;
+    Ok(sent_page(&root))
+}
 #[tauri::command]
 pub async fn mail_detail(
     username: String,
@@ -300,6 +322,19 @@ pub async fn mail_upload(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sent_messages_keep_recipients_sent_time_and_total() {
+        let page = sent_page(
+            &json!({"total":75,"var":[{"id":"s1","subject":"已发送","to":["one@example.invalid","two@example.invalid"],"sentDate":1234567890,"flags":{"attached":true}}]}),
+        );
+        assert_eq!(page["total"], 75);
+        assert_eq!(
+            page["rows"][0]["to"],
+            "one@example.invalid；two@example.invalid"
+        );
+        assert_eq!(page["rows"][0]["date"], "1234567890");
+        assert_eq!(page["rows"][0]["attached"], true);
+    }
     #[test]
     fn detail_preserves_body_recipients_and_authenticated_attachment_route() {
         let root = json!({"var":{"mail":{"subject":"通知","from":["a@bjtu.edu.cn"],"to":["b@bjtu.edu.cn"],"mainPartData":{"content":"<p>正文<img src='cid:image'></p>"},"attachments":[{"id":"2","filename":"报告.pdf","estimateSize":1024,"contentId":"image"}]},"mailInfo":{"id":"m1"}}});
