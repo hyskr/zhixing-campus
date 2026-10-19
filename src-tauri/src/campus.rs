@@ -9,6 +9,46 @@ pub struct Features {
 // 参考来源：参考 MIS 邮箱 SSO、Coremail.sid 及 mbox:listThreads；原生 WebView 登录态由本项目衔接。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/mail/system.js
 pub async fn mail_session(session: &Session) -> Result<String, String> {
+    // Coremail 的重新 SSO 会更换 sid，使正在编辑的 compose id 失效。
+    // 先验证当前 Cookie 会话，仅在服务器确认过期后重新进入邮箱。
+    let cached = {
+        let url = Url::parse("https://mail.bjtu.edu.cn/coremail/").unwrap();
+        let jar = session.cookies.lock().map_err(|e| e.to_string())?;
+        let sid = jar
+            .get_request_values(&url)
+            .find(|(name, _)| *name == "Coremail.sid")
+            .map(|(_, value)| value.to_string());
+        sid
+    };
+    if let Some(sid) = cached {
+        let root = session
+            .client
+            .post("https://mail.bjtu.edu.cn/coremail/XT/jsp/mail.jsp")
+            .query(&[
+                ("func", "getAllFolders"),
+                ("sid", sid.as_str()),
+                ("stats", "false"),
+                ("threads", "false"),
+            ])
+            .header(
+                "Referer",
+                format!("https://mail.bjtu.edu.cn/coremail/main.jsp?sid={sid}"),
+            )
+            .send()
+            .await
+            .map_err(network_error)?
+            .error_for_status()
+            .map_err(network_error)?
+            .json::<Value>()
+            .await
+            .map_err(network_error)?;
+        match root["code"].as_str() {
+            Some("S_OK") => return Ok(sid),
+            Some("FA_INVALID_SESSION" | "S_INVALID_SESSION" | "S_SESSION_TIMEOUT") => {}
+            Some(code) => return Err(format!("邮箱会话检查失败：{code}")),
+            None => return Err("邮箱会话检查未返回有效结果".into()),
+        }
+    }
     let response = get(session, "https://mis.bjtu.edu.cn/osys_sso_email/", None).await?;
     if is_login_url(response.url()) {
         return Err(AUTH_EXPIRED.into());

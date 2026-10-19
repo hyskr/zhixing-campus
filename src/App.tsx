@@ -652,7 +652,37 @@ export default function App() {
               )}
               {page === "mail" && (
                 <MailPage
+                  key={account.id}
                   account={account}
+                  onRead={(ids, read, displayedRows) =>
+                    setStore((s) => {
+                      const old = s.data[account.id];
+                      if (!old) return s;
+                      const inbox = old.mailInbox ?? displayedRows;
+                      const changed = inbox.filter(
+                        (row) => ids.includes(row.id) && row.read !== read,
+                      ).length;
+                      return {
+                        ...s,
+                        data: {
+                          ...s.data,
+                          [account.id]: {
+                            ...old,
+                            mailInbox: inbox.map((row) =>
+                              ids.includes(row.id) ? { ...row, read } : row,
+                            ),
+                            mailCount: Math.max(
+                              0,
+                              (old.mailInbox
+                                ? old.mailCount
+                                : inbox.filter((row) => !row.read).length) +
+                                (read ? -changed : changed),
+                            ),
+                          },
+                        },
+                      };
+                    })
+                  }
                   onLoginRequired={() => setLogin({ studentId: account.id })}
                   rows={
                     data.mailInbox ??

@@ -54,3 +54,7 @@ BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存�
 
 - 多视角同步、单路音频和阅读器功能组织参考 [57Darling02/BjtuCoursePlatform](https://github.com/57Darling02/BjtuCoursePlatform)，由本项目用 React 与 PDF.js API 实现，未复制 Vue 组件或其 PDF.js 发行目录。固定文件链接见 SOURCES.md。
 - hls.js：Apache-2.0，用于不具备原生 HLS 支持的 WebView；许可见 `licenses/hls-js.txt`。
+
+## 完整邮箱
+
+邮件协议和字段参考 KMP 的 `MailboxRemoteDataSource.kt`、`MailboxJsonParser.kt` 与 wan300/bjtu_mis_Android 的 `CoremailProvider.kt`；固定版本链接见 SOURCES.md。本项目用 Rust 与 React 实现邮箱请求、状态同步和写信界面。

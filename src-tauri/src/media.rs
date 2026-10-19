@@ -240,12 +240,20 @@ async fn stream_file(
 }
 
 async fn download_response(session: &Session, url: &str) -> Result<reqwest::Response, String> {
+    let referer = if Url::parse(url).is_ok_and(|u| u.host_str() == Some("mail.bjtu.edu.cn")) {
+        format!(
+            "https://mail.bjtu.edu.cn/coremail/main.jsp?sid={}",
+            campus::mail_session(session).await?
+        )
+    } else {
+        "http://123.121.147.7:88/ve/".into()
+    };
     let mut last_error: Option<String> = None;
     for attempt in 0..3u32 {
         let response = session
             .client
             .get(url)
-            .header("Referer", "http://123.121.147.7:88/ve/")
+            .header("Referer", &referer)
             .timeout(Duration::from_secs(3600))
             .send()
             .await

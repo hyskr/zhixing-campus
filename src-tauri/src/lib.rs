@@ -4,6 +4,7 @@ mod credentials;
 mod devices;
 mod files;
 mod learning;
+mod mailbox;
 mod media;
 mod parsers;
 mod quick_login;
@@ -995,6 +996,12 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             campus::open_school_page,
+            mailbox::mail_detail,
+            mailbox::mail_mark_read,
+            mailbox::mail_begin_compose,
+            mailbox::mail_cancel_compose,
+            mailbox::mail_send,
+            mailbox::mail_upload,
             classrooms::classroom_occupancy,
             campus::network_credentials,
             campus::reconnect_network,

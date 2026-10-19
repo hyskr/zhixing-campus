@@ -148,6 +148,13 @@ pub async fn file_bytes(
     let session = get_session(&state, &username)?;
     let url = learning::absolute_url(&url);
     let mut request = session.client.get(&url);
+    if Url::parse(&url).is_ok_and(|u| u.host_str() == Some("mail.bjtu.edu.cn")) {
+        let sid = campus::mail_session(&session).await?;
+        request = request.header(
+            "Referer",
+            format!("https://mail.bjtu.edu.cn/coremail/main.jsp?sid={sid}"),
+        );
+    }
     if Url::parse(&url).is_ok_and(|u| {
         u.host_str() == Some("123.121.147.7")
             && u.port() == Some(88)

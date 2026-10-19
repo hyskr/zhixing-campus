@@ -81,3 +81,7 @@ bun run tauri build --bundles app
 - `Classrooms.tsx`：Select 选择楼宇、周次、学期与时段；Input 搜索教室及座位数；Checkbox 筛选空闲；Button 刷新；Loader 显示请求状态。
 - `ReplayViewer.tsx`：Checkbox 切换多视角，Select 选择倍速，Button 同步画面。
 - `PdfNavigation.tsx`：Button 切换目录和搜索、Input 输入关键词、Loader 显示搜索状态。错误继续使用全局浮动 Toast。
+
+## 0.9.0 邮件阅读与写信
+
+`Mail.tsx` 使用 Checkbox 多选、Button 标记已读与回复、Loader 显示完整正文读取状态。`MailCompose.tsx` 使用 FileUpload 选择／拖入多附件、上传状态与失败重试，Input 编辑地址与主题，Center Morph Modal 承载写信和发送核对。操作结果使用全局浮动 Toast。
