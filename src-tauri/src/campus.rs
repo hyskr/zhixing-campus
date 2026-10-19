@@ -75,6 +75,39 @@ pub async fn inbox(session: &Session) -> Result<Value, String> {
 pub fn shortcut(name: &str) -> Option<&'static str> {
     match name{"mis"=>Some("https://mis.bjtu.edu.cn/home/"),"academic"=>Some("https://aa.bjtu.edu.cn/"),"courses"=>Some("https://mis.bjtu.edu.cn/module/module/28/"),"vpn"=>Some("https://webvpn.bjtu.edu.cn/"),"recharge"=>Some("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"),"sso"=>Some("https://sso.bjtu.edu.cn/sso/login?service=https%3A%2F%2Fuc.bjtu.edu.cn%2Fuser%2Flogin&pageName=login"),_=>None}
 }
+// 入口导航前刷新 MIS 与目标平台的 Cookie，随后由网页窗口接收更新后的会话。
+async fn refresh_school_session(session: &Session, target: &str) -> Result<(), String> {
+    let response = get(
+        session,
+        &format!("{MIS}/home/"),
+        Some(&format!("{MIS}/home/")),
+    )
+    .await?;
+    if is_login_url(response.url()) || response.url().host_str() != Some("mis.bjtu.edu.cn") {
+        return Err(AUTH_EXPIRED.into());
+    }
+    let body = response.text().await.map_err(network_error)?;
+    if parsers::expired_page(&body) {
+        return Err(AUTH_EXPIRED.into());
+    }
+    match target {
+        "academic" => ensure_aa(session).await?,
+        "courses" => {
+            quick_login::enter_from_mis(session).await?;
+            *session.smart.lock().map_err(|e| e.to_string())? = None;
+        }
+        "vpn" | "sso" | "recharge" => {
+            get(
+                session,
+                shortcut(target).ok_or("未知校园入口")?,
+                Some(&format!("{MIS}/home/")),
+            )
+            .await?;
+        }
+        _ => {}
+    }
+    Ok(())
+}
 #[tauri::command]
 pub async fn open_school_page(
     username: String,
@@ -83,7 +116,11 @@ pub async fn open_school_page(
     app: tauri::AppHandle,
     state: tauri::State<'_, CampusState>,
 ) -> Result<(), String> {
+    if target != "mail" && shortcut(&target).is_none() {
+        return Err("未知校园入口".into());
+    }
     let session = get_session(&state, &username)?;
+    refresh_school_session(&session, &target).await?;
     let address = if target == "mail" {
         let sid = mail_session(&session).await?;
         let mut url = Url::parse("https://mail.bjtu.edu.cn/coremail/main.jsp").unwrap();

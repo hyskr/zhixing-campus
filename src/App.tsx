@@ -652,6 +652,7 @@ export default function App() {
               {page === "mail" && (
                 <MailPage
                   account={account}
+                  onLoginRequired={() => setLogin({ studentId: account.id })}
                   rows={
                     data.mailInbox ??
                     (account.demo
@@ -722,6 +723,7 @@ export default function App() {
               {page === "services" && (
                 <Services
                   account={account}
+                  onLoginRequired={() => setLogin({ studentId: account.id })}
                   data={data}
                   onDeviceView={setDeviceView}
                   onRefresh={() => sync(account, "services")}

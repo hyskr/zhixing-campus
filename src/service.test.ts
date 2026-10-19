@@ -5,6 +5,7 @@ import {
   authenticateCampus,
   ManualCaptchaRequired,
   syncCampus,
+  openSchoolPage,
 } from "./service";
 const { stop } = vi.hoisted(() => ({ stop: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
@@ -168,4 +169,38 @@ it("连续三次验证码校验失败后换新图交给手动输入", async () =
   expect(
     call.mock.calls.filter(([command]) => command === "begin_login"),
   ).toHaveLength(4);
+});
+
+it("快捷入口会话失效时，先恢复认证再重试原页面与邮件编号", async () => {
+  call
+    .mockRejectedValueOnce("登录状态已失效，请重新登录校园账号")
+    .mockResolvedValueOnce("test-password")
+    .mockResolvedValueOnce({ image: "captcha" })
+    .mockResolvedValueOnce(profile)
+    .mockResolvedValueOnce(undefined);
+  await openSchoolPage("10001", "mail", "mail-42");
+  expect(call.mock.calls.map(([command]) => command)).toEqual([
+    "open_school_page",
+    "saved_password",
+    "begin_login",
+    "finish_login",
+    "open_school_page",
+  ]);
+  expect(call).toHaveBeenLastCalledWith("open_school_page", {
+    username: "10001",
+    target: "mail",
+    messageId: "mail-42",
+  });
+});
+it("无法恢复登录时不继续打开快捷入口", async () => {
+  call
+    .mockRejectedValueOnce("登录状态已失效，请重新登录校园账号")
+    .mockResolvedValueOnce(null);
+  await expect(openSchoolPage("10001", "academic")).rejects.toThrow(
+    "登录状态已失效",
+  );
+  expect(call.mock.calls.map(([command]) => command)).toEqual([
+    "open_school_page",
+    "saved_password",
+  ]);
 });

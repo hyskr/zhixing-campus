@@ -94,3 +94,7 @@ v0.6.0 的侧栏、按钮、标签页、表单控件、弹层、课程抽屉、�
 ## 浮动操作反馈与最近更新
 
 `ui.tsx` 使用 BeUI `animated-toast-stack` 统一操作反馈；组件关闭按钮在 `src/components/motion/animated-toast-stack.tsx` 中提供中文名称。`UpdatesPopover.tsx` 通过已有 BeUI Card、Button、Animated Badge 组合更新列表，使用当前账号的 `Change` 数据；来源文件和许可见 [BEUI.md](BEUI.md)。
+
+## 邮箱滚动与入口会话衔接
+
+`Mail.tsx` 与 `styles.css` 为收件列表和摘要阅读区提供独立的有界滚动区域。`service.ts` 的 `openSchoolPage` 复用已有登录恢复流程；`campus.rs` 在打开网页前更新 MIS 和目标平台 Cookie。教务及智慧课程衔接分别沿用 `ensure_aa` 与 `quick_login::enter_from_mis`，上游参考文件见前文登录与平台会话条目。

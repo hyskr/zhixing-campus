@@ -164,6 +164,20 @@ export async function withCampusSession<T>(
     return operation();
   }
 }
+/** 原生端更新平台会话后再创建或导航网页窗口；MIS 失效时先恢复登录。 */
+export function openSchoolPage(
+  username: string,
+  target: string,
+  messageId?: string,
+): Promise<void> {
+  return withCampusSession(username, () =>
+    invoke<void>("open_school_page", {
+      username,
+      target,
+      messageId: messageId ?? null,
+    }),
+  );
+}
 export const loadReplays = (username: string, courseId: string) =>
   withCampusSession(username, () =>
     invoke<Replay[]>("course_replays", { username, courseId }),

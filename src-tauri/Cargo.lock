@@ -6217,7 +6217,7 @@ dependencies = [
 
 [[package]]
 name = "zhixing-campus"
-version = "0.7.4"
+version = "0.7.5"
 dependencies = [
  "base64 0.22.1",
  "cookie_store",

@@ -14,20 +14,23 @@ import type { Account, CampusData } from "./types";
 import { PageHeading } from "./Pages";
 import { copyText } from "./learning";
 import DeviceManager from "./DeviceManager";
-import { withCampusSession } from "./service";
+import { openSchoolPage, ManualCaptchaRequired } from "./service";
 export default function Services({
   account,
   data,
   onRefresh,
+  onLoginRequired,
   onDeviceView,
 }: {
   account: Account;
   data: CampusData;
   onRefresh: () => Promise<void>;
+  onLoginRequired?: () => void;
   onDeviceView?: (active: boolean) => void;
 }) {
   const setMessage = useFeedback("success");
   const [tab, setTab] = useState("余额与入口");
+  const [opening, setOpening] = useState("");
   const [error, setError] = useErrorState();
   useEffect(() => {
     onDeviceView?.(tab === "校园网设备");
@@ -38,17 +41,20 @@ export default function Services({
       void onRefresh().catch((e) => setError(String(e)));
   }, [account.id]);
   async function open(target: string) {
+    if (opening) return;
     try {
       if (account.demo) throw Error("请连接校园账号后打开学校网站。");
-      await withCampusSession(account.id, () =>
-        invoke("open_school_page", {
-          username: account.id,
-          target,
-          messageId: null,
-        }),
-      );
+      setOpening(target);
+      await openSchoolPage(account.id, target);
     } catch (e) {
       setError(String(e));
+      if (
+        e instanceof ManualCaptchaRequired ||
+        String(e).includes("登录状态已失效")
+      )
+        onLoginRequired?.();
+    } finally {
+      setOpening("");
     }
   }
   return (
@@ -94,8 +100,12 @@ export default function Services({
                   ¥ {account.demo ? "35.00" : data.balances?.network || "—"}
                 </strong>
                 <div className="modal-actions">
-                  <Button size="sm" onClick={() => open("recharge")}>
-                    校园网充值
+                  <Button
+                    size="sm"
+                    disabled={!!opening}
+                    onClick={() => open("recharge")}
+                  >
+                    {opening === "recharge" ? "更新登录状态…" : "校园网充值"}
                   </Button>
                   <Button
                     size="sm"
@@ -125,8 +135,13 @@ export default function Services({
                 ["vpn", "WebVPN"],
                 ["sso", "新版统一身份认证"],
               ].map(([id, name]) => (
-                <button key={id} onClick={() => open(id)}>
-                  <span>{name}</span>
+                <button
+                  key={id}
+                  disabled={!!opening}
+                  aria-busy={opening === id}
+                  onClick={() => open(id)}
+                >
+                  <span>{opening === id ? "正在更新登录会话…" : name}</span>
                   <ExternalLink size={16} />
                 </button>
               ))}
@@ -134,8 +149,6 @@ export default function Services({
           </section>
         </>
       )}
-      
-      
     </>
   );
 }

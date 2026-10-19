@@ -5751,3 +5751,73 @@ body,
 .updates-popover {
   gap: 0 !important;
 }
+
+/* The inbox and reader each own their scroll area inside one bounded view. */
+.main-shell:has(.mail-page) {
+  height: 100dvh;
+  overflow: hidden;
+}
+.main-content:has(.mail-page) {
+  height: calc(100dvh - 66px);
+  display: flex;
+  flex-direction: column;
+  padding-top: 14px;
+  padding-bottom: 18px;
+  overflow: hidden;
+}
+.main-content:has(.mail-page) > .page-content,
+.mail-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.mail-page > .page-heading {
+  flex-shrink: 0;
+}
+.mail-page .mail-workspace {
+  flex: 1;
+  height: 0;
+  min-height: 0;
+  max-height: none;
+  grid-template-rows: minmax(0, 1fr);
+}
+.mail-folder-rail,
+.mail-index,
+.mail-reader {
+  min-height: 0;
+}
+.mail-folder-rail {
+  overflow-y: auto;
+}
+.mail-index {
+  overflow: hidden;
+}
+.mail-index-heading,
+.mail-index-search,
+.mail-filter-tabs {
+  flex-shrink: 0;
+}
+.mail-message-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+}
+.mail-reader {
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+}
+.mail-reader > * {
+  flex-shrink: 0;
+}
+.mail-reader-body {
+  flex: 1 0 auto;
+}
+.school-shortcuts button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+
+.mail-reader { overflow-x: hidden; }
+.mail-reader-body p { overflow-wrap: anywhere; }

@@ -20,7 +20,7 @@ import { Tooltip } from "@/components/motion/tooltip";
 import type { Account, MailMessage } from "./types";
 import { PageHeading } from "./Pages";
 import { Empty, fullDate } from "./ui";
-import { withCampusSession } from "./service";
+import { openSchoolPage, ManualCaptchaRequired } from "./service";
 
 function mailDate(value: string) {
   const raw = /^\d{10,13}$/.test(value)
@@ -49,16 +49,19 @@ export default function Mail({
   rows = [],
   total = 0,
   onRefresh,
+  onLoginRequired,
 }: {
   account: Account;
   rows?: MailMessage[];
   total?: number;
   onRefresh: () => Promise<void>;
+  onLoginRequired?: () => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [opening, setOpening] = useState(false);
   const [error, setError] = useErrorState();
 
   useEffect(() => {
@@ -79,18 +82,21 @@ export default function Mail({
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
 
   async function open(message?: MailMessage) {
+    if (opening) return;
     setError("");
     try {
       if (account.demo) throw Error("请连接校园账号后打开学校邮箱。");
-      await withCampusSession(account.id, () =>
-        invoke("open_school_page", {
-          username: account.id,
-          target: "mail",
-          messageId: message?.id ?? null,
-        }),
-      );
+      setOpening(true);
+      await openSchoolPage(account.id, "mail", message?.id);
     } catch (reason) {
       setError(String(reason));
+      if (
+        reason instanceof ManualCaptchaRequired ||
+        String(reason).includes("登录状态已失效")
+      )
+        onLoginRequired?.();
+    } finally {
+      setOpening(false);
     }
   }
 
@@ -107,7 +113,7 @@ export default function Mail({
   }
 
   return (
-    <>
+    <div className="mail-page">
       <PageHeading
         eyebrow="MAIL"
         title="校园邮箱"
@@ -145,8 +151,14 @@ export default function Mail({
             <p>
               这里显示最近的收件记录。其他文件夹和完整邮件可在学校邮箱中查看。
             </p>
-            <Button variant="secondary" size="sm" onClick={() => void open()}>
-              打开学校邮箱 <ArrowUpRight size={14} />
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={opening}
+              onClick={() => void open()}
+            >
+              {opening ? "更新登录状态…" : "打开学校邮箱"}{" "}
+              <ArrowUpRight size={14} />
             </Button>
           </div>
         </aside>
@@ -274,8 +286,9 @@ export default function Mail({
                 <p>{selected.summary || "该邮件没有提供摘要。"}</p>
               </div>
               <div className="mail-reader-footer">
-                <Button onClick={() => void open(selected)}>
-                  在学校邮箱中阅读 <ArrowUpRight size={15} />
+                <Button disabled={opening} onClick={() => void open(selected)}>
+                  {opening ? "更新登录状态…" : "在学校邮箱中阅读"}{" "}
+                  <ArrowUpRight size={15} />
                 </Button>
                 <span>使用当前账号的学校登录状态打开原邮件。</span>
               </div>
@@ -288,7 +301,6 @@ export default function Mail({
           )}
         </article>
       </section>
-      
-    </>
+    </div>
   );
 }
