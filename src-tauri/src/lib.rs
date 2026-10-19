@@ -1,4 +1,5 @@
 mod campus;
+mod classrooms;
 mod credentials;
 mod devices;
 mod files;
@@ -994,6 +995,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             campus::open_school_page,
+            classrooms::classroom_occupancy,
             campus::network_credentials,
             campus::reconnect_network,
             campus::network_status,

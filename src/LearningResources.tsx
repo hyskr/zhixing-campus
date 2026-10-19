@@ -1,3 +1,4 @@
+import ReplayViewer from "./ReplayViewer";
 import { useErrorState } from "./ui";
 import { resourceDirectory } from "./resourcePaths";
 import { sameCourseName } from "./courseMatching";
@@ -90,8 +91,13 @@ export default function LearningResources({
   const [resolvedUrl, setResolvedUrl] = useState("");
   const [mappedCourse, setMappedCourse] = useState("auto");
   const [refreshing, setRefreshing] = useState(false);
-  const matches = data.resources.filter((root) => !focusCourse || sameCourseName(root.name, focusCourse));
-  const available = mappedCourse === "auto" ? matches : data.resources.filter((root) => root.id === mappedCourse);
+  const matches = data.resources.filter(
+    (root) => !focusCourse || sameCourseName(root.name, focusCourse),
+  );
+  const available =
+    mappedCourse === "auto"
+      ? matches
+      : data.resources.filter((root) => root.id === mappedCourse);
   const roots = available;
   async function download(nodes: Resource[]) {
     if (account.demo || !isTauri()) {
@@ -112,7 +118,8 @@ export default function LearningResources({
           rpId: node.rpId,
           url: node.url,
           downloadAllowed: node.downloadAllowed,
-          relativePath: nodes.length > 1 ? resourceDirectory(data.resources, node.id) : [],
+          relativePath:
+            nodes.length > 1 ? resourceDirectory(data.resources, node.id) : [],
           kind: "resource",
         };
       });
@@ -191,74 +198,116 @@ export default function LearningResources({
           description="查看课程文件、教学日历和课堂回放。"
         />
       )}
-      {focusCourse && <div className="course-resource-match">
-        <span>智慧课程</span>
-        <Select value={mappedCourse} onValueChange={setMappedCourse}>
-          <SelectTrigger aria-label="选择对应的智慧课程"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="auto">{matches.length ? `自动匹配：${matches.map((root) => root.name).join("、")}` : "请选择对应的智慧课程"}</SelectItem>
-            {data.resources.map((root) => <SelectItem key={root.id} value={root.id}>{root.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>}
-      {focusCourse && !available.length ? <div className="surface course-resource-unmatched">
-        <BookOpen size={25} />
-        <h3>{data.resources.length ? "尚未匹配到智慧课程" : "智慧课程列表尚未同步"}</h3>
-        <p>{data.resources.length ? `课表中的“${focusCourse}”没有对应的课程名称，请在上方选择智慧课程。` : "先同步课程列表，再读取这门课程的文件和回放。"}</p>
-        {onRefresh && <Button size="sm" disabled={refreshing} onClick={async () => { setRefreshing(true); try { await onRefresh(); } finally { setRefreshing(false); } }}><RefreshCw size={14} />{refreshing ? "同步中" : "同步课程列表"}</Button>}
-      </div> : <>
-      <Tabs
-        value={tab}
-        onValueChange={(next) => setTab(next === "replay" ? "replay" : "files")}
-        variant="underline"
-        className="learning-tabs"
-      >
-        <TabsList>
-          <TabsTrigger value={"files"}>
-            <Folder size={14} />
-            课程文件
-          </TabsTrigger>
-          <TabsTrigger value={"replay"}>
-            <Video size={14} />
-            课程回放
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-      
-      {collectingLabel && (
-        <p className="inline-loading">
-          <Loader variant="spinner" size={15} label="正在加载" />
-          {collectingLabel}
-        </p>
+      {focusCourse && (
+        <div className="course-resource-match">
+          <span>智慧课程</span>
+          <Select value={mappedCourse} onValueChange={setMappedCourse}>
+            <SelectTrigger aria-label="选择对应的智慧课程">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="auto">
+                {matches.length
+                  ? `自动匹配：${matches.map((root) => root.name).join("、")}`
+                  : "请选择对应的智慧课程"}
+              </SelectItem>
+              {data.resources.map((root) => (
+                <SelectItem key={root.id} value={root.id}>
+                  {root.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       )}
-      
-      {tab === "replay" ? (
-        <ReplayPanel
-          account={account}
-          roots={available}
-          initialCourse={active}
-          cache={data.replays ?? {}}
-          onCache={onReplayCache}
-        />
+      {focusCourse && !available.length ? (
+        <div className="surface course-resource-unmatched">
+          <BookOpen size={25} />
+          <h3>
+            {data.resources.length
+              ? "尚未匹配到智慧课程"
+              : "智慧课程列表尚未同步"}
+          </h3>
+          <p>
+            {data.resources.length
+              ? `课表中的“${focusCourse}”没有对应的课程名称，请在上方选择智慧课程。`
+              : "先同步课程列表，再读取这门课程的文件和回放。"}
+          </p>
+          {onRefresh && (
+            <Button
+              size="sm"
+              disabled={refreshing}
+              onClick={async () => {
+                setRefreshing(true);
+                try {
+                  await onRefresh();
+                } finally {
+                  setRefreshing(false);
+                }
+              }}
+            >
+              <RefreshCw size={14} />
+              {refreshing ? "同步中" : "同步课程列表"}
+            </Button>
+          )}
+        </div>
       ) : (
-        <ResourceExplorer
-          key={`${account.id}:${roots.map((root) => root.id).join("|")}`}
-          roots={roots}
-          query={query}
-          selected={selected}
-          onSelectionChange={setSelected}
-          onLoad={onLoad}
-          onDetail={setDetail}
-          onDownload={download}
-          onCopy={copy}
-          onPreview={(node) => preview(node, account)}
-          onTreeDownload={treeDownload}
-          onCalendar={calendar}
-          busy={picking}
-          compact={compact}
-        />
+        <>
+          <Tabs
+            value={tab}
+            onValueChange={(next) =>
+              setTab(next === "replay" ? "replay" : "files")
+            }
+            variant="underline"
+            className="learning-tabs"
+          >
+            <TabsList>
+              <TabsTrigger value={"files"}>
+                <Folder size={14} />
+                课程文件
+              </TabsTrigger>
+              <TabsTrigger value={"replay"}>
+                <Video size={14} />
+                课程回放
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {collectingLabel && (
+            <p className="inline-loading">
+              <Loader variant="spinner" size={15} label="正在加载" />
+              {collectingLabel}
+            </p>
+          )}
+
+          {tab === "replay" ? (
+            <ReplayPanel
+              account={account}
+              roots={available}
+              initialCourse={active}
+              cache={data.replays ?? {}}
+              onCache={onReplayCache}
+            />
+          ) : (
+            <ResourceExplorer
+              key={`${account.id}:${roots.map((root) => root.id).join("|")}`}
+              roots={roots}
+              query={query}
+              selected={selected}
+              onSelectionChange={setSelected}
+              onLoad={onLoad}
+              onDetail={setDetail}
+              onDownload={download}
+              onCopy={copy}
+              onPreview={(node) => preview(node, account)}
+              onTreeDownload={treeDownload}
+              onCalendar={calendar}
+              busy={picking}
+              compact={compact}
+            />
+          )}
+        </>
       )}
-      </>}
       {detail && (
         <Modal
           title={detail.name}
@@ -283,8 +332,7 @@ export default function LearningResources({
               学校页面标记未开放下载，可尝试获取接口提供的链接。
             </p>
           )}
-          
-          
+
           {resolvedUrl && (
             <div className="raw-link-box">
               <Input
@@ -457,7 +505,7 @@ function ReplayPanel({
           {loading ? "正在读取" : "刷新回放"}
         </Button>
       </div>
-      
+
       {loading && !rootList.length && (
         <div className="replay-loading">
           <Loader variant="spinner" size={23} label="正在加载" />
@@ -617,26 +665,7 @@ function ReplayPlayer({
         <Copy size={14} />
         复制全部视角链接
       </Button>
-      {link && (
-        <video
-          key={link.url}
-          controls
-          playsInline
-          preload="metadata"
-          className="replay-video"
-          src={link.url}
-          onError={(event) => {
-            const code = event.currentTarget.error?.code;
-            setError(
-              code === 2
-                ? "回放网络加载失败，请检查网络或重新打开回放获取新链接。"
-                : code === 3
-                  ? "回放解码失败，可在浏览器打开或下载后播放。"
-                  : "回放地址无法加载，请重新打开回放获取新链接，或在浏览器打开。",
-            );
-          }}
-        />
-      )}
+      {link && <ReplayViewer links={links} view={view} />}
       <div className="modal-actions">
         <Button
           variant="secondary"
@@ -659,7 +688,6 @@ function ReplayPlayer({
           下载所选视角
         </Button>
       </div>
-      
     </Modal>
   );
 }

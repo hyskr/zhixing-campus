@@ -1,3 +1,4 @@
+import Classrooms from "./Classrooms";
 import UpdatesPopover from "./UpdatesPopover";
 import { FeedbackAlerts, useFeedback } from "./ui";
 import { TextReveal } from "@/components/motion/text-reveal";
@@ -727,6 +728,14 @@ export default function App() {
                   data={data}
                   onDeviceView={setDeviceView}
                   onRefresh={() => sync(account, "services")}
+                />
+              )}
+              {page === "classrooms" && (
+                <Classrooms
+                  key={account.id}
+                  account={account}
+                  currentWeek={data.currentWeek}
+                  onLoginRequired={() => setLogin({ studentId: account.id })}
                 />
               )}
               {page === "files" && <FileSpace account={account} />}

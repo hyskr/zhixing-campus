@@ -75,3 +75,9 @@ bun run tauri build --bundles app
 课程关联以 `courseMatching.ts` 处理教务名称的培养层次后缀，例如“工程伦理 [研]”对应“工程伦理”；不删除“在线课程”等课程标题内容。未自动匹配时可在侧栏选择对应智慧课程。
 
 `UpdatesPopover.tsx` 使用 BeUI Card、Button、Animated Badge 组合最近更新：标题允许两行，类别、变更类型与时间位于下一行，最多展示最近六条并提供查看全部入口。Esc 关闭后焦点回到通知按钮。
+
+## 0.8.0 使用位置
+
+- `Classrooms.tsx`：Select 选择楼宇、周次、学期与时段；Input 搜索教室及座位数；Checkbox 筛选空闲；Button 刷新；Loader 显示请求状态。
+- `ReplayViewer.tsx`：Checkbox 切换多视角，Select 选择倍速，Button 同步画面。
+- `PdfNavigation.tsx`：Button 切换目录和搜索、Input 输入关键词、Loader 显示搜索状态。错误继续使用全局浮动 Toast。

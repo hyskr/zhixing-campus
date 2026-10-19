@@ -45,6 +45,7 @@ import { timeRemaining } from "./homework";
 export const icons = {
   download: Download,
   services: Wallet,
+  classrooms: MapPin,
   house: House,
   calendar: CalendarDays,
   graduation: GraduationCap,

@@ -9,7 +9,8 @@ export type Page =
   | "settings"
   | "downloads"
   | "mail"
-  | "services";
+  | "services"
+  | "classrooms";
 export interface Account {
   id: string;
   name: string;
@@ -206,6 +207,7 @@ export const navItems: { id: Page; label: string; icon: string }[] = [
   { id: "downloads", label: "下载管理", icon: "download" },
   { id: "mail", label: "校园邮箱", icon: "mail" },
   { id: "services", label: "校园服务", icon: "services" },
+  { id: "classrooms", label: "教室占用", icon: "classrooms" },
 ];
 
 export interface Attachment {
@@ -268,4 +270,27 @@ export interface MailMessage {
   date: string;
   read: boolean;
   attached: boolean;
+}
+
+export type RoomStatus =
+  | "free"
+  | "scheduled"
+  | "rescheduled"
+  | "exam"
+  | "experiment"
+  | "other"
+  | "unknown";
+export interface Classroom {
+  id: string;
+  name: string;
+  capacity: number;
+  cells: RoomStatus[];
+}
+export interface ClassroomPage {
+  week: number;
+  building: string;
+  rooms: Classroom[];
+  buildings: { id: string; name: string }[];
+  semesters: { id: string; name: string }[];
+  currentSemester?: string;
 }

@@ -1,3 +1,4 @@
+import PdfNavigation from "./PdfNavigation";
 import { useErrorState } from "./ui";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
 import { Loader } from "@/components/motion/loader";
@@ -160,10 +161,10 @@ function Pdf({ bytes }: { bytes: Uint8Array }) {
           <Plus size={14} />
         </Button>
       </div>
+      <PdfNavigation doc={doc} onNavigate={setPage} />
       <div className="pdf-canvas-area">
         <canvas ref={canvas} />
       </div>
-      
     </>
   );
 }
@@ -324,7 +325,7 @@ function Preview({
             此格式可下载后使用系统应用打开；提供 PDF 转换版的文件可直接预览。
           </p>
         ) : null}
-        
+
         {fullScreen && (
           <div className="file-fullscreen-dock">
             <Dock size={40}>

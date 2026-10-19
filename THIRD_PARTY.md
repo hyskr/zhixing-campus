@@ -49,3 +49,8 @@ BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存�
 - Geist 与 Geist Mono 字体包采用 SIL OFL 1.1，许可文本位于 `licenses/geist.txt`、`licenses/geist-mono.txt`。
 
 - Lenis：MIT，BeUI 滚动进度组件辅助模块的依赖，许可见 `licenses/lenis.txt`。资料目录使用原生滚动。
+
+## 回放与课件阅读
+
+- 多视角同步、单路音频和阅读器功能组织参考 [57Darling02/BjtuCoursePlatform](https://github.com/57Darling02/BjtuCoursePlatform)，由本项目用 React 与 PDF.js API 实现，未复制 Vue 组件或其 PDF.js 发行目录。固定文件链接见 SOURCES.md。
+- hls.js：Apache-2.0，用于不具备原生 HLS 支持的 WebView；许可见 `licenses/hls-js.txt`。

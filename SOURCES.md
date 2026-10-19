@@ -102,3 +102,13 @@ v0.6.0 的侧栏、按钮、标签页、表单控件、弹层、课程抽屉、�
 ## AA 网页授权与 Cookie 衔接
 
 AA 网页入口使用 MIS `/module/module/10/`，在 WebView 内完成浏览器侧的 SSO。原生 `ensure_aa` 以 `/notice/item/` 及登录表单检查确认认证结果；完成地址参考上表 `MISService.swift` 与 `SchoolLoginProtocol.kt`。`campus.rs::school_webview_cookies` 只导出有效 Cookie，保留域、路径、HttpOnly、SameSite 与绝对到期时间，不重新使用相对 Max-Age。
+
+## 0.8.0 回放、阅读器与教室占用
+
+| 功能 | 本项目位置 | 参考文件与范围 |
+| --- | --- | --- |
+| 多视角同步、单路音频、倍速 | `src/ReplayViewer.tsx` | [BjtuCoursePlatform · CourseReplaySyncPlayer.vue](https://github.com/57Darling02/BjtuCoursePlatform/blob/a426761cbb8d38e218ba59653bfaf5f49c3fc47e/src/features/replay/components/CourseReplaySyncPlayer.vue)：参考交互及媒体同步方式，以 React 实现。 |
+| PDF 目录与文字搜索 | `src/PdfNavigation.tsx` | [BjtuCoursePlatform · CoursewarePage.vue](https://github.com/57Darling02/BjtuCoursePlatform/blob/a426761cbb8d38e218ba59653bfaf5f49c3fc47e/src/pages/courseware/CoursewarePage.vue)：参考完整 PDF.js 阅读器能力，本项目直接调用已有 PDF.js API。 |
+| 教室占用 | `src-tauri/src/classrooms.rs`、`src/Classrooms.tsx` | [KMP · ClassroomOccupancyHtmlParser.kt](https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/data/classroomoccupancy/ClassroomOccupancyHtmlParser.kt)：参考 7×7 单元格与颜色分类；当前接口和楼宇选项由学校页面核对。 |
+
+四个选课项目的文件、版本与流程对照见 [COURSE-RESEARCH.md](COURSE-RESEARCH.md)。选课执行尚未接入。
