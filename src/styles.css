@@ -5156,17 +5156,6 @@ body,
 .settings-group-content .settings-form-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-.campus-alert {
-  margin: 12px 0;
-  border: 1px solid #ecd8d2;
-}
-.campus-alert [data-slot="alert-title"] {
-  font-size: 13px;
-}
-.campus-alert [data-slot="alert-description"] {
-  font-size: 12px;
-  line-height: 1.65;
-}
 .upload-area {
   display: block;
   border: 0;
@@ -5193,23 +5182,6 @@ body,
 .global-morphing-search {
   width: 250px;
   font-size: 12px;
-}
-.notification-panel {
-  position: absolute;
-  right: 30px;
-  top: 60px;
-  width: 365px;
-  z-index: 45;
-}
-.notification-dismiss {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  cursor: default;
-}
-.notification-panel > div {
-  position: relative;
-  z-index: 1;
 }
 .assignment-course-multiselect {
   min-width: 215px;
@@ -5455,22 +5427,6 @@ body,
     padding-block: 8px;
   }
 }
-.floating-feedback-alert {
-  position: fixed;
-  top: 78px;
-  right: 24px;
-  z-index: 300;
-  width: min(390px, calc(100vw - 48px));
-  pointer-events: none;
-}
-.floating-feedback-alert > div {
-  pointer-events: auto;
-  border-radius: 11px;
-  box-shadow: 0 9px 30px #1a25151a, 0 2px 8px #1a25150a;
-  backdrop-filter: blur(16px);
-  background-color: #f4fbf8f5;
-  font-size: 13px;
-}
 .course-space-tabs {
   margin-top: 12px;
 }
@@ -5639,4 +5595,159 @@ body,
 }
 .download-history-row > button {
   flex-shrink: 0;
+}
+.campus-feedback-toasts {
+  z-index: 300 !important;
+  width: min(380px, calc(100vw - 32px));
+  right: 20px;
+  bottom: 20px;
+}
+.campus-feedback-surface {
+  border-radius: 11px !important;
+  padding: 12px 14px !important;
+  background: #fffffff5 !important;
+  box-shadow: 0 8px 28px #18221618 !important;
+  border-color: #e1e5de !important;
+}
+.campus-feedback-title {
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+  overflow-wrap: anywhere;
+}
+.campus-feedback-close {
+  color: #7d867b;
+}
+.download-task-error {
+  text-align: left;
+  width: fit-content;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.updates-popover-wrap {
+  position: absolute;
+  top: 58px;
+  right: 24px;
+  z-index: 70;
+  width: min(390px, calc(100vw - 32px));
+}
+.updates-backdrop {
+  position: fixed;
+  inset: 0;
+  cursor: default;
+}
+.updates-popover {
+  position: relative;
+  padding: 0 !important;
+  border: 1px solid #e3e6df !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 12px 36px #1822161f !important;
+  background: #fff !important;
+}
+.updates-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #eceee9;
+}
+.updates-heading > div {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.updates-heading h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.updates-heading > div > span {
+  font-size: 11px;
+  color: #7a8379;
+}
+.updates-heading > button {
+  width: 26px;
+  height: 26px;
+}
+.updates-list {
+  max-height: min(380px, calc(100dvh - 205px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.update-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 13px 15px;
+  text-align: left;
+  border-bottom: 1px solid #f0f1ed;
+}
+.update-item:hover,
+.update-item:focus-visible {
+  background: #f6f7f3;
+}
+.update-kind-dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #7b917d;
+  margin-top: 7px;
+}
+.update-kind-dot.removed {
+  background: #bd8566;
+}
+.update-item-content {
+  min-width: 0;
+  flex: 1;
+}
+.update-item-content > strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.6;
+}
+.update-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  font-size: 11px;
+  color: #8a9288;
+}
+.update-item-meta time {
+  margin-left: auto;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.update-open-icon {
+  margin-top: 4px;
+  color: #a4aca1;
+}
+.updates-popover footer {
+  padding: 5px 10px;
+  background: #fafbf8;
+}
+.updates-popover footer > button {
+  width: 100%;
+  justify-content: center;
+  font-size: 12px;
+  color: #626d60;
+}
+.updates-empty {
+  padding: 28px 18px;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: #8a9287;
+  font-size: 12px;
+}
+.updates-empty strong {
+  color: #667060;
+}
+.updates-popover {
+  gap: 0 !important;
 }

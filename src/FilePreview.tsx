@@ -1,6 +1,6 @@
+import { useErrorState } from "./ui";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
 import { Loader } from "@/components/motion/loader";
-import { ErrorAlert } from "./ui";
 import {
   createContext,
   useContext,
@@ -59,7 +59,7 @@ function Pdf({ bytes }: { bytes: Uint8Array }) {
     ),
     [page, setPage] = useState(1),
     [scale, setScale] = useState(1.15),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   useEffect(() => {
     let active = true;
     let loading: import("pdfjs-dist").PDFDocumentLoadingTask | undefined;
@@ -163,7 +163,7 @@ function Pdf({ bytes }: { bytes: Uint8Array }) {
       <div className="pdf-canvas-area">
         <canvas ref={canvas} />
       </div>
-      {error && <ErrorAlert message={error} />}
+      
     </>
   );
 }
@@ -180,7 +180,7 @@ function Preview({
     [bytes, setBytes] = useState<Uint8Array | null>(null),
     [html, setHtml] = useState(""),
     [image, setImage] = useState(""),
-    [error, setError] = useState(""),
+    [error, setError] = useErrorState(),
     [loading, setLoading] = useState(true),
     [fullScreen, setFullScreen] = useState(false);
   useEffect(() => {
@@ -324,7 +324,7 @@ function Preview({
             此格式可下载后使用系统应用打开；提供 PDF 转换版的文件可直接预览。
           </p>
         ) : null}
-        {error && <ErrorAlert message={String(error)} />}
+        
         {fullScreen && (
           <div className="file-fullscreen-dock">
             <Dock size={40}>

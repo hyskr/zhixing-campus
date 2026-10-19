@@ -1,3 +1,4 @@
+import { useErrorState } from "./ui";
 import { sameCourseName } from "./courseMatching";
 import {
   Collapsible,
@@ -14,7 +15,6 @@ import {
   MultiSelectItem,
   MultiSelectEmpty,
 } from "@/components/motion/multi-select";
-import { ErrorAlert } from "./ui";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import {
@@ -65,7 +65,7 @@ export default function Assignments({
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<Homework | null>(null);
   const [retrying, setRetrying] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
   const now = useNow();
   const courses = [...new Set(data.homework.map((h) => h.course))];
   const rows = data.homework.filter(
@@ -194,7 +194,7 @@ export default function Assignments({
           })}
         </div>
       )}
-      {error && <ErrorAlert message={String(error)} />}
+      
       {groups
         .filter((group) => filter === "全部状态" || filter === group.label)
         .map((group) => {

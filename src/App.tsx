@@ -1,24 +1,15 @@
-import { FeedbackAlerts } from "./ui";
+import UpdatesPopover from "./UpdatesPopover";
+import { FeedbackAlerts, useFeedback } from "./ui";
 import { TextReveal } from "@/components/motion/text-reveal";
 import {
   MorphingSearch,
   type MorphingSearchItem,
 } from "@/components/motion/morphing-search";
-import { NotificationStack } from "@/components/motion/notification-stack";
 import CampusSidebar from "./CampusSidebar";
 import {
   AnimatedSidebarProvider,
   AnimatedSidebarTrigger,
 } from "@/components/motion/animated-sidebar";
-import { AnimatedToastStack } from "@/components/motion/animated-toast-stack";
-import {
-  Alert,
-  AlertAction,
-  AlertContent,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
-} from "@/components/motion/alert";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -90,16 +81,14 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [syncLabel, setSyncLabel] = useState("");
-  const [syncFailures, setSyncFailures] = useState<Record<string, string[]>>(
-    {},
-  );
   const [accountMenu, setAccountMenu] = useState(false);
   const [login, setLogin] = useState<{ studentId?: string } | null>(null);
   const [removeId, setRemoveId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<"changes" | "mail" | "help" | null>(
     null,
   );
-  const [toast, setToast] = useState("");
+  const setToast = useFeedback("success");
+  const notificationsTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const account =
@@ -109,15 +98,9 @@ export default function App() {
     try {
       saveStore(store);
     } catch {
-      setToast("本机存储空间不足，最新数据暂未保存");
+      setToast("本机存储空间不足，最新数据暂未保存", "error");
     }
   }, [store]);
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(""), 4500);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -155,7 +138,6 @@ export default function App() {
             services: "services",
           } as Record<string, string>
         )[page];
-  const syncKey = `${account?.id}:${pageScope ?? page}`;
   useEffect(() => {
     if (!isTauri()) return;
     let active = true;
@@ -199,23 +181,13 @@ export default function App() {
         if (!payload.message.includes("登录状态已失效")) return;
         void withCampusSession(payload.accountId, () =>
           invoke("refresh_mailbox", { username: payload.accountId }),
-        )
-          .then(() => {
-            if (active)
-              setSyncFailures((errors) => ({
-                ...errors,
-                [`${payload.accountId}:mail`]: [],
-              }));
-          })
-          .catch(() => {
-            if (active)
-              setSyncFailures((errors) => ({
-                ...errors,
-                [`${payload.accountId}:mail`]: [
-                  "校园邮箱需要重新登录后继续后台检查",
-                ],
-              }));
-          });
+        ).catch(() => {
+          if (active)
+            setToast("校园邮箱需要重新登录后继续后台检查", "error", {
+              label: "重新登录",
+              onClick: () => setLogin({ studentId: payload.accountId }),
+            });
+        });
       },
     );
     return () => {
@@ -228,7 +200,6 @@ export default function App() {
     setSyncing(true);
     setSyncLabel("正在连接校园系统");
     try {
-      const targetKey = `${target.id}:${scope}`;
       if (target.demo) {
         setStore((s) => ({
           ...s,
@@ -271,10 +242,6 @@ export default function App() {
           },
           scope,
         );
-        setSyncFailures((errors) => ({
-          ...errors,
-          [targetKey]: result.failures,
-        }));
         setStore((s) =>
           s.accounts.some((a) => a.id === target.id)
             ? {
@@ -300,6 +267,15 @@ export default function App() {
             : scope === "all"
               ? "校园数据已同步"
               : "当前页面已同步",
+          result.failures.length ? "info" : "success",
+          result.failures.length
+            ? {
+                label: "重试同步",
+                onClick: () => {
+                  void sync(target, scope);
+                },
+              }
+            : undefined,
         );
       }
     } catch (error) {
@@ -307,11 +283,7 @@ export default function App() {
         error instanceof ManualCaptchaRequired
           ? "验证码需要手动填写，请重新登录"
           : String(error);
-      setSyncFailures((errors) => ({
-        ...errors,
-        [`${target.id}:${scope}`]: [message],
-      }));
-      setToast(message);
+      setToast(message, "error");
       if (
         message.includes("登录状态已失效") ||
         error instanceof ManualCaptchaRequired
@@ -373,10 +345,10 @@ export default function App() {
           }
         : s,
     );
-    setSyncFailures((errors) => ({
-      ...errors,
-      [`${target}:homework`]: result.failures,
-    }));
+    setToast(
+      result.failures.length ? result.failures.join("；") : "课程作业已刷新",
+      result.failures.length ? "error" : "success",
+    );
   }
   function replayCache(id: string, list: Replay[]) {
     if (!account) return;
@@ -412,7 +384,7 @@ export default function App() {
       setRemoveId(null);
       setToast("账号及本机缓存已移除");
     } catch (error) {
-      setToast(String(error));
+      setToast(String(error), "error");
     }
   }
   function accountAdded(added: Account) {
@@ -543,6 +515,7 @@ export default function App() {
             <button
               className="topbar-icon"
               aria-label="查看数据变更"
+              ref={notificationsTrigger}
               onClick={() => setNotificationsOpen((value) => !value)}
               aria-expanded={notificationsOpen}
             >
@@ -550,30 +523,28 @@ export default function App() {
               {data.changes.length > 0 && <span className="notification-dot" />}
             </button>
             {notificationsOpen && (
-              <div className="notification-panel">
-                <button
-                  className="notification-dismiss"
-                  aria-label="关闭通知"
-                  onClick={() => setNotificationsOpen(false)}
-                />
-                <NotificationStack
-                  items={data.changes.slice(0, 6).map((change) => ({
-                    id: change.id,
-                    title: change.title,
-                    description: change.category + "更新",
-                    trailing: fullDate(change.time),
-                  }))}
-                  defaultExpanded
-                  maxVisible={6}
-                  collapsedLabel="最近更新"
-                  expandedLabel="最近更新"
-                  emptyLabel="暂无数据更新"
-                  onViewAll={() => {
-                    setNotificationsOpen(false);
-                    setDialog("changes");
-                  }}
-                />
-              </div>
+              <UpdatesPopover
+                changes={data.changes}
+                trigger={notificationsTrigger}
+                onClose={() => setNotificationsOpen(false)}
+                onSelect={(change) => {
+                  setNotificationsOpen(false);
+                  const destinations: Record<string, Page> = {
+                    作业: "homework",
+                    成绩: "grades",
+                    课表: "schedule",
+                    资料: "resources",
+                    邮箱: "mail",
+                  };
+                  if (destinations[change.category])
+                    navigate(destinations[change.category]);
+                  else setDialog("changes");
+                }}
+                onViewAll={() => {
+                  setNotificationsOpen(false);
+                  setDialog("changes");
+                }}
+              />
             )}
             <span
               className="header-sync"
@@ -614,39 +585,6 @@ export default function App() {
           </div>
         </header>
         <main className="main-content">
-          {account && pageScope && syncFailures[syncKey]?.length > 0 && (
-            <Alert variant="warning" className="sync-warning">
-              <AlertIcon />
-              <AlertContent>
-                <AlertTitle>部分数据尚未更新，已保留本机缓存</AlertTitle>
-                <AlertDescription>
-                  {syncFailures[syncKey].join("；")}
-                </AlertDescription>
-                <AlertAction>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() =>
-                      syncFailures[syncKey].some(
-                        (message) =>
-                          message.includes("登录") ||
-                          message.includes("验证码"),
-                      )
-                        ? setLogin({ studentId: account.id })
-                        : void sync()
-                    }
-                  >
-                    {syncFailures[syncKey].some(
-                      (message) =>
-                        message.includes("登录") || message.includes("验证码"),
-                    )
-                      ? "重新登录"
-                      : "重试同步"}
-                  </Button>
-                </AlertAction>
-              </AlertContent>
-            </Alert>
-          )}
           {page === "settings" ? (
             <div className="page-content">
               <Settings account={account} />
@@ -804,7 +742,7 @@ export default function App() {
                       await invoke("remove_account", { username: a.id });
                       setToast("已退出登录，本机缓存可继续查看");
                     } catch (error) {
-                      setToast(String(error));
+                      setToast(String(error), "error");
                     }
                   }}
                 />
@@ -930,16 +868,6 @@ export default function App() {
         </Modal>
       )}
       <FeedbackAlerts />
-      <AnimatedToastStack
-        placement="fixed"
-        toasts={
-          toast
-            ? [{ id: toast, title: toast, status: "info", duration: 4500 }]
-            : []
-        }
-        onDismiss={() => setToast("")}
-        position="bottom-right"
-      />
     </AnimatedSidebarProvider>
   );
 }

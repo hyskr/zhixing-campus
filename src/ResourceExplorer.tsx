@@ -30,7 +30,7 @@ import {
 } from "@/components/motion/file-tree";
 import { OverflowActions } from "@/components/motion/overflow-actions";
 import type { Resource } from "./types";
-import { ErrorAlert, useFeedback } from "./ui";
+import { useFeedback } from "./ui";
 
 type Entry = { key: string; node: Resource; children: Entry[] };
 function entries(nodes: Resource[], parent = ""): Entry[] {
@@ -163,6 +163,7 @@ export default function ResourceExplorer({
     setErrors((current) => ({ ...current, [entry.key]: "" }));
     const request = Promise.resolve().then(() => onLoad(entry.node)).catch((reason) => {
       setErrors((current) => ({ ...current, [entry.key]: String(reason) }));
+      notify(String(reason), "error");
       return undefined;
     }).finally(() => {
       requests.current.delete(entry.key);
@@ -195,7 +196,6 @@ export default function ResourceExplorer({
       if (firstCategory.node.loaded === false) void load(firstCategory);
     }
   }, [effectiveKey, currentEntry?.node.loaded, firstCategory?.key, firstCategory?.node.loaded]);
-  const currentError = effectiveKey ? errors[effectiveKey] : "";
   function descendantFiles(node: Resource): Resource[] {
     return node.kind === "file" ? [node] : node.children.flatMap(descendantFiles);
   }
@@ -483,7 +483,7 @@ export default function ResourceExplorer({
               选择左侧课程或文件查看操作。
             </div>
           )}
-          {currentError && <ErrorAlert message={currentError} />}
+          
         </article>
       </div>
     </section>

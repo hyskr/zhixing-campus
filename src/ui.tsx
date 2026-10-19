@@ -1,19 +1,23 @@
-import { createPortal } from "react-dom";
 import {
-  Alert,
-  AlertClose,
-  AlertContent,
-  AlertDescription,
-  AlertIcon,
-  AlertTitle,
-} from "@/components/motion/alert";
+  AnimatedToastStack,
+  useAnimatedToastStack,
+  type ToastStatus,
+  type AnimatedToastAction,
+} from "@/components/motion/animated-toast-stack";
 import { StatefulButton } from "@/components/motion/button";
 import {
   CenterMorphModal,
   CenterMorphModalContent,
 } from "@/components/motion/center-morph-modal";
 import { Drawer } from "@/components/motion/drawer";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ArrowUpRight,
   BookOpen,
@@ -179,55 +183,86 @@ export function Modal({
   );
 }
 
-export function ErrorAlert({
-  message,
-  title = "操作未完成",
-}: {
+type FeedbackDetail = {
   message: string;
-  title?: string;
-}) {
-  return (
-    <Alert variant="destructive" className="campus-alert">
-      <AlertIcon />
-      <AlertContent>
-        <AlertTitle>{title}</AlertTitle>
-        <AlertDescription>{message}</AlertDescription>
-      </AlertContent>
-    </Alert>
+  variant: ToastStatus;
+  action?: AnimatedToastAction;
+};
+export function useFeedback(variant: ToastStatus = "success") {
+  return useCallback(
+    (
+      message: string,
+      kind: ToastStatus = variant,
+      action?: AnimatedToastAction,
+    ) => {
+      if (message)
+        window.dispatchEvent(
+          new CustomEvent<FeedbackDetail>("campus:feedback", {
+            detail: { message, variant: kind, action },
+          }),
+        );
+    },
+    [variant],
   );
 }
-
-type FeedbackVariant = "success" | "info";
-export function useFeedback(variant: FeedbackVariant = "success") {
-  return useCallback((message: string, kind: FeedbackVariant = variant) => {
-    if (message) window.dispatchEvent(new CustomEvent("campus:feedback", { detail: { message, variant: kind } }));
-  }, [variant]);
+/** 保留页面所需的失败状态，操作原因统一交给浮动提示。 */
+export function useErrorState() {
+  const [error, storeError] = useState("");
+  const notify = useFeedback("error");
+  const setError = useCallback(
+    (message: string) => {
+      storeError(message);
+      if (message)
+        notify(message, message === "此目录暂无可下载文件" ? "info" : "error");
+    },
+    [notify],
+  );
+  return [error, setError] as const;
 }
 export function FeedbackAlerts() {
-  const [feedback, setFeedback] = useState<{ id: number; message: string; variant: FeedbackVariant } | null>(null);
-  const sequence = useRef(0);
+  const [portalRoot, setPortalRoot] = useState<Element | null>(null);
+  useEffect(() => {
+    const update = () => setPortalRoot(document.fullscreenElement);
+    update();
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+
+  const { toasts, showToast, dismissToast } = useAnimatedToastStack({
+    defaultDuration: 4500,
+    limit: 3,
+  });
   useEffect(() => {
     const receive = (event: Event) => {
-      const detail = (event as CustomEvent<{ message: string; variant: FeedbackVariant }>).detail;
-      setFeedback({ ...detail, id: ++sequence.current });
+      const { message, variant, action } = (
+        event as CustomEvent<FeedbackDetail>
+      ).detail;
+      showToast({
+        title: message,
+        status: variant,
+        action,
+        duration: variant === "error" ? 6500 : 4500,
+      });
     };
     window.addEventListener("campus:feedback", receive);
     return () => window.removeEventListener("campus:feedback", receive);
-  }, []);
-  useEffect(() => {
-    if (!feedback) return;
-    const timer = setTimeout(() => setFeedback(null), 4500);
-    return () => clearTimeout(timer);
-  }, [feedback]);
-  return feedback ? createPortal(
-    <div className="floating-feedback-alert">
-      <Alert key={feedback.id} variant={feedback.variant} open onOpenChange={(open) => { if (!open) setFeedback(null); }} contentClassName="items-center">
-        <AlertIcon />
-        <AlertContent><AlertDescription>{feedback.message}</AlertDescription></AlertContent>
-        <AlertClose aria-label="关闭提示" />
-      </Alert>
-    </div>, document.body
-  ) : null;
+  }, [showToast]);
+  return (
+    <AnimatedToastStack
+      toasts={toasts}
+      onDismiss={dismissToast}
+      placement="fixed"
+      portalRoot={portalRoot}
+      position="bottom-right"
+      maxVisible={3}
+      className="campus-feedback-toasts"
+      classNames={{
+        surface: "campus-feedback-surface",
+        title: "campus-feedback-title",
+        close: "campus-feedback-close",
+      }}
+    />
+  );
 }
 
 export function SyncButton({

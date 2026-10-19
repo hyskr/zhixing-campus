@@ -1,6 +1,6 @@
+import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { Card, CardContent } from "@/components/motion/card";
-import { ErrorAlert } from "./ui";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 // 参考来源：余额字段参考 MIS 状态接口，充值入口参考原版首页；界面与入口管理由本项目实现。
 // https://github.com/HFDLYS/BJTUselfService/blob/7d94f740efa99152456f5a2e72bb0948de4a2e7a/app/src/main/java/team/bjtuss/bjtuselfservice/web/MisDataManager.java
@@ -28,7 +28,7 @@ export default function Services({
 }) {
   const setMessage = useFeedback("success");
   const [tab, setTab] = useState("余额与入口");
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
   useEffect(() => {
     onDeviceView?.(tab === "校园网设备");
     return () => onDeviceView?.(false);
@@ -135,7 +135,7 @@ export default function Services({
         </>
       )}
       
-      {error && <ErrorAlert message={String(error)} />}
+      
     </>
   );
 }

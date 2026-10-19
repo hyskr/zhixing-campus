@@ -1,10 +1,10 @@
+import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import {
   FileUpload,
   createFileUploadItem,
   type FileUploadItem,
 } from "@/components/motion/file-upload";
-import { ErrorAlert } from "./ui";
 import { Checkbox } from "@/components/motion/checkbox";
 // 参考来源：参考上传记录保存、链接复制及附件复用的功能组织；界面与存储由本项目实现。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/uploader/saved-uploads.js
@@ -42,7 +42,7 @@ export default function UploadPanel({
   const { files, update } = useUploads(account.id);
   const [queue, setQueue] = useState<FileUploadItem[]>([]);
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   async function upload(values: File[], added?: FileUploadItem[]) {
     if (busy || !values.length) return;
     const batch =
@@ -177,7 +177,7 @@ export default function UploadPanel({
       </div>
       {busy && <progress className="upload-wait" aria-label="正在上传文件" />}
       
-      {error && <ErrorAlert message={String(error)} />}
+      
       <div className="upload-record-heading">
         <h3>
           已上传文件 <span className="count-pill">{files.length}</span>

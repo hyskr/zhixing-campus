@@ -1,4 +1,4 @@
-import { ErrorAlert } from "./ui";
+import { useErrorState } from "./ui";
 // 页面布局参考：https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail.tsx
 // 邮件列表与阅读区参考：https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail-list.tsx
 // https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail-display.tsx
@@ -59,7 +59,7 @@ export default function Mail({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
 
   useEffect(() => {
     if (!rows.length) {
@@ -288,7 +288,7 @@ export default function Mail({
           )}
         </article>
       </section>
-      {error && <ErrorAlert message={String(error)} />}
+      
     </>
   );
 }

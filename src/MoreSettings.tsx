@@ -1,6 +1,6 @@
+import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { SettingsGroup } from "./SettingsGroups";
-import { ErrorAlert } from "./ui";
 import {
   Select,
   SelectTrigger,
@@ -33,7 +33,7 @@ export default function MoreSettings({ account }: { account?: Account }) {
       String(preferences.mailInterval || 10),
     ),
     [mode, setMode] = useState("keychain"),
-    [error, setError] = useState(""),
+    [error, setError] = useErrorState(),
     [busy, setBusy] = useState(false),
     [diagnostics, setDiagnostics] = useState<
       { id: string; name: string; ok: boolean; detail: string }[]
@@ -385,7 +385,7 @@ export default function MoreSettings({ account }: { account?: Account }) {
         </div>
       </SettingsGroup>
       
-      {error && <ErrorAlert message={String(error)} />}
+      
     </>
   );
 }

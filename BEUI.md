@@ -1,6 +1,6 @@
 # BeUI 界面与 Bun 开发
 
-知行 Campus v0.7.2 使用 BeUI 源码组件重写界面，React 页面调用已有校园服务接口。运行与依赖管理使用 Bun。
+知行 Campus v0.7.4 使用 BeUI 源码组件重写界面，React 页面调用已有校园服务接口。运行与依赖管理使用 Bun。
 
 ## 组件来源与使用位置
 
@@ -16,11 +16,11 @@
 | Select | [select](https://beui.dev/components/motion/select) | 作业筛选、认证方式、凭据模式、并行数与回放课程选择 |
 | Switch | [switch](https://beui.dev/components/motion/switch) | 连接、上传复用、通知和自动重连设置 |
 | Checkbox | [checkbox](https://beui.dev/components/motion/checkbox) | 资源、设备、附件多选 |
-| Card | [card](https://beui.dev/components/motion/card) | `Pages.tsx`：首页指标、安排、待办、课程与更新 |
+| Card | [card](https://beui.dev/components/motion/card) | `Pages.tsx`、`UpdatesPopover.tsx`：首页与更新面板 |
 | Table | [table](https://beui.dev/components/motion/table) | `Pages.tsx`：可排序成绩表与虚拟滚动 |
 | Center Morph Modal | [center-morph-modal](https://beui.dev/components/motion/center-morph-modal) | `ui.tsx`：登录、成绩、作业详情、确认与文件预览 |
 | Drawer | [drawer](https://beui.dev/components/motion/drawer) | `ui.tsx`、`CourseDrawer.tsx`：课程详情侧栏 |
-| Animated Toast Stack | [animated-toast-stack](https://beui.dev/components/motion/animated-toast-stack) | `App.tsx`：同步与操作反馈 |
+| Animated Toast Stack | [animated-toast-stack](https://beui.dev/components/motion/animated-toast-stack) | `ui.tsx`：统一错误、信息、同步与操作反馈 |
 | Animated Badge | [animated-badge](https://beui.dev/components/motion/animated-badge) | `Mail.tsx`、`Assignments.tsx`、`Downloads.tsx`：未读、作业与下载状态 |
 | Tooltip | [tooltip](https://beui.dev/components/motion/tooltip) | `Mail.tsx`：刷新操作提示 |
 | Stateful Button | [button](https://beui.dev/components/motion/button) | `ui.tsx`：同步中的状态反馈 |
@@ -32,8 +32,6 @@
 | File Upload | [file-upload](https://beui.dev/r/file-upload.json) | `UploadPanel.tsx`：文件选择、拖拽、上传队列、失败重试；粘贴仍接入原上传流程 |
 | Overflow Actions | [overflow-actions](https://beui.dev/r/overflow-actions.json) | `ResourceExplorer.tsx`：批量下载与更多文件操作 |
 | Morphing Search | [morphing-search](https://beui.dev/r/morphing-search.json) | `App.tsx`：⌘K / Ctrl+K 搜索页面、课程和作业 |
-| Notification Stack | [notification-stack](https://beui.dev/r/notification-stack.json) | `App.tsx`：最近数据变更列表 |
-| Animated Alert | [alert](https://beui.dev/r/alert.json) | `ui.tsx 与各业务页`：同步警告与表单错误；操作结果在右上角浮动显示 |
 | Animated Collapsible | [collapsible](https://beui.dev/r/collapsible.json) | `Assignments.tsx`：待完成、已提交、已逾期独立折叠 |
 | Sortable List | [sortable-stack](https://beui.dev/r/sortable-stack.json) | `HomeShortcuts.tsx`：快速入口拖拽、键盘排序和本机保存 |
 | Multi Select | [multi-select](https://beui.dev/r/multi-select.json) | `Assignments.tsx`：多门课程组合筛选 |
@@ -72,6 +70,8 @@ bun run tauri build --bundles app
 
 `packageManager` 固定为 `bun@1.4.3`，依赖版本由 `bun.lock` 锁定。Tauri 的开发和构建前置命令分别调用 `bun run dev` 和 `bun run build`。
 
-操作结果通过 `useFeedback` 发送，`FeedbackAlerts` 在正文之外以 BeUI Alert 显示，4.5 秒后消失，可手动关闭。同样的操作可重复通知。File Tree 的 `renderAccessory` 扩展在行尾组合 BeUI Checkbox；勾选文件夹时先刷新并递归读取后代目录，再选择返回的文件；顶部全选同样读取全部课程目录。取消选择不发起请求。课程侧栏使用文字始终可见的 Tabs 导航。
+操作结果通过 `useFeedback` 发送，页面错误通过 `useErrorState` 保留业务状态并发出提示；`FeedbackAlerts` 在正文之外使用 BeUI Animated Toast Stack 显示。一般提示 4.5 秒、错误 6.5 秒后消失，可手动关闭，最多保留三条。同样的操作可重复通知，全屏文件查看时提示进入当前全屏容器。File Tree 的 `renderAccessory` 扩展在行尾组合 BeUI Checkbox；勾选文件夹时先刷新并递归读取后代目录，再选择返回的文件；顶部全选同样读取全部课程目录。取消选择不发起请求。课程侧栏使用文字始终可见的 Tabs 导航。
 
 课程关联以 `courseMatching.ts` 处理教务名称的培养层次后缀，例如“工程伦理 [研]”对应“工程伦理”；不删除“在线课程”等课程标题内容。未自动匹配时可在侧栏选择对应智慧课程。
+
+`UpdatesPopover.tsx` 使用 BeUI Card、Button、Animated Badge 组合最近更新：标题允许两行，类别、变更类型与时间位于下一行，最多展示最近六条并提供查看全部入口。Esc 关闭后焦点回到通知按钮。

@@ -1,4 +1,4 @@
-import { ErrorAlert } from "./ui";
+import { useErrorState } from "./ui";
 import { Input } from "@/components/motion/input";
 import {
   Select,
@@ -38,7 +38,7 @@ export default function LoginModal({
   const [busy, setBusy] = useState(false);
   const [manual, setManual] = useState(false);
   const [progress, setProgress] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
   const [credentialMode, setCredentialMode] = useState("keychain");
   const remember = credentialMode !== "session";
   const [method, setMethod] = useState("cas"),
@@ -282,7 +282,7 @@ export default function LoginModal({
             </SelectContent>
           </Select>
         </label>
-        {error && <ErrorAlert message={String(error)} />}
+        
         <Button
           type="submit"
           className="login-submit"

@@ -1,4 +1,5 @@
-import { ErrorAlert } from "./ui";
+import { useFeedback } from "./ui";
+import { useErrorState } from "./ui";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { Input } from "@/components/motion/input";
@@ -42,15 +43,19 @@ const Context = createContext<{
   clear: (accountId: string) => Promise<void>;
 }>({ tasks: [], error: "", clear: async () => {} });
 export function DownloadsProvider({ children }: { children: ReactNode }) {
+  const notify = useFeedback("error");
   const [tasks, setTasks] = useState<Record<string, DownloadTask>>({}),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   useEffect(() => {
     if (!isTauri()) return;
     let active = true;
     const off = listen<DownloadTask>(
       "campus-download-progress",
       ({ payload }) => {
-        if (active) setTasks((prev) => ({ ...prev, [payload.id]: payload }));
+        if (active) {
+          setTasks((prev) => ({ ...prev, [payload.id]: payload }));
+          if (payload.state === "failed") notify(`${payload.name}：${payload.error || "下载失败"}`);
+        }
       },
     );
     void off
@@ -89,10 +94,11 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
 }
 export const useDownloads = () => useContext(Context);
 export default function Downloads({ account }: { account?: Account }) {
+  const showDownloadError = useFeedback("error");
   const { tasks, error: loadError, clear } = useDownloads();
   const [filter, setFilter] = useState("全部"),
     [query, setQuery] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   const all = tasks
     .filter((t) => !account || t.accountId === account.id)
     .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
@@ -251,7 +257,7 @@ export default function Downloads({ account }: { account?: Account }) {
                     {t.finishedAt && <time dateTime={new Date(t.finishedAt).toISOString()}>{t.state === "completed" ? "完成" : "结束"}：{formatDownloadTime(t.finishedAt)}</time>}
                     {t.startedAt && <span>{downloadDuration(t)}</span>}
                   </div>
-                  {t.error ? <p className="download-task-error" role="alert" title={t.error}>{t.error}</p> : <p className="download-path" title={t.path ?? t.folder ?? ""}>{t.path ?? t.folder ?? "保存位置将在下载完成后显示"}</p>}
+                  {t.error ? <button className="download-task-error" onClick={() => showDownloadError(t.error!)}>查看失败原因</button> : <p className="download-path" title={t.path ?? t.folder ?? ""}>{t.path ?? t.folder ?? "保存位置将在下载完成后显示"}</p>}
                 </div>
                 {activeTask(t) ? (
                   <Button
@@ -296,9 +302,7 @@ export default function Downloads({ account }: { account?: Account }) {
           </div>
         )}
       </section>
-      {(error || loadError) && (
-        <ErrorAlert message={String(error || loadError)} />
-      )}
+      
     </>
   );
 }

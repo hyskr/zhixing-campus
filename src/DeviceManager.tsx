@@ -1,4 +1,4 @@
-import { ErrorAlert } from "./ui";
+import { useErrorState } from "./ui";
 import { Input } from "@/components/motion/input";
 import { Checkbox } from "@/components/motion/checkbox";
 // 参考来源：用户提供的《校园网设备管理器》HTML（已粘贴的文本.txt）。
@@ -40,7 +40,7 @@ export default function DeviceManager({
   const [rows, setRows] = useState<Device[]>([]),
     [selected, setSelected] = useState<string[]>([]),
     [loading, setLoading] = useState(false),
-    [error, setError] = useState(""),
+    [error, setError] = useErrorState(),
     [rounds, setRounds] = useState(1),
     [ip, setIp] = useState(""),
     [confirmation, setConfirmation] = useState<Device[] | null>(null),
@@ -359,7 +359,7 @@ export default function DeviceManager({
           <progress max={progress.total} value={progress.completed} />
         </div>
       )}
-      {error && <ErrorAlert message={String(error)} />}
+      
       <div className="device-logs">
         <h3>操作日志</h3>
         {logs.length ? (

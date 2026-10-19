@@ -1,6 +1,6 @@
+import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { SettingsGroup, SettingsGroups } from "./SettingsGroups";
-import { ErrorAlert } from "./ui";
 import { Input } from "@/components/motion/input";
 import {
   Select,
@@ -22,7 +22,7 @@ export default function Settings({ account }: { account?: Account }) {
   const setStatus = useFeedback("info");
   const { preferences, ready, save } = usePreferences();
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   const [port, setPort] = useState<string>();
   async function update(patch: Partial<Preferences>) {
     setBusy(true);
@@ -201,7 +201,7 @@ export default function Settings({ account }: { account?: Account }) {
         </SettingsGroup>
         <MoreSettings account={account} />
       </SettingsGroups>
-      {error && <ErrorAlert message={String(error)} />}
+      
     </div>
   );
 }

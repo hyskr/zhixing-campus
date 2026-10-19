@@ -90,3 +90,7 @@ v0.6.0 的侧栏、按钮、标签页、表单控件、弹层、课程抽屉、�
 ## 下载目录与时间记录
 
 `resourcePaths.ts` 从当前课程资源树生成保存路径，多选下载通过 `DownloadItem.relativePath` 传入原生下载队列；子目录递归下载同样传入完整父路径。`media.rs` 保存加入、开始和结束时间，重试时更新当前下载的时间；`Downloads.tsx` 使用固定高度的卡片展示时间、速度和保存位置。
+
+## 浮动操作反馈与最近更新
+
+`ui.tsx` 使用 BeUI `animated-toast-stack` 统一操作反馈；组件关闭按钮在 `src/components/motion/animated-toast-stack.tsx` 中提供中文名称。`UpdatesPopover.tsx` 通过已有 BeUI Card、Button、Animated Badge 组合更新列表，使用当前账号的 `Change` 数据；来源文件和许可见 [BEUI.md](BEUI.md)。

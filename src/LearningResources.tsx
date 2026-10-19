@@ -1,9 +1,9 @@
+import { useErrorState } from "./ui";
 import { resourceDirectory } from "./resourcePaths";
 import { sameCourseName } from "./courseMatching";
 import { useFeedback } from "./ui";
 import { Loader } from "@/components/motion/loader";
 import ResourceExplorer from "./ResourceExplorer";
-import { ErrorAlert } from "./ui";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import {
   Select,
@@ -82,7 +82,7 @@ export default function LearningResources({
   const [tab, setTab] = useState<"files" | "replay">("files");
   const [selected, setSelected] = useState<Record<string, Resource>>({});
   const [detail, setDetail] = useState<Resource | null>(null);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
   const preview = useFilePreview();
   const [picking, setPicking] = useState(false);
   const setNotice = useFeedback("success");
@@ -224,7 +224,7 @@ export default function LearningResources({
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      {error && <ErrorAlert message={String(error)} />}
+      
       {collectingLabel && (
         <p className="inline-loading">
           <Loader variant="spinner" size={15} label="正在加载" />
@@ -284,7 +284,7 @@ export default function LearningResources({
             </p>
           )}
           
-          {error && <ErrorAlert message={String(error)} />}
+          
           {resolvedUrl && (
             <div className="raw-link-box">
               <Input
@@ -375,7 +375,7 @@ function ReplayPanel({
   );
   const [rootList, setRootList] = useState<Replay[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
   const [refresh, setRefresh] = useState(0);
   const [player, setPlayer] = useState<{
     replay: Replay;
@@ -457,7 +457,7 @@ function ReplayPanel({
           {loading ? "正在读取" : "刷新回放"}
         </Button>
       </div>
-      {error && <ErrorAlert message={String(error)} />}
+      
       {loading && !rootList.length && (
         <div className="replay-loading">
           <Loader variant="spinner" size={23} label="正在加载" />
@@ -524,7 +524,7 @@ function ReplayPlayer({
   const [view, setView] = useState(
     links.find((link) => link.view === "teacher")?.view ?? links[0]?.view,
   );
-  const [error, setError] = useState("");
+  const [error, setError] = useErrorState();
   const [picking, setPicking] = useState(false);
   const link = links.find((l) => l.view === view);
   async function download() {
@@ -659,7 +659,7 @@ function ReplayPlayer({
           下载所选视角
         </Button>
       </div>
-      {error && <ErrorAlert message={String(error)} />}
+      
     </Modal>
   );
 }

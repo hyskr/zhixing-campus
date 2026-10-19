@@ -1,5 +1,5 @@
+import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
-import { ErrorAlert } from "./ui";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Input } from "@/components/motion/input";
@@ -30,7 +30,7 @@ export default function FileSpace({ account }: { account: Account }) {
     [selected, setSelected] = useState<string[]>([]),
     [loading, setLoading] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   useEffect(() => {
     if (tab !== "个人资源空间") return;
     let active = true;
@@ -224,7 +224,7 @@ export default function FileSpace({ account }: { account: Account }) {
           )}
         </section>
       )}
-      {error && <ErrorAlert message={String(error)} />}
+      
       
     </>
   );

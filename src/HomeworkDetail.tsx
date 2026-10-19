@@ -1,6 +1,6 @@
+import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { Loader } from "@/components/motion/loader";
-import { ErrorAlert } from "./ui";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/motion/button";
@@ -40,7 +40,7 @@ export default function HomeworkDetail({
   const preview = useFilePreview();
   const [detail, setDetail] = useState<HomeworkDetailData | null>(null),
     [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
+    [error, setError] = useErrorState();
   const [tab, setTab] = useState("作业要求"),
     [content, setContent] = useState(""),
     [files, setFiles] = useState<UploadedFile[]>([]),
@@ -324,7 +324,7 @@ export default function HomeworkDetail({
         </>
       )}
       
-      {error && <ErrorAlert message={String(error)} />}
+      
       <div className="modal-actions">
         <Button
           size="sm"
