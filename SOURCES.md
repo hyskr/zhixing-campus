@@ -131,3 +131,7 @@ AA 网页入口使用 MIS `/module/module/10/`，在 WebView 内完成浏览器�
 Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.claude.com/tutorials/navigating-the-claude-desktop-app) 的视觉方向，使用本项目 CSS 令牌和系统字体实现，未引入 Claude 的组件代码、图标或字体文件。实现位于 `src/appearance.css`、`src/AppearanceSettings.tsx` 与 `src/preferences.tsx`。
 
 首页的四块信息区、邮箱优先级与邮件动态合并由本项目实现，位置为 `src/HomeDashboard.tsx`、`src/storage.ts`、`src/App.tsx`。`src/courseWeeks.ts` 保留原有教学周判断，用于首页与课表共享。
+
+## 0.10.1 SSO 主登录更新
+
+最近两天上游提交、具体文件和本项目对应实现见 [AUTH-20261020.md](AUTH-20261020.md)。主流程参考 KMP `cc23379` 的 MIS OAuth 认证和验证码错误分类；课程助手 `99a6a37` 用于核对默认 SSO 及共享浏览器的账号切换行为。SM2 使用既有 gm-crypto，以 KMP 公开的学校 sm-crypto 夹具交叉验证。

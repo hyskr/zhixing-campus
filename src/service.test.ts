@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
 import { solveCaptcha } from "./captcha";
 import {
-  authenticateCampus,
+  authenticateLegacyCampus as authenticateCampus,
   ManualCaptchaRequired,
   syncCampus,
   openSchoolPage,
@@ -10,6 +10,9 @@ import {
 const { stop } = vi.hoisted(() => ({ stop: vi.fn() }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("@tauri-apps/api/event", () => ({ listen: vi.fn(async () => stop) }));
+vi.mock("./ssoCrypto", () => ({
+  encryptSsoPassword: vi.fn(async () => "encrypted-password"),
+}));
 vi.mock("./captcha", () => ({ solveCaptcha: vi.fn() }));
 const call = vi.mocked(invoke);
 const profile = {
@@ -93,19 +96,23 @@ describe("校园登录与会话恢复", () => {
   it("会话失效后使用已保存凭据登录再同步", async () => {
     call
       .mockRejectedValueOnce("登录状态已失效，请重新登录校园账号")
+      .mockResolvedValueOnce({ publicKey: "sso-key", credentialMode: "file" })
       .mockResolvedValueOnce("test-password")
-      .mockResolvedValueOnce({ image: "first" })
-      .mockResolvedValueOnce(profile)
+      .mockResolvedValueOnce({ profile })
       .mockResolvedValueOnce(snapshot);
     expect(await syncCampus("10001")).toEqual(snapshot);
     expect(call.mock.calls.map((args) => args[0])).toEqual([
       "sync_account",
+      "begin_sso",
       "saved_password",
-      "begin_login",
-      "finish_login",
+      "finish_sso",
       "sync_account",
     ]);
     expect(stop).toHaveBeenCalledTimes(2);
+    expect(call).toHaveBeenCalledWith(
+      "finish_sso",
+      expect.objectContaining({ credentialMode: "file" }),
+    );
   });
   it("子系统会话失效且未保存密码时保留成功的数据", async () => {
     const partial = {
@@ -113,9 +120,12 @@ describe("校园登录与会话恢复", () => {
       authExpired: true,
       failures: ["作业：登录状态已失效"],
     };
-    call.mockResolvedValueOnce(partial).mockResolvedValueOnce(null);
+    call
+      .mockResolvedValueOnce(partial)
+      .mockResolvedValueOnce({ publicKey: "key" })
+      .mockResolvedValueOnce(null);
     expect(await syncCampus("10001")).toEqual(partial);
-    expect(call).toHaveBeenCalledTimes(2);
+    expect(call).toHaveBeenCalledTimes(3);
   });
 });
 it("成绩页刷新只请求成绩同步范围", async () => {
@@ -139,8 +149,8 @@ it("同账号的并发过期请求共用一次登录恢复", async () => {
   });
   call.mockImplementation(async (command) => {
     if (command === "saved_password") return "test-password";
-    if (command === "begin_login") return { image: "captcha-image" };
-    if (command === "finish_login") return profile;
+    if (command === "begin_sso") return { publicKey: "sso-key" };
+    if (command === "finish_sso") return { profile };
     throw Error(String(command));
   });
   const { withCampusSession } = await import("./service");
@@ -151,7 +161,7 @@ it("同账号的并发过期请求共用一次登录恢复", async () => {
     ]),
   ).toEqual(["ok", "ok"]);
   expect(
-    call.mock.calls.filter(([command]) => command === "begin_login"),
+    call.mock.calls.filter(([command]) => command === "begin_sso"),
   ).toHaveLength(1);
 });
 it("连续三次验证码校验失败后换新图交给手动输入", async () => {
@@ -174,16 +184,16 @@ it("连续三次验证码校验失败后换新图交给手动输入", async () =
 it("快捷入口会话失效时，先恢复认证再重试原页面与邮件编号", async () => {
   call
     .mockRejectedValueOnce("登录状态已失效，请重新登录校园账号")
+    .mockResolvedValueOnce({ publicKey: "key" })
     .mockResolvedValueOnce("test-password")
-    .mockResolvedValueOnce({ image: "captcha" })
-    .mockResolvedValueOnce(profile)
+    .mockResolvedValueOnce({ profile })
     .mockResolvedValueOnce(undefined);
   await openSchoolPage("10001", "mail", "mail-42");
   expect(call.mock.calls.map(([command]) => command)).toEqual([
     "open_school_page",
+    "begin_sso",
     "saved_password",
-    "begin_login",
-    "finish_login",
+    "finish_sso",
     "open_school_page",
   ]);
   expect(call).toHaveBeenLastCalledWith("open_school_page", {
@@ -195,12 +205,83 @@ it("快捷入口会话失效时，先恢复认证再重试原页面与邮件编�
 it("无法恢复登录时不继续打开快捷入口", async () => {
   call
     .mockRejectedValueOnce("登录状态已失效，请重新登录校园账号")
+    .mockResolvedValueOnce({ publicKey: "key" })
     .mockResolvedValueOnce(null);
   await expect(openSchoolPage("10001", "academic")).rejects.toThrow(
     "登录状态已失效",
   );
   expect(call.mock.calls.map(([command]) => command)).toEqual([
     "open_school_page",
+    "begin_sso",
     "saved_password",
   ]);
+});
+
+it("新登录默认直接完成 MIS SSO，不再衔接旧 CAS", async () => {
+  const { authenticateCampus: login } = await import("./service");
+  call
+    .mockResolvedValueOnce({ publicKey: "key" })
+    .mockResolvedValueOnce({ profile });
+  expect(await login("10001", "test-password", false)).toEqual(profile);
+  expect(call.mock.calls.map((c) => c[0])).toEqual(["begin_sso", "finish_sso"]);
+  expect(call).toHaveBeenLastCalledWith(
+    "finish_sso",
+    expect.objectContaining({
+      credentialMode: "session",
+      encryptedPassword: "encrypted-password",
+    }),
+  );
+});
+it("SSO 仍有效时恢复不读取密码", async () => {
+  call
+    .mockRejectedValueOnce("登录状态已失效")
+    .mockResolvedValueOnce({ profile })
+    .mockResolvedValueOnce(undefined);
+  await openSchoolPage("10001", "academic");
+  expect(call.mock.calls.map((c) => c[0])).toEqual([
+    "open_school_page",
+    "begin_sso",
+    "open_school_page",
+  ]);
+});
+it("学校要求字母验证码时交给手动输入，不使用旧 OCR", async () => {
+  const { authenticateSso } = await import("./service");
+  const challenge = {
+    publicKey: "key",
+    captchaRequired: true,
+    image: "data:image/png;base64,test",
+  };
+  call
+    .mockResolvedValueOnce({ publicKey: "key" })
+    .mockResolvedValueOnce(challenge);
+  const error = await authenticateSso("10001", "password", "file").catch(
+    (e) => e,
+  );
+  expect(error).toBeInstanceOf(ManualCaptchaRequired);
+  expect(error.ssoChallenge).toEqual(challenge);
+  expect(solveCaptcha).not.toHaveBeenCalled();
+  call.mockResolvedValueOnce({ profile });
+  await authenticateSso(
+    "10001",
+    "password",
+    "file",
+    () => {},
+    error.ssoChallenge,
+    "AbCd",
+  );
+  expect(call).toHaveBeenLastCalledWith(
+    "finish_sso",
+    expect.objectContaining({ answer: "AbCd", credentialMode: "file" }),
+  );
+});
+
+it("SSO 密码错误不自动重试或回退 CAS", async () => {
+  const { authenticateCampus: login } = await import("./service");
+  call
+    .mockResolvedValueOnce({ publicKey: "key" })
+    .mockRejectedValueOnce("账号或密码错误，请检查后重试");
+  await expect(login("10001", "bad-password", false)).rejects.toBe(
+    "账号或密码错误，请检查后重试",
+  );
+  expect(call.mock.calls.map((c) => c[0])).toEqual(["begin_sso", "finish_sso"]);
 });

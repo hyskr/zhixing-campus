@@ -17,7 +17,12 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { authenticateCampus, ManualCaptchaRequired } from "./service";
+import {
+  authenticateCampus,
+  authenticateSso,
+  ManualCaptchaRequired,
+  type SsoChallenge,
+} from "./service";
 import { Modal } from "./ui";
 import type { Account } from "./types";
 
@@ -41,9 +46,8 @@ export default function LoginModal({
   const [error, setError] = useErrorState();
   const [credentialMode, setCredentialMode] = useState("keychain");
   const remember = credentialMode !== "session";
-  const [method, setMethod] = useState("cas"),
-    [ssoVerified, setSsoVerified] = useState(false),
-    [ssoPublicKey, setSsoPublicKey] = useState("");
+  const [method, setMethod] = useState("sso");
+  const [ssoChallenge, setSsoChallenge] = useState<SsoChallenge | undefined>();
   function preview(nextImage: string, nextAnswer: string, expression: string) {
     setImage(nextImage);
     setAnswer(nextAnswer);
@@ -58,66 +62,33 @@ export default function LoginModal({
     }
     setBusy(true);
     try {
-      if (method === "sso" && !ssoVerified) {
-        setProgress("正在连接新版 SSO");
-        const key =
-          ssoPublicKey ||
-          (await invoke<{ publicKey: string }>("begin_sso", { username }))
-            .publicKey;
-        setSsoPublicKey(key);
-        // 参考来源：新版 SSO 的页面公钥、SM2 密文及 base64 编码约定。
-        // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/cas/system.js
-        const { SM2 } = await import("gm-crypto");
-        const hex = Array.from(atob(key), (ch) =>
-          ch.charCodeAt(0).toString(16).padStart(2, "0"),
-        ).join("");
-        const encryptedPassword = SM2.encrypt(password, hex, {
-          inputEncoding: "utf8",
-          outputEncoding: "base64",
-        });
-        const result = await invoke<{
-          ok?: boolean;
-          captchaRequired?: boolean;
-          image?: string;
-          message?: string;
-          publicKey?: string;
-        }>("finish_sso", {
-          username,
-          password,
-          encryptedPassword,
-          answer: manual ? answer : null,
-          credentialMode,
-        });
-        if (result.captchaRequired) {
-          setManual(true);
-          setImage(result.image ?? "");
-          setAnswer("");
-          setRecognition(result.message || "请输入新版 SSO 验证码");
-          return;
-        }
-        setSsoVerified(true);
-        setManual(false);
-        setImage("");
-        setProgress("新版 SSO 已连接，正在衔接 MIS");
-      }
       const account =
-        manual && (method !== "sso" || ssoVerified)
-          ? await invoke<Account>("finish_login", {
-              username,
-              password,
-              answer,
-              remember,
-              credentialMode,
-              loginMethod: method,
-            })
-          : await authenticateCampus(
+        method === "sso"
+          ? await authenticateSso(
               username.trim(),
               password,
-              remember,
+              credentialMode,
               setProgress,
-              preview,
-              { credentialMode, loginMethod: method },
-            );
+              ssoChallenge,
+              manual ? answer : undefined,
+            )
+          : manual
+            ? await invoke<Account>("finish_login", {
+                username,
+                password,
+                answer,
+                remember,
+                credentialMode,
+                loginMethod: "cas",
+              })
+            : await authenticateCampus(
+                username.trim(),
+                password,
+                remember,
+                setProgress,
+                preview,
+                { credentialMode, loginMethod: "cas" },
+              );
       onSuccess(account);
     } catch (reason) {
       if (reason instanceof ManualCaptchaRequired) {
@@ -125,10 +96,12 @@ export default function LoginModal({
         setImage(reason.image);
         setAnswer("");
         setRecognition(reason.message);
+        setSsoChallenge(reason.ssoChallenge);
       } else {
         setError(String(reason));
         setManual(false);
         setImage("");
+        setSsoChallenge(undefined);
       }
     } finally {
       setBusy(false);
@@ -141,10 +114,14 @@ export default function LoginModal({
     setAnswer("");
     setProgress("正在获取新的验证码");
     try {
-      if (method === "sso" && !ssoVerified) {
-        setSsoPublicKey("");
-        setManual(false);
-        setImage("");
+      if (method === "sso") {
+        const next = await invoke<SsoChallenge>("refresh_sso_captcha", {
+          username,
+        });
+        setSsoChallenge(next);
+        setImage(next.image ?? "");
+        setManual(true);
+        setRecognition("请输入图片中的字母验证码");
         return;
       }
       const result = await invoke<{ image: string }>("begin_login", {
@@ -179,8 +156,7 @@ export default function LoginModal({
             disabled={busy || manual}
             onValueChange={(e) => {
               setMethod(e);
-              setSsoVerified(false);
-              setSsoPublicKey("");
+              setSsoChallenge(undefined);
             }}
           >
             <SelectTrigger>
@@ -188,8 +164,8 @@ export default function LoginModal({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="cas">CAS / MIS 统一认证</SelectItem>
-              <SelectItem value="sso">新版 SSO（同时衔接 MIS）</SelectItem>
+              <SelectItem value="sso">统一身份认证 SSO（推荐）</SelectItem>
+              <SelectItem value="cas">旧版 CAS（兼容入口）</SelectItem>
             </SelectContent>
           </Select>
         </label>
@@ -234,17 +210,11 @@ export default function LoginModal({
                   value={String(answer)}
                   onChange={(e) => setAnswer(e)}
                   placeholder={
-                    method === "sso" && !ssoVerified
-                      ? "填写图片字符"
-                      : "填写算式结果"
+                    method === "sso" ? "填写图片字符" : "填写算式结果"
                   }
                   required={manual}
                   disabled={!manual || busy}
-                  aria-label={
-                    method === "sso" && !ssoVerified
-                      ? "SSO验证码"
-                      : "验证码算式结果"
-                  }
+                  aria-label={method === "sso" ? "SSO验证码" : "验证码算式结果"}
                 />
               </div>
             </label>
@@ -282,7 +252,7 @@ export default function LoginModal({
             </SelectContent>
           </Select>
         </label>
-        
+
         <Button
           type="submit"
           className="login-submit"

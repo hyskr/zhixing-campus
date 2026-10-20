@@ -161,6 +161,8 @@ fn network_error(error: reqwest::Error) -> String {
 }
 fn is_login_url(url: &Url) -> bool {
     url.host_str() == Some("cas.bjtu.edu.cn") && url.path().starts_with("/auth/")
+        || url.host_str() == Some("sso.bjtu.edu.cn")
+            && (url.path().starts_with("/o/authorize") || url.path().starts_with("/sso/login"))
         || url.path().contains("/login/")
 }
 async fn get(
@@ -929,8 +931,14 @@ fn saved_password(
     Ok(state.credentials.password(&username))
 }
 #[tauri::command]
-fn remove_account(username: String, state: tauri::State<'_, CampusState>) -> Result<(), String> {
+async fn remove_account(
+    username: String,
+    state: tauri::State<'_, CampusState>,
+) -> Result<(), String> {
     valid_username(&username)?;
+    if let Ok(session) = get_session(&state, &username) {
+        sso::logout(&session).await;
+    }
     let path = state.directory.join(format!("{username}.cookies.json"));
     if path.exists() {
         fs::remove_file(path).map_err(|e| e.to_string())?;
@@ -1018,6 +1026,7 @@ pub fn run() {
             files::file_bytes,
             sso::begin_sso,
             sso::finish_sso,
+            sso::refresh_sso_captcha,
             credentials::credential_info,
             credentials::change_credential_storage,
             settings::get_preferences,

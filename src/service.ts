@@ -9,15 +9,93 @@ import type {
   ReplayLink,
 } from "./types";
 
+export interface SsoChallenge {
+  publicKey: string;
+  captchaRequired?: boolean;
+  image?: string;
+  message?: string;
+  profile?: Account;
+  credentialMode?: string;
+}
 export class ManualCaptchaRequired extends Error {
   constructor(
     public image: string,
     message: string,
+    public ssoChallenge?: SsoChallenge,
   ) {
     super(message);
   }
 }
+export async function authenticateSso(
+  username: string,
+  password: string,
+  credentialMode: string,
+  progress: (label: string) => void = () => {},
+  previous?: SsoChallenge,
+  answer?: string,
+): Promise<Account> {
+  progress("正在连接 MIS 统一身份认证");
+  const challenge =
+    previous ??
+    (await invoke<SsoChallenge>("begin_sso", { username, fresh: true }));
+  if (challenge.profile) return challenge.profile;
+  if (challenge.captchaRequired && !answer)
+    throw new ManualCaptchaRequired(
+      challenge.image ?? "",
+      "请输入统一身份认证的字母验证码",
+      challenge,
+    );
+  const { encryptSsoPassword } = await import("./ssoCrypto");
+  progress("正在完成统一身份认证与 MIS 授权");
+  const encryptedPassword = await encryptSsoPassword(
+    password,
+    challenge.publicKey,
+  );
+  const result = await invoke<SsoChallenge>("finish_sso", {
+    username,
+    password,
+    encryptedPassword,
+    answer: answer ?? null,
+    credentialMode,
+  });
+  if (result.captchaRequired)
+    throw new ManualCaptchaRequired(
+      result.image ?? "",
+      result.message || "请输入统一身份认证的字母验证码",
+      result,
+    );
+  if (!result.profile) throw Error("统一身份认证未返回校园资料，请重新登录");
+  return result.profile;
+}
 export async function authenticateCampus(
+  username: string,
+  password: string,
+  remember: boolean,
+  progress: (label: string) => void = () => {},
+  preview: (
+    image: string,
+    answer: string,
+    expression: string,
+  ) => void = () => {},
+  options?: { credentialMode: string; loginMethod: string },
+): Promise<Account> {
+  if (options?.loginMethod === "cas")
+    return authenticateLegacyCampus(
+      username,
+      password,
+      remember,
+      progress,
+      preview,
+      options,
+    );
+  return authenticateSso(
+    username,
+    password,
+    options?.credentialMode ?? (remember ? "keychain" : "session"),
+    progress,
+  );
+}
+export async function authenticateLegacyCampus(
   username: string,
   password: string,
   remember: boolean,
@@ -79,11 +157,23 @@ async function renewCampus(
   const pending = reauthenticating.get(username);
   if (pending) return pending;
   const job = (async () => {
+    progress("正在恢复统一身份认证会话");
+    const challenge = await invoke<SsoChallenge>("begin_sso", {
+      username,
+      fresh: false,
+    });
+    if (challenge.profile) return challenge.profile;
     const password = await invoke<string | null>("saved_password", {
       username,
     });
     if (!password) throw new Error("登录状态已失效，请重新登录校园账号");
-    return authenticateCampus(username, password, true, progress);
+    return authenticateSso(
+      username,
+      password,
+      challenge.credentialMode ?? "keychain",
+      progress,
+      challenge,
+    );
   })();
   reauthenticating.set(username, job);
   try {
