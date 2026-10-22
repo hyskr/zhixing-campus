@@ -41,6 +41,9 @@ struct Session {
     client: Client,
     cookies: Arc<CookieStoreMutex>,
     smart: Arc<Mutex<Option<SmartSession>>>,
+    academic_gate: Arc<tokio::sync::RwLock<()>>,
+    smart_gate: Arc<tokio::sync::Mutex<()>>,
+    mail_gate: Arc<tokio::sync::Mutex<()>>,
 }
 #[derive(Clone)]
 struct SmartSession {
@@ -101,6 +104,9 @@ fn new_session(
         client,
         cookies,
         smart: Arc::new(Mutex::new(None)),
+        academic_gate: Arc::new(tokio::sync::RwLock::new(())),
+        smart_gate: Arc::new(tokio::sync::Mutex::new(())),
+        mail_gate: Arc::new(tokio::sync::Mutex::new(())),
     })
 }
 fn get_session(state: &CampusState, username: &str) -> Result<Session, String> {
@@ -166,6 +172,18 @@ fn is_login_url(url: &Url) -> bool {
         || url.path().contains("/login/")
 }
 async fn get(
+    session: &Session,
+    url: &str,
+    referer: Option<&str>,
+) -> Result<reqwest::Response, String> {
+    let _reading = if Url::parse(url).is_ok_and(|url| url.host_str() == Some("aa.bjtu.edu.cn")) {
+        Some(session.academic_gate.read().await)
+    } else {
+        None
+    };
+    get_uncoordinated(session, url, referer).await
+}
+async fn get_uncoordinated(
     session: &Session,
     url: &str,
     referer: Option<&str>,
@@ -364,8 +382,17 @@ fn authenticated_aa_page(url: &Url, body: &str) -> bool {
 // 参考 AA 认证完成地址与 MIS 跳转表单：
 // https://github.com/fish2lab/bjtu-cli/blob/8a39d48d326ac195360c3564c9576d8a067aad03/Sources/bjtu/Services/MISService.swift
 async fn ensure_aa(session: &Session) -> Result<(), String> {
+    // 认证独占，普通 AA 请求持读锁；等待中的认证先探测当前会话，避免重复登录。
+    // https://github.com/s1y4x1/BJTU-course-assistant/commit/aa994da1f611fef29a5b51e989c527fe9f5592e5
+    let _login = session.academic_gate.write().await;
+    let existing = get_uncoordinated(session, &format!("{AA}/notice/item/"), None).await?;
+    let existing_url = existing.url().clone();
+    let existing_body = existing.text().await.map_err(network_error)?;
+    if authenticated_aa_page(&existing_url, &existing_body) {
+        return Ok(());
+    }
     let module_url = format!("{MIS}/module/module/10/");
-    let response = get(session, &module_url, Some(&format!("{MIS}/home/"))).await?;
+    let response = get_uncoordinated(session, &module_url, Some(&format!("{MIS}/home/"))).await?;
     let base = response.url().clone();
     let body = response.text().await.map_err(network_error)?;
     if authenticated_aa_page(&base, &body) {
@@ -381,7 +408,7 @@ async fn ensure_aa(session: &Session) -> Result<(), String> {
         .map(str::to_string)
         .ok_or("教务系统未提供登录跳转，请稍后重试")?;
     let target = base.join(&action).map_err(|_| "教务跳转地址无效")?;
-    let response = get(session, target.as_str(), Some(&module_url)).await?;
+    let response = get_uncoordinated(session, target.as_str(), Some(&module_url)).await?;
     let final_url = response.url().clone();
     let body = response.text().await.map_err(network_error)?;
     if !authenticated_aa_page(&final_url, &body) {
@@ -483,6 +510,7 @@ async fn smart_json(
 // https://github.com/fish2lab/bjtu-cli/blob/8a39d48d326ac195360c3564c9576d8a067aad03/Sources/bjtu/Services/SmartCurriculumService.swift
 // https://github.com/HFDLYS/BJTUselfService/blob/7d94f740efa99152456f5a2e72bb0948de4a2e7a/app/src/main/java/team/bjtuss/bjtuselfservice/repository/SmartCurriculumPlatformRepository.kt
 async fn prepare_smart(session: &Session) -> Result<SmartSession, String> {
+    let _login = session.smart_gate.lock().await;
     *session.smart.lock().map_err(|e| e.to_string())? = None;
     if !quick_login::current_user(&session).await.unwrap_or(false)
         && !quick_login::restore(&session).await.unwrap_or(false)
@@ -1060,6 +1088,52 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn academic_requests_wait_for_authentication_then_continue() {
+        use std::{
+            future::Future,
+            io::{Read, Write},
+            task::Poll,
+        };
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        listener.set_nonblocking(true).unwrap();
+        let address = listener.local_addr().unwrap();
+        let mut session = new_session(
+            CookieStore::default(),
+            "10001",
+            Arc::new(Mutex::new(settings::Preferences::default())),
+            Arc::new(credentials::Store::default()),
+        )
+        .unwrap();
+        session.client = Client::builder()
+            .proxy(reqwest::Proxy::all(format!("http://{address}")).unwrap())
+            .build()
+            .unwrap();
+        let authentication = session.academic_gate.write().await;
+        let request = get(&session, "http://aa.bjtu.edu.cn/notice/item/", None);
+        tokio::pin!(request);
+        let waiting = std::future::poll_fn(|cx| {
+            Poll::Ready(matches!(request.as_mut().poll(cx), Poll::Pending))
+        })
+        .await;
+        assert!(waiting);
+        assert_eq!(
+            listener.accept().unwrap_err().kind(),
+            std::io::ErrorKind::WouldBlock
+        );
+        listener.set_nonblocking(false).unwrap();
+        let server = std::thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut bytes = [0; 2048];
+            stream.read(&mut bytes).unwrap();
+            stream
+                .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\nOK")
+                .unwrap();
+        });
+        drop(authentication);
+        assert_eq!(request.await.unwrap().text().await.unwrap(), "OK");
+        server.join().unwrap();
+    }
     #[test]
     fn academic_login_requires_authenticated_home_not_just_aa_host() {
         assert!(authenticated_aa_page(

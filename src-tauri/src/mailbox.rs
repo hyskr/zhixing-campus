@@ -4,36 +4,60 @@ const ORIGIN: &str = "https://mail.bjtu.edu.cn";
 // 正文与写信协议参考 KMP MailboxRemoteDataSource.kt；上传和状态更新参考 Android CoremailProvider.kt。
 // https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/data/mailbox/MailboxRemoteDataSource.kt
 // https://github.com/wan300/bjtu_mis_Android/blob/55ee861175a284925326b3e3f70aa672bb03d062/android/app/src/main/java/cn/edu/bjtu/mis/data/provider/CoremailProvider.kt
+pub(crate) fn expired_code(root: &Value) -> bool {
+    matches!(
+        root["code"].as_str(),
+        Some("FA_SECURITY" | "S_SESSION_TIMEOUT" | "FA_INVALID_SESSION" | "S_INVALID_SESSION")
+    )
+}
 fn checked(root: Value) -> Result<Value, String> {
+    if expired_code(&root) {
+        return Err(AUTH_EXPIRED.into());
+    }
     match root["code"].as_str() {
         Some("S_OK") => Ok(root),
-        Some("S_SESSION_TIMEOUT" | "FA_INVALID_SESSION" | "S_INVALID_SESSION") => {
-            Err(AUTH_EXPIRED.into())
-        }
         Some(code) => Err(format!("邮箱操作失败：{code}")),
         None => Err("邮箱返回内容无法识别".into()),
     }
 }
-async fn json_call(session: &Session, sid: &str, func: &str, body: Value) -> Result<Value, String> {
-    let response = session
-        .client
-        .post(format!("{ORIGIN}/coremail/s/json"))
-        .query(&[("sid", sid), ("func", func)])
-        .header("Origin", ORIGIN)
-        .header("X-Requested-With", "XMLHttpRequest")
-        .header("Referer", format!("{ORIGIN}/coremail/main.jsp?sid={sid}"))
-        .json(&body)
-        .send()
-        .await
-        .map_err(network_error)?;
-    checked(
-        response
+fn retryable_json(func: &str) -> bool {
+    matches!(func, "mbox:listMessages" | "mbox:listThreads")
+}
+pub(crate) async fn json_call(
+    session: &Session,
+    sid: &str,
+    func: &str,
+    body: Value,
+) -> Result<Value, String> {
+    let mut sid = sid.to_string();
+    for attempt in 0..2 {
+        let response = session
+            .client
+            .post(format!("{ORIGIN}/coremail/s/json"))
+            .query(&[("sid", sid.as_str()), ("func", func)])
+            .header("Origin", ORIGIN)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", format!("{ORIGIN}/coremail/main.jsp?sid={sid}"))
+            .json(&body)
+            .send()
+            .await
+            .map_err(network_error)?;
+        if is_login_url(response.url()) {
+            return Err(AUTH_EXPIRED.into());
+        }
+        let root = response
             .error_for_status()
             .map_err(network_error)?
-            .json()
+            .json::<Value>()
             .await
-            .map_err(network_error)?,
-    )
+            .map_err(network_error)?;
+        if attempt == 0 && expired_code(&root) && retryable_json(func) {
+            sid = campus::renew_mail_session(session, &sid).await?;
+            continue;
+        }
+        return checked(root);
+    }
+    unreachable!()
 }
 async fn form_call(
     session: &Session,
@@ -41,25 +65,35 @@ async fn form_call(
     path: &str,
     fields: &[(&str, &str)],
 ) -> Result<Value, String> {
-    let response = session
-        .client
-        .post(format!("{ORIGIN}{path}"))
-        .query(&[("sid", sid)])
-        .header("Origin", ORIGIN)
-        .header("X-Requested-With", "XMLHttpRequest")
-        .header("Referer", format!("{ORIGIN}/coremail/main.jsp?sid={sid}"))
-        .form(fields)
-        .send()
-        .await
-        .map_err(network_error)?;
-    checked(
-        response
+    let mut sid = sid.to_string();
+    for attempt in 0..2 {
+        let response = session
+            .client
+            .post(format!("{ORIGIN}{path}"))
+            .query(&[("sid", sid.as_str())])
+            .header("Origin", ORIGIN)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Referer", format!("{ORIGIN}/coremail/main.jsp?sid={sid}"))
+            .form(fields)
+            .send()
+            .await
+            .map_err(network_error)?;
+        if is_login_url(response.url()) {
+            return Err(AUTH_EXPIRED.into());
+        }
+        let root = response
             .error_for_status()
             .map_err(network_error)?
-            .json()
+            .json::<Value>()
             .await
-            .map_err(network_error)?,
-    )
+            .map_err(network_error)?;
+        if attempt == 0 && expired_code(&root) && path == "/coremail/XT/jsp/readMessage.jsp" {
+            sid = campus::renew_mail_session(session, &sid).await?;
+            continue;
+        }
+        return checked(root);
+    }
+    unreachable!()
 }
 fn strings(value: &Value) -> Vec<String> {
     if let Some(items) = value.as_array() {
@@ -322,6 +356,19 @@ pub async fn mail_upload(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn security_expiry_is_retryable_only_for_mail_reads() {
+        assert!(expired_code(&json!({"code":"FA_SECURITY"})));
+        assert_eq!(
+            checked(json!({"code":"FA_SECURITY"})).unwrap_err(),
+            AUTH_EXPIRED
+        );
+        assert!(retryable_json("mbox:listMessages"));
+        assert!(retryable_json("mbox:listThreads"));
+        assert!(!retryable_json("mbox:compose"));
+        assert!(!retryable_json("upload:prepare"));
+        assert!(!retryable_json("mbox:updateMessageInfos"));
+    }
     #[test]
     fn sent_messages_keep_recipients_sent_time_and_total() {
         let page = sent_page(

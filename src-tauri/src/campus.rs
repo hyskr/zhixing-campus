@@ -9,16 +9,36 @@ pub struct Features {
 // 参考来源：参考 MIS 邮箱 SSO、Coremail.sid 及 mbox:listThreads；原生 WebView 登录态由本项目衔接。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/mail/system.js
 pub async fn mail_session(session: &Session) -> Result<String, String> {
+    let _login = session.mail_gate.lock().await;
+    mail_session_locked(session, false).await
+}
+fn cached_mail_sid(session: &Session) -> Result<Option<String>, String> {
+    let url = Url::parse("https://mail.bjtu.edu.cn/coremail/").unwrap();
+    let jar = session.cookies.lock().map_err(|e| e.to_string())?;
+    let sid = jar
+        .get_request_values(&url)
+        .find(|(name, _)| *name == "Coremail.sid")
+        .map(|(_, value)| value.to_string());
+    Ok(sid)
+}
+// FA_SECURITY 只为可重放的读取操作更新一次邮箱会话；发送操作不自动重试。
+// https://github.com/s1y4x1/BJTU-course-assistant/blob/c1e19cdcbe4c6579c099bbe9ffebadf1f6104533/modules/mail/system.js
+pub async fn renew_mail_session(session: &Session, old_sid: &str) -> Result<String, String> {
+    let _login = session.mail_gate.lock().await;
+    if let Some(sid) = cached_mail_sid(session)? {
+        if sid != old_sid {
+            return Ok(sid);
+        }
+    }
+    mail_session_locked(session, true).await
+}
+async fn mail_session_locked(session: &Session, force: bool) -> Result<String, String> {
     // Coremail 的重新 SSO 会更换 sid，使正在编辑的 compose id 失效。
     // 先验证当前 Cookie 会话，仅在服务器确认过期后重新进入邮箱。
-    let cached = {
-        let url = Url::parse("https://mail.bjtu.edu.cn/coremail/").unwrap();
-        let jar = session.cookies.lock().map_err(|e| e.to_string())?;
-        let sid = jar
-            .get_request_values(&url)
-            .find(|(name, _)| *name == "Coremail.sid")
-            .map(|(_, value)| value.to_string());
-        sid
+    let cached = if force {
+        None
+    } else {
+        cached_mail_sid(session)?
     };
     if let Some(sid) = cached {
         let root = session
@@ -44,13 +64,15 @@ pub async fn mail_session(session: &Session) -> Result<String, String> {
             .map_err(network_error)?;
         match root["code"].as_str() {
             Some("S_OK") => return Ok(sid),
-            Some("FA_INVALID_SESSION" | "S_INVALID_SESSION" | "S_SESSION_TIMEOUT") => {}
+            Some(
+                "FA_INVALID_SESSION" | "S_INVALID_SESSION" | "S_SESSION_TIMEOUT" | "FA_SECURITY",
+            ) => {}
             Some(code) => return Err(format!("邮箱会话检查失败：{code}")),
             None => return Err("邮箱会话检查未返回有效结果".into()),
         }
     }
     let response = get(session, "https://mis.bjtu.edu.cn/osys_sso_email/", None).await?;
-    if is_login_url(response.url()) {
+    if is_login_url(response.url()) || response.url().host_str() != Some("mail.bjtu.edu.cn") {
         return Err(AUTH_EXPIRED.into());
     }
     let sid = response
@@ -70,6 +92,9 @@ pub async fn mail_session(session: &Session) -> Result<String, String> {
     sid.ok_or("邮箱未返回登录会话，请重新登录校园账号".into())
 }
 pub fn normalize_mail(root: &Value) -> Result<Value, String> {
+    if mailbox::expired_code(&root) {
+        return Err(AUTH_EXPIRED.into());
+    }
     if root["code"] != "S_OK" {
         return Err(format!("收件箱读取失败：{}", string(&root["code"])));
     }
@@ -81,8 +106,9 @@ pub fn normalize_mail(root: &Value) -> Result<Value, String> {
 }
 pub async fn inbox(session: &Session) -> Result<Value, String> {
     let sid = mail_session(session).await?;
-    let root=session.client.post("https://mail.bjtu.edu.cn/coremail/s/json").header("Origin","https://mail.bjtu.edu.cn").header("Referer",format!("https://mail.bjtu.edu.cn/coremail/main.jsp?sid={sid}")).query(&[("func","mbox:listThreads"),("sid",&sid)]).json(&json!({"start":0,"limit":100,"summaryWindowSize":100,"mode":"count","order":"date","desc":true,"returnTotal":true,"returnTag":false,"fid":1,"mboxa":"","topFirst":true})).send().await.map_err(network_error)?.error_for_status().map_err(network_error)?.json::<Value>().await.map_err(network_error)?;
+    let root=mailbox::json_call(session,&sid,"mbox:listThreads",json!({"start":0,"limit":100,"summaryWindowSize":100,"mode":"count","order":"date","desc":true,"returnTotal":true,"returnTag":false,"fid":1,"mboxa":"","topFirst":true})).await?;
     let mut result = normalize_mail(&root)?;
+    let sid = cached_mail_sid(session)?.unwrap_or(sid);
     let folders = session
         .client
         .post("https://mail.bjtu.edu.cn/coremail/XT/jsp/mail.jsp")
@@ -113,7 +139,19 @@ pub async fn inbox(session: &Session) -> Result<Value, String> {
     Ok(result)
 }
 pub fn shortcut(name: &str) -> Option<&'static str> {
-    match name{"mis"=>Some("https://mis.bjtu.edu.cn/home/"),"academic"=>Some("https://mis.bjtu.edu.cn/module/module/10/"),"courses"=>Some("https://mis.bjtu.edu.cn/module/module/28/"),"vpn"=>Some("https://webvpn.bjtu.edu.cn/"),"recharge"=>Some("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"),"sso"=>Some("https://sso.bjtu.edu.cn/sso/login?service=https%3A%2F%2Fuc.bjtu.edu.cn%2Fuser%2Flogin&pageName=login"),_=>None}
+    match name {
+        "mis" => Some("https://mis.bjtu.edu.cn/home/"),
+        "academic" => Some("https://mis.bjtu.edu.cn/module/module/10/"),
+        "courses" => Some("https://mis.bjtu.edu.cn/module/module/28/"),
+        "vpn" => Some("https://webvpn.bjtu.edu.cn/"),
+        "recharge" => Some("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"),
+        // 用户中心先经过票据兑换接口建立 UC 会话。
+        // https://github.com/s1y4x1/BJTU-course-assistant/commit/81b9fb0f660236337c6dacc6c0de2b3df221ac28
+        "sso" => Some(
+            "https://uc.bjtu.edu.cn/api/login?target=https%3A%2F%2Fuc.bjtu.edu.cn%2Fuser%2Flogin",
+        ),
+        _ => None,
+    }
 }
 // 保留 CookieStore 计算的绝对过期时间，避免导入旧 Max-Age 时延长有效期。
 fn school_webview_cookies(store: &CookieStore) -> Vec<tauri::webview::Cookie<'static>> {
@@ -466,6 +504,37 @@ pub async fn prime_mail_baseline(
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn concurrent_mail_recovery_reuses_sid_rotated_by_another_request() {
+        let session = new_session(
+            CookieStore::default(),
+            "10001",
+            Arc::new(Mutex::new(settings::Preferences::default())),
+            Arc::new(credentials::Store::default()),
+        )
+        .unwrap();
+        session
+            .cookies
+            .lock()
+            .unwrap()
+            .parse(
+                "Coremail.sid=new-test-sid; Path=/; Secure",
+                &Url::parse("https://mail.bjtu.edu.cn/").unwrap(),
+            )
+            .unwrap();
+        let (first, second) = tokio::join!(
+            renew_mail_session(&session, "old-test-sid"),
+            renew_mail_session(&session, "old-test-sid")
+        );
+        assert_eq!(first.unwrap(), "new-test-sid");
+        assert_eq!(second.unwrap(), "new-test-sid");
+        let url = Url::parse(shortcut("sso").unwrap()).unwrap();
+        assert_eq!(url.host_str(), Some("uc.bjtu.edu.cn"));
+        assert_eq!(url.path(), "/api/login");
+        assert!(url
+            .query_pairs()
+            .any(|(name, value)| name == "target" && value == "https://uc.bjtu.edu.cn/user/login"));
+    }
     #[test]
     fn academic_window_uses_mis_sso_and_only_live_cookies() {
         assert_eq!(

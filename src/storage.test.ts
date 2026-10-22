@@ -210,3 +210,17 @@ it("已发送缓存更新保留收件箱同步时间，避免触发重复刷新"
   expect(next.syncedAt?.mail).toBe(old.syncedAt.mail);
   expect(next.syncedAt?.mailSent).toBeTruthy();
 });
+
+it("教务不可达保留成绩和课表，邮箱仍可同步", () => {
+  const old = makeDemoData();
+  const next = applySync(old, {
+    scope: "all",
+    mailInbox: [],
+    mailCount: 0,
+    failures: ["教务：连接被拒绝"],
+  });
+  expect(next.grades).toEqual(old.grades);
+  expect(next.courses).toEqual(old.courses);
+  expect(next.mailInbox).toEqual([]);
+  expect(next.mailCount).toBe(0);
+});
