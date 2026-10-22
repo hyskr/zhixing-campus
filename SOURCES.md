@@ -154,3 +154,7 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 - 成绩与课程提醒调度：[NOTIFICATIONS.md](NOTIFICATIONS.md)。系统投递使用已有 Tauri 通知插件，调度、缓存和去重在本项目实现。
 - 界面与导航调整：[UI-REVIEW.md](UI-REVIEW.md)，设置复用 BeUI Button／Switch／Select，保留现有 Sidebar、Tooltip。
 - DOCX、PPTX 本机预览及依赖来源：[OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。
+
+## 0.11.1 上游维护
+
+两个仓库的版本范围、对应文件、适用性与本次吸收项见 [UPSTREAM-20261022.md](UPSTREAM-20261022.md)。邮件实体正文参考 HFDLYS `HtmlEmailRenderer.kt`；当前节次参考同版本 `CourseScheduleScreen.kt`。首页布局按本项目需求调整，继续使用 BeUI。

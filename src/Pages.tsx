@@ -1,3 +1,4 @@
+import { currentCourseSlot } from "./currentCourse";
 import { isInWeek } from "./courseWeeks";
 import HomeShortcuts from "./HomeShortcuts";
 import {
@@ -71,6 +72,7 @@ export function Schedule({
   query: string;
   onCourse: (name: string) => void;
 }) {
+  const now = useNow();
   const [selection, setSelection] = useState(false);
   const [week, setWeek] = useState(data.currentWeek);
   const [selected, setSelected] = useState<Course | null>(null);
@@ -86,6 +88,13 @@ export function Schedule({
       c.name.includes(query) &&
       isInWeek(c.weeks, week),
   );
+  const slot =
+    !selection && week === data.currentWeek
+      ? currentCourseSlot(now, periodTimes)
+      : null;
+  const ongoing = slot
+    ? courses.filter((c) => c.day === slot.day && c.period === slot.period)
+    : [];
   return (
     <div className="schedule-page">
       <PageHeading
@@ -161,7 +170,7 @@ export function Schedule({
             </div>
             {Array.from({ length: 7 }, (_, col) => (
               <div
-                className={`schedule-cell ${col > 4 ? "weekend" : ""}`}
+                className={`schedule-cell ${col > 4 ? "weekend" : ""} ${slot?.day === col + 1 && slot?.period === row + 1 && ongoing.length ? "current-slot" : ""}`}
                 key={col}
               >
                 {courses
@@ -169,10 +178,15 @@ export function Schedule({
                   .map((c) => (
                     <Tooltip
                       key={c.id}
-                      content={`${c.name} · ${c.place} · ${c.teacher}`}
+                      content={`${slot?.day === c.day && slot.period === c.period ? "上课中 · " : ""}${c.name} · ${c.place} · ${c.teacher}`}
                     >
                       <button
                         className={`schedule-course ${c.color}`}
+                        aria-current={
+                          slot?.day === c.day && slot.period === c.period
+                            ? "time"
+                            : undefined
+                        }
                         aria-label={`${c.name}，${c.place || "地点待定"}，${c.teacher || "教师待定"}`}
                         onClick={() => onCourse(c.name)}
                       >
@@ -188,7 +202,10 @@ export function Schedule({
         ))}
       </section>
       <p className="table-caption">
-        点击课程查看详情<span>{courses.length} 个上课时段</span>
+        {ongoing.length && slot
+          ? `上课中 · 第 ${slot.period} 节 · 北京时间`
+          : "点击课程查看详情"}
+        <span>{courses.length} 个上课时段</span>
       </p>
       {selected && (
         <ItemDetail item={selected} onClose={() => setSelected(null)} />

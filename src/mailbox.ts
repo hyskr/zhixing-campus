@@ -135,11 +135,24 @@ export function recipients(value: string) {
     .map((value) => value.trim())
     .filter(Boolean);
 }
-export function mailDocument(html: string) {
-  const clean = DOMPurify.sanitize(html, {
+// Coremail 有时返回整段实体转义 HTML；只解码一次，再按邮件正文规则净化。
+// https://github.com/HFDLYS/BJTUselfService/blob/622fb143a30439cea0ba6361c701f8a684a43d2c/app/src/main/java/team/bjtuss/bjtuselfservice/utils/HtmlEmailRenderer.kt
+export function normalizeMailHtml(html: string) {
+  if (!html.includes("<") && html.includes("&lt;")) {
+    return (
+      new DOMParser().parseFromString(html, "text/html").body.textContent ?? ""
+    );
+  }
+  return html;
+}
+function sanitizeMailHtml(html: string) {
+  return DOMPurify.sanitize(normalizeMailHtml(html), {
     FORBID_TAGS: ["form", "input", "button", "iframe", "object", "embed"],
     FORBID_ATTR: ["srcset"],
   });
+}
+export function mailDocument(html: string) {
+  const clean = sanitizeMailHtml(html);
   const doc = new DOMParser().parseFromString(clean, "text/html");
   doc.querySelectorAll("a").forEach((a) => {
     a.target = "_blank";
@@ -149,7 +162,7 @@ export function mailDocument(html: string) {
 }
 export async function prepareMailHtml(account: Account, detail: MailDetail) {
   const doc = new DOMParser().parseFromString(
-    DOMPurify.sanitize(detail.html),
+    sanitizeMailHtml(detail.html),
     "text/html",
   );
   await Promise.all(

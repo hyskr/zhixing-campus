@@ -1,6 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { invoke } from "@tauri-apps/api/core";
-import { markMail, recipients, sendMail, type MailDraft } from "./mailbox";
+import {
+  markMail,
+  recipients,
+  sendMail,
+  type MailDraft,
+} from "./mailbox";
 import type { Account } from "./types";
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn() }));
 vi.mock("./service", () => ({
@@ -72,3 +77,4 @@ it("已发送分页使用独立接口和偏移，不混入收件箱", async () =
     start: 50,
   });
 });
+

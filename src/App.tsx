@@ -36,6 +36,7 @@ import {
   LogOut,
   Mail,
   Plus,
+  PanelLeft,
   Search,
   ShieldCheck,
   UserRound,
@@ -500,7 +501,9 @@ export default function App() {
             <AnimatedSidebarTrigger
               className="mobile-sidebar-trigger"
               aria-label="展开主导航"
-            />
+            >
+              <PanelLeft size={18} aria-hidden="true" />
+            </AnimatedSidebarTrigger>
             <Breadcrumb className="workspace-breadcrumb">
               <BreadcrumbList maxItems={3}>
                 <BreadcrumbItem>

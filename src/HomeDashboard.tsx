@@ -18,7 +18,13 @@ import { isInWeek } from "./courseWeeks";
 import { makeDemoMail } from "./demo";
 import { periodTimes, remaining } from "./ui";
 import HomeworkDetail from "./HomeworkDetail";
-import HomeShortcuts from "./HomeShortcuts";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/motion/select";
 function mailTime(value: string) {
   return /^\d{10,13}$/.test(value)
     ? Number(value) * (value.length === 10 ? 1000 : 1)
@@ -107,32 +113,80 @@ export default function HomeDashboard({
             · 第 {data.currentWeek} 教学周
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => navigate("schedule")}
-        >
-          <CalendarDays size={15} />
-          查看课表
-        </Button>
+        <div className="home-heading-actions">
+          <Select
+            value=""
+            onValueChange={onCourse}
+            disabled={!names.length}
+            className="home-course-picker"
+          >
+            <SelectTrigger className="home-course-picker-trigger">
+              <GraduationCap size={15} aria-hidden="true" />
+              <SelectValue placeholder="课程空间" />
+            </SelectTrigger>
+            <SelectContent className="home-course-picker-content">
+              {names.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("schedule")}
+          >
+            <CalendarDays size={15} />
+            查看课表
+          </Button>
+        </div>
       </header>
       <div className="home-summary" aria-label="校园数据摘要">
-        <button onClick={() => showMail()}>
-          未读邮件 <strong>{data.mailCount}</strong>
-          <span>封</span>
-        </button>
-        <button onClick={() => navigate("homework")}>
-          待完成作业 <strong>{pending.length}</strong>
-          <span>项</span>
-        </button>
-        <button onClick={() => navigate("schedule")}>
-          今日课程 <strong>{today.length}</strong>
-          <span>节</span>
-        </button>
-        <button onClick={showChanges}>
-          校园动态 <strong>{data.changes.length}</strong>
-          <span>条</span>
-        </button>
+        <Button
+          variant="ghost"
+          className="home-summary-item"
+          onClick={() => showMail()}
+        >
+          <span className="home-summary-label">未读邮件</span>
+          <span className="home-summary-value">
+            <strong>{data.mailCount}</strong>
+            <span>封</span>
+          </span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="home-summary-item"
+          onClick={() => navigate("homework")}
+        >
+          <span className="home-summary-label">待完成作业</span>
+          <span className="home-summary-value">
+            <strong>{pending.length}</strong>
+            <span>项</span>
+          </span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="home-summary-item"
+          onClick={() => navigate("schedule")}
+        >
+          <span className="home-summary-label">今日课程</span>
+          <span className="home-summary-value">
+            <strong>{today.length}</strong>
+            <span>节</span>
+          </span>
+        </Button>
+        <Button
+          variant="ghost"
+          className="home-summary-item"
+          onClick={showChanges}
+        >
+          <span className="home-summary-label">校园动态</span>
+          <span className="home-summary-value">
+            <strong>{data.changes.length}</strong>
+            <span>条</span>
+          </span>
+        </Button>
       </div>
       <div className="dashboard-grid">
         <Card className="dashboard-panel dashboard-mail">
@@ -295,30 +349,6 @@ export default function HomeDashboard({
           </div>
         </Card>
       </div>
-      <footer className="dashboard-footer">
-        <div className="dashboard-course-links">
-          <GraduationCap size={16} />
-          {names.slice(0, 3).map((name) => (
-            <Button
-              key={name}
-              size="sm"
-              variant="ghost"
-              onClick={() => onCourse(name)}
-            >
-              {name}
-            </Button>
-          ))}
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => navigate("resources")}
-          >
-            课程资料
-            <ArrowUpRight size={12} />
-          </Button>
-        </div>
-        <HomeShortcuts navigate={navigate} />
-      </footer>
       {selected && (
         <HomeworkDetail
           account={account}

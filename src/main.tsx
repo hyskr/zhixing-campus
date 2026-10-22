@@ -9,6 +9,7 @@ import { PreferencesProvider } from "./preferences";
 import "./styles.css";
 import "./interface.css";
 import "./appearance.css";
+import "./homepage.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

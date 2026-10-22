@@ -171,3 +171,7 @@ git commit -m "Describe the change"
 - DOCX 与 PPTX 在本机解析预览，支持缩放、幻灯片翻页与全屏。
 
 实现与验证见 [MAIL-SESSION.md](MAIL-SESSION.md)、[NOTIFICATIONS.md](NOTIFICATIONS.md)、[UI-REVIEW.md](UI-REVIEW.md)、[OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。
+
+## 0.11.1
+
+对照两个上游最新提交，补充实体转义邮件 HTML 的显示兼容与当前课次高亮。首页摘要条统一外框，课程空间入口移到标题栏，窄窗口主导航按钮显示图标。版本范围和参考实现见 [UPSTREAM-20261022.md](UPSTREAM-20261022.md)。

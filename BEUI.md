@@ -33,7 +33,7 @@
 | Overflow Actions | [overflow-actions](https://beui.dev/r/overflow-actions.json) | `ResourceExplorer.tsx`：批量下载与更多文件操作 |
 | Morphing Search | [morphing-search](https://beui.dev/r/morphing-search.json) | `App.tsx`：⌘K / Ctrl+K 搜索页面、课程和作业 |
 | Animated Collapsible | [collapsible](https://beui.dev/r/collapsible.json) | `Assignments.tsx`：待完成、已提交、已逾期独立折叠 |
-| Sortable List | [sortable-stack](https://beui.dev/r/sortable-stack.json) | `HomeShortcuts.tsx`：快速入口拖拽、键盘排序和本机保存 |
+| Sortable List | [sortable-stack](https://beui.dev/r/sortable-stack.json) | 源码已安装，首页改为页首 Select 选择课程空间 |
 | Multi Select | [multi-select](https://beui.dev/r/multi-select.json) | `Assignments.tsx`：多门课程组合筛选 |
 | Shared Layout Background | [shared-layout-bg](https://beui.dev/r/shared-layout-bg.json) | 侧栏和 File Tree 内部的选中态 |
 | File Tree | [file-tree](https://beui.dev/r/file-tree.json) | `ResourceExplorer.tsx`：课程、资源分类、文件夹和文件图标，左目录右详情，文件和文件夹可直接勾选 |
@@ -49,7 +49,7 @@
 ## 本项目设计
 
 - Codex 风格的中性浅色工作台、石墨文字与紧凑分组导航。
-- 所有页面使用单行标题；首页固定展示邮箱、作业、校园动态和今日课表，可排序快捷入口放在底部，超出摘要容量通过完整页面查看。
+- 所有页面使用单行标题；首页固定展示邮箱、作业、校园动态和今日课表，页首 Select 提供课程空间入口，超出摘要容量通过完整页面查看。
 - 首页和课表在 1040 × 720 及以上桌面窗口适配一屏；课表七个时段等高，同格课程水平并列，完整信息通过 Tooltip 和课程侧栏查看。
 - 设置仅在内容超出时内部滚动；页面禁用滚动边界回弹。
 - 资料页左侧为课程文件树，右侧展示选中文件的详情与操作；文件类型有独立图标。
@@ -88,7 +88,7 @@ bun run tauri build --bundles app
 
 ## 0.10.0 外观与首页
 
-- `HomeDashboard.tsx`：Card 承载四个固定信息区，AnimatedBadge 显示邮箱未读数，Button 提供入口，底部保留 Sortable List。
+- `HomeDashboard.tsx`：Card 承载四个固定信息区，AnimatedBadge 显示邮箱未读数，Button 提供入口，课程空间入口使用 Select。
 - `AppearanceSettings.tsx`：Button 作为可选择的风格卡片，使用 aria-pressed 表达当前选择。外观令牌由 `appearance.css` 覆盖，复用现有 BeUI 组件。
 - 侧栏将邮箱放在首页之后，未读数即时更新；动态中的邮件可跳转到具体正文。
 
@@ -98,3 +98,8 @@ bun run tauri build --bundles app
 - 侧栏继续使用 Animated Sidebar，分为日常、学习和工具。
 - Office 查看器使用 Button 翻页与缩放、Loader 显示解析状态；错误使用全局 Toast。
 - 设置组已替换原折叠结构，`SettingsGroups.tsx` 不再使用 Bouncy Accordion。
+
+## 0.11.1 首页
+
+- 摘要条统一外框与四项分隔；页首 BeUI Select 打开课程空间。
+- 移除底部重复入口；窄窗口 SidebarTrigger 显式显示导航图标。
