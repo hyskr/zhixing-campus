@@ -175,3 +175,7 @@ git commit -m "Describe the change"
 ## 0.11.1
 
 对照两个上游最新提交，补充实体转义邮件 HTML 的显示兼容与当前课次高亮。首页摘要条统一外框，课程空间入口移到标题栏，窄窗口主导航按钮显示图标。版本范围和参考实现见 [UPSTREAM-20261022.md](UPSTREAM-20261022.md)。
+
+## GitHub Actions 三平台安装包
+
+推送 `main` 或手动运行 **Desktop packages**，自动构建 Windows x64、macOS arm64／Intel、Linux x64。安装包从对应 Actions 运行的 Artifacts 下载，保留 14 天。平台依赖、下载命令及签名说明见 [BUILDING.md](BUILDING.md)。
