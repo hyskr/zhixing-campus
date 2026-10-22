@@ -127,6 +127,14 @@ pub async fn begin_sso(
     state: tauri::State<'_, CampusState>,
     sso: tauri::State<'_, SsoState>,
 ) -> Result<Value, String> {
+    begin_with_state(username, fresh, &state, &sso).await
+}
+pub(super) async fn begin_with_state(
+    username: String,
+    fresh: Option<bool>,
+    state: &CampusState,
+    sso: &SsoState,
+) -> Result<Value, String> {
     valid_username(&username)?;
     let session = if fresh == Some(false) {
         get_session(&state, &username).ok()
@@ -199,6 +207,31 @@ pub async fn finish_sso(
     state: tauri::State<'_, CampusState>,
     sso: tauri::State<'_, SsoState>,
 ) -> Result<Value, String> {
+    match finish_authentication(username.clone(), encrypted_password, answer, &sso).await? {
+        Completion::Challenge(value) => Ok(value),
+        Completion::Authenticated(session, profile) => {
+            state
+                .credentials
+                .put(&username, &password, &credential_mode, "sso")?;
+            if credential_mode == "session" {
+                let _ = fs::remove_file(state.directory.join(format!("{username}.cookies.json")));
+            }
+            save_session(&state, &username, &session)?;
+            state.sessions.lock().unwrap().insert(username, session);
+            Ok(json!({"profile":profile}))
+        }
+    }
+}
+pub(super) enum Completion {
+    Challenge(Value),
+    Authenticated(Session, Value),
+}
+pub(super) async fn finish_authentication(
+    username: String,
+    encrypted_password: String,
+    answer: Option<String>,
+    sso: &SsoState,
+) -> Result<Completion, String> {
     let (session, page) = sso
         .pending
         .lock()
@@ -248,7 +281,7 @@ pub async fn finish_sso(
                 .lock()
                 .unwrap()
                 .insert(username, (session, next));
-            return Ok(result);
+            return Ok(Completion::Challenge(result));
         }
         return Err(if string(&next["error"]["code"]) == "40400" {
             "账号或密码错误，请检查后重试".into()
@@ -270,21 +303,10 @@ pub async fn finish_sso(
         html
     };
     let profile = parsers::student(&html, &username)?;
-    state
-        .credentials
-        .put(&username, &password, &credential_mode, "sso")?;
-    if credential_mode == "session" {
-        let _ = fs::remove_file(state.directory.join(format!("{username}.cookies.json")));
-    }
-    save_session(&state, &username, &session)?;
-    state
-        .sessions
-        .lock()
-        .unwrap()
-        .insert(username.clone(), session);
     sso.captcha_users.lock().unwrap().remove(&username);
-    Ok(json!({"profile":profile}))
+    Ok(Completion::Authenticated(session, profile))
 }
+
 pub async fn logout(session: &Session) {
     if let Ok(client) = Client::builder()
         .cookie_provider(session.cookies.clone())

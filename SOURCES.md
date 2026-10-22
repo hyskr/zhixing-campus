@@ -139,3 +139,7 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 ## 0.10.2 模块连接维护
 
 智慧课程备用路径、教务认证协调、邮箱 FA_SECURITY 恢复、极速凭据去重和用户中心票据回调的具体上游文件、固定提交及本项目实现位置，见 [MAINTENANCE-20261022.md](MAINTENANCE-20261022.md)。
+
+## 真实接口巡检脚本
+
+`src-tauri/src/live_api.rs` 直接复用本项目已有 SSO、MIS、教务、作业、资料、回放和邮箱请求与解析；脚本未另行移植学校接口。`scripts/encrypt-sso.ts` 通过标准输入衔接同一 `src/ssoCrypto.ts` 实现。模块的上游参考关系沿用各实现文件的固定版本注释。

@@ -40,7 +40,7 @@ fn course<'a>(smart: &'a SmartSession, id: &str) -> Result<&'a Value, String> {
 }
 // 参考来源：参考回放课程、录制列表及播放链接接口；下载通过本项目原生队列执行。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/platform.js
-async fn replay_data(
+pub(super) async fn replay_data(
     session: &Session,
     smart: &SmartSession,
     id: &str,

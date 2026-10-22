@@ -59,7 +59,7 @@ pub(crate) async fn json_call(
     }
     unreachable!()
 }
-async fn form_call(
+pub(super) async fn form_call(
     session: &Session,
     sid: &str,
     path: &str,
@@ -110,7 +110,7 @@ fn attachment_url(mid: &str, part: &str) -> String {
         .extend_pairs([("mid", mid), ("part", part), ("mode", "download")]);
     url.into()
 }
-fn detail(root: &Value, mid: &str) -> Result<Value, String> {
+pub(super) fn detail(root: &Value, mid: &str) -> Result<Value, String> {
     let payload = &root["var"];
     let mail = &payload["mail"];
     let info = &payload["mailInfo"];
@@ -127,7 +127,7 @@ fn detail(root: &Value, mid: &str) -> Result<Value, String> {
 }
 // 已发送使用 FID 3；mbox:listMessages 可返回收件人和发送时间。
 // https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/feature/mailbox/MailboxScreenModel.kt
-fn sent_page(root: &Value) -> Value {
+pub(super) fn sent_page(root: &Value) -> Value {
     let rows=root["var"].as_array().into_iter().flatten().map(|v|json!({
         "id":string(&v["id"]),"subject":string(&v["subject"]),"from":strings(&v["from"]).join("；"),"to":strings(&v["to"]).join("；"),
         "summary":string(&v["summary"]),"date":v["sentDate"].as_str().map(str::to_string).unwrap_or_else(||string(&v["sentDate"])),"read":true,

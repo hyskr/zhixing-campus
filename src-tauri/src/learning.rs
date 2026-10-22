@@ -132,7 +132,7 @@ pub async fn homework_detail(
 // 参考来源：参考作业详情与提交记录接口；正文、附件、分数和批语映射为本项目结构。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/homework-core.js
 // https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed/blob/6a72b1c4a18d5c6ff6d6f62518f995eb8bcdb865/multiplatform/shared/src/commonMain/kotlin/team/bjtuss/bjtuselfservice/shared/data/homework/HomeworkSubmissionHtmlParser.kt
-async fn detail_data(
+pub(super) async fn detail_data(
     session: &Session,
     smart: &SmartSession,
     course_id: &str,
@@ -339,6 +339,15 @@ pub async fn resource_space(
 ) -> Result<Vec<Value>, String> {
     let session = get_session(&state, &username)?;
     let smart = smart_session(&session).await?;
+    let result = space_data(&session, &smart, &query).await?;
+    save_session(&state, &username, &session)?;
+    Ok(result)
+}
+pub(super) async fn space_data(
+    session: &Session,
+    smart: &SmartSession,
+    query: &str,
+) -> Result<Vec<Value>, String> {
     let mut root = json!({});
     for rows in [10usize, 0] {
         let rows = if rows == 0 {
@@ -378,7 +387,6 @@ pub async fn resource_space(
         }
     }
     let result=root["result"].as_array().unwrap_or(&Vec::new()).iter().map(|v|json!({"id":string(&v["rpId"]),"name":string(&v["rpName"]),"url":absolute_url(&string(&v["resUrl"])),"rpId":string(&v["rpId"]),"size":parsers::resource_size(&v["rpSize"]),"inputTime":string(&v["inputTime"])})).collect();
-    save_session(&state, &username, &session)?;
     Ok(result)
 }
 #[derive(Deserialize)]

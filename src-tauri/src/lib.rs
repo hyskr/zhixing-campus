@@ -4,6 +4,8 @@ mod credentials;
 mod devices;
 mod files;
 mod learning;
+#[cfg(test)]
+mod live_api;
 mod mailbox;
 mod media;
 mod parsers;

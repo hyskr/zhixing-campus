@@ -30,3 +30,7 @@ run = "bun run tauri build"
 [tasks."build:app"]
 description = "构建 macOS 应用"
 run = "bun run tauri build --bundles app"
+
+[tasks."test:live"]
+description = "读取已保存凭据，逐项巡检真实只读接口并生成报告"
+run = "bun scripts/test-live-api.ts"

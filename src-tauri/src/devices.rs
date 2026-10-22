@@ -40,7 +40,7 @@ async fn own_session(state: &CampusState, username: &str) -> Result<Session, Str
     }
     Ok(session)
 }
-async fn devices(session: &Session) -> Result<Vec<Value>, String> {
+pub(super) async fn devices(session: &Session) -> Result<Vec<Value>, String> {
     let response = session
         .client
         .get("https://login.bjtu.edu.cn:802/eportal/portal/online_list")

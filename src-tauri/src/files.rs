@@ -79,6 +79,15 @@ pub async fn teaching_calendar(
 ) -> Result<Value, String> {
     let session = get_session(&state, &username)?;
     let smart = smart_session(&session).await?;
+    let result = calendar_data(&session, &smart, &course_id).await?;
+    save_session(&state, &username, &session)?;
+    Ok(result)
+}
+pub(super) async fn calendar_data(
+    session: &Session,
+    smart: &SmartSession,
+    course_id: &str,
+) -> Result<Value, String> {
     let course = smart
         .courses
         .iter()
@@ -91,7 +100,7 @@ pub async fn teaching_calendar(
             ("method", "toCoursePlatform"),
             ("courseId", string(&course["course_num"]).as_str()),
             ("dataSource", "1"),
-            ("cId", course_id.as_str()),
+            ("cId", course_id),
             ("xkhId", string(&course["fz_id"]).as_str()),
             ("xqCode", smart.term.as_str()),
         ])
@@ -119,7 +128,6 @@ pub async fn teaching_calendar(
         calendar_source(&page).ok_or("该课程尚未提供教学日历 PDF")?
     };
     let url = media::resource_url(&source, Some(false), &*session.preferences.lock().unwrap());
-    save_session(&state, &username, &session)?;
     Ok(
         json!({"id":format!("calendar-{course_id}"),"name":format!("{}_教学日历.pdf",string(&course["name"])),"url":url,"courseId":course_id}),
     )
