@@ -29,9 +29,6 @@ export default function MoreSettings({ account }: { account?: Account }) {
     [interval, setInterval] = useState(
       String(preferences.networkInterval || 60),
     ),
-    [mailInterval, setMailInterval] = useState(
-      String(preferences.mailInterval || 10),
-    ),
     [mode, setMode] = useState("keychain"),
     [error, setError] = useErrorState(),
     [busy, setBusy] = useState(false),
@@ -41,11 +38,6 @@ export default function MoreSettings({ account }: { account?: Account }) {
   useEffect(() => {
     if (!isTauri()) return;
     let active = true;
-    void invoke<{ message?: string }>("network_status")
-      .then((status) => {
-        if (active && status?.message) setNetworkStatus(status.message);
-      })
-      .catch(() => {});
     const off = listen<{ message: string }>(
       "campus-network-status",
       ({ payload }) => {
@@ -63,7 +55,6 @@ export default function MoreSettings({ account }: { account?: Account }) {
         preferences.networkAccount || (account?.demo ? "" : account?.id) || "",
       );
       setInterval(String(preferences.networkInterval));
-      setMailInterval(String(preferences.mailInterval));
     }
   }, [ready, account?.id]);
   useEffect(() => {
@@ -214,75 +205,6 @@ export default function MoreSettings({ account }: { account?: Account }) {
             }}
           />
         </label>
-        
-      </SettingsGroup>
-      <SettingsGroup
-        id="mail"
-        title="新邮件通知"
-        description="先建立记录，之后提醒新邮件。"
-      >
-        <label className="setting-row">
-          <span>
-            <strong>后台检查当前账号收件箱</strong>
-            <small>
-              {account?.name || "请先连接校园账号"} · 应用运行时生效
-            </small>
-          </span>
-          <Switch
-            ariaLabel="后台新邮件通知"
-            checked={
-              preferences.mailNotifications &&
-              preferences.mailAccount === account?.id
-            }
-            disabled={busy || !account || account.demo}
-            onCheckedChange={(e) => {
-              const checked = e;
-              void run(async () => {
-                if (checked) {
-                  await notifications();
-                  await invoke("prime_mail_baseline", {
-                    username: account!.id,
-                  });
-                }
-                await save({
-                  ...preferences,
-                  mailNotifications: checked,
-                  mailAccount: account?.id || "",
-                  mailInterval: Number(mailInterval) || 10,
-                });
-              });
-            }}
-          />
-        </label>
-        <div className="setting-row">
-          <span>
-            <strong>检查间隔（分钟）</strong>
-          </span>
-          <form
-            className="port-setting"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void run(() =>
-                save({
-                  ...preferences,
-                  mailInterval: Number(mailInterval) || 10,
-                }),
-              );
-            }}
-          >
-            <Input
-              type="number"
-              min="1"
-              max="1440"
-              aria-label="邮件检查间隔"
-              value={String(mailInterval)}
-              onChange={(e) => setMailInterval(e)}
-            />
-            <Button size="sm" type="submit" variant="secondary" disabled={busy}>
-              保存间隔
-            </Button>
-          </form>
-        </div>
       </SettingsGroup>
       <SettingsGroup
         id="credentials"
@@ -384,8 +306,6 @@ export default function MoreSettings({ account }: { account?: Account }) {
           ))}
         </div>
       </SettingsGroup>
-      
-      
     </>
   );
 }

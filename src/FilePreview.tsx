@@ -27,7 +27,8 @@ import { Modal } from "./ui";
 import { downloadFiles, getLinks, type LinkFile } from "./learning";
 import { withCampusSession } from "./service";
 import type { Account } from "./types";
-import DOMPurify from "dompurify";
+import OfficePreview from "./OfficePreview";
+import { isPdf, previewExtension, validatePreviewBytes } from "./fileFormats";
 type PreviewItem = LinkFile & { convertUrl?: string };
 const Context = createContext<(item: PreviewItem, account: Account) => void>(
   () => {},
@@ -179,7 +180,7 @@ function Preview({
 }) {
   const viewer = useRef<HTMLDivElement>(null),
     [bytes, setBytes] = useState<Uint8Array | null>(null),
-    [html, setHtml] = useState(""),
+    [format, setFormat] = useState(previewExtension(item.name, item.url)),
     [image, setImage] = useState(""),
     [error, setError] = useErrorState(),
     [loading, setLoading] = useState(true),
@@ -190,7 +191,7 @@ function Preview({
     return () => document.removeEventListener("fullscreenchange", changed);
   }, []);
   const name = item.name,
-    ext = name.split(".").at(-1)?.toLowerCase();
+    ext = previewExtension(name, item.url);
   useEffect(() => {
     let active = true;
     let objectUrl = "";
@@ -203,13 +204,15 @@ function Preview({
       const url = account.demo
         ? ext === "docx"
           ? "/demo/report.docx"
-          : ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
-                ext ?? "",
-              )
-            ? "/models/diagnostic.png"
-            : ["txt", "md", "csv", "json"].includes(ext ?? "")
-              ? "/demo/readme.txt"
-              : "/demo/document.pdf"
+          : ["pptx", "ppt"].includes(ext)
+            ? "/demo/slides.pptx"
+            : ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
+                  ext ?? "",
+                )
+              ? "/models/diagnostic.png"
+              : ["txt", "md", "csv", "json"].includes(ext ?? "")
+                ? "/demo/readme.txt"
+                : "/demo/document.pdf"
         : links[0].url;
       const data =
         isTauri() && !account.demo
@@ -221,30 +224,31 @@ function Preview({
                 }),
               ),
             )
-          : new Uint8Array(await (await fetch(url)).arrayBuffer());
+          : await (async () => {
+              const response = await fetch(url);
+              if (!response.ok)
+                throw Error(`文件读取失败：HTTP ${response.status}`);
+              return new Uint8Array(await response.arrayBuffer());
+            })();
       if (!active) return;
+      const actualFormat = previewExtension(name, url);
+      validatePreviewBytes(data, actualFormat);
+      setFormat(actualFormat);
       setBytes(data);
       if (
-        ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(ext ?? "")
+        ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(
+          actualFormat,
+        )
       ) {
         objectUrl = URL.createObjectURL(
           new Blob([data], {
             type:
-              ext === "svg"
+              actualFormat === "svg"
                 ? "image/svg+xml"
-                : `image/${ext === "jpg" ? "jpeg" : ext}`,
+                : `image/${actualFormat === "jpg" ? "jpeg" : actualFormat}`,
           }),
         );
         setImage(objectUrl);
-      } else if (
-        ext === "docx" &&
-        new TextDecoder().decode(data.slice(0, 5)) !== "%PDF-"
-      ) {
-        const mammoth = await import("mammoth");
-        const result = await mammoth.convertToHtml({
-          arrayBuffer: data.buffer as ArrayBuffer,
-        });
-        if (active) setHtml(DOMPurify.sanitize(result.value));
       }
     })()
       .catch((e) => {
@@ -258,7 +262,7 @@ function Preview({
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [item.id, account.id]);
-  const pdf = bytes && new TextDecoder().decode(bytes.slice(0, 5)) === "%PDF-";
+  const pdf = bytes && isPdf(bytes);
   async function fullscreen() {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -301,10 +305,10 @@ function Preview({
           <div className="image-preview">
             <img src={image} alt={name} />
           </div>
-        ) : html ? (
-          <article
-            className="docx-preview rich-content"
-            dangerouslySetInnerHTML={{ __html: html }}
+        ) : bytes && ["docx", "pptx", "ppt"].includes(format) ? (
+          <OfficePreview
+            bytes={bytes}
+            format={format as "docx" | "pptx" | "ppt"}
           />
         ) : [
             "txt",

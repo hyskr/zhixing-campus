@@ -173,11 +173,12 @@ export function Schedule({
                     >
                       <button
                         className={`schedule-course ${c.color}`}
+                        aria-label={`${c.name}，${c.place || "地点待定"}，${c.teacher || "教师待定"}`}
                         onClick={() => onCourse(c.name)}
                       >
                         <strong>{c.name}</strong>
-                        <span>{c.place}</span>
-                        <small>{c.teacher}</small>
+                        <span>{c.place || "地点待定"}</span>
+                        <small>{c.teacher || "教师待定"}</small>
                       </button>
                     </Tooltip>
                   ))}

@@ -1,15 +1,91 @@
-// BeUI 组件来源：https://beui.dev/r/bouncy-accordion.json
 import { createContext, useContext, useState, type ReactNode } from "react";
-import { BouncyAccordion } from "@/components/motion/bouncy-accordion";
-const SettingsGroupContext = createContext<{
-  active: string | null;
-  setActive: (id: string | null) => void;
-} | null>(null);
+import {
+  Bell,
+  Download,
+  KeyRound,
+  Palette,
+  Stethoscope,
+  Wifi,
+} from "lucide-react";
+import { Button } from "@/components/motion/button";
+const sections = [
+  {
+    id: "appearance",
+    title: "外观",
+    description: "界面风格与阅读体验",
+    icon: Palette,
+  },
+  {
+    id: "notifications",
+    title: "通知与提醒",
+    description: "邮件、成绩与上课提醒",
+    icon: Bell,
+  },
+  {
+    id: "files",
+    title: "下载与文件",
+    description: "下载任务、课件与上传记录",
+    icon: Download,
+  },
+  {
+    id: "connection",
+    title: "登录与网络",
+    description: "课程连接与校园网",
+    icon: Wifi,
+  },
+  {
+    id: "credentials",
+    title: "账号与凭据",
+    description: "当前账号的保存方式",
+    icon: KeyRound,
+  },
+  {
+    id: "diagnostics",
+    title: "环境诊断",
+    description: "检查连接与本地环境",
+    icon: Stethoscope,
+  },
+];
+const category: Record<string, string> = {
+  appearance: "appearance",
+  notifications: "notifications",
+  mail: "notifications",
+  login: "connection",
+  network: "connection",
+  downloads: "files",
+  uploads: "files",
+  credentials: "credentials",
+  diagnostics: "diagnostics",
+};
+const SettingsGroupContext = createContext("appearance");
 export function SettingsGroups({ children }: { children: ReactNode }) {
-  const [active, setActive] = useState<string | null>("login");
+  const [active, setActive] = useState("appearance");
+  const current = sections.find((s) => s.id === active)!;
   return (
-    <SettingsGroupContext.Provider value={{ active, setActive }}>
-      <div className="settings-groups">{children}</div>
+    <SettingsGroupContext.Provider value={active}>
+      <div className="settings-workspace">
+        <nav className="settings-navigation" aria-label="设置分类">
+          {sections.map(({ id, title, icon: Icon }) => (
+            <Button
+              key={id}
+              variant="ghost"
+              className="settings-category"
+              aria-current={id === active ? "page" : undefined}
+              onClick={() => setActive(id)}
+            >
+              <Icon size={16} />
+              {title}
+            </Button>
+          ))}
+        </nav>
+        <div className="settings-pane" key={active}>
+          <header className="settings-pane-heading">
+            <h2>{current.title}</h2>
+            <p>{current.description}</p>
+          </header>
+          <div className="settings-groups">{children}</div>
+        </div>
+      </div>
     </SettingsGroupContext.Provider>
   );
 }
@@ -24,28 +100,18 @@ export function SettingsGroup({
   description: string;
   children: ReactNode;
 }) {
-  const context = useContext(SettingsGroupContext);
+  const active = useContext(SettingsGroupContext);
+  if ((category[id] ?? id) !== active) return null;
   return (
-    <BouncyAccordion
-      items={[
-        {
-          id,
-          title,
-          description: (
-            <div className="settings-group-content">
-              <p className="settings-group-description">{description}</p>
-              {children}
-            </div>
-          ),
-        },
-      ]}
-      value={context?.active === id ? id : null}
-      onValueChange={context?.setActive}
+    <section
       className="campus-settings-group"
-      classNames={{
-        trigger: "campus-settings-trigger",
-        content: "campus-settings-content",
-      }}
-    />
+      aria-labelledby={`settings-${id}`}
+    >
+      <header className="settings-section-heading">
+        <h3 id={`settings-${id}`}>{title}</h3>
+        <p>{description}</p>
+      </header>
+      <div className="settings-group-content">{children}</div>
+    </section>
   );
 }

@@ -1,3 +1,4 @@
+import ReminderBridge from "./ReminderBridge";
 import { makeDemoMail } from "./demo";
 import Classrooms from "./Classrooms";
 import UpdatesPopover from "./UpdatesPopover";
@@ -110,6 +111,10 @@ export default function App() {
   }, [store]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === ",") {
+        e.preventDefault();
+        setPage("settings");
+      }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setSearchOpen((value) => !value);
@@ -468,6 +473,7 @@ export default function App() {
       className="app-shell"
       style={{ "--sidebar-width": "236px", "--sidebar-width-icon": "68px" }}
     >
+      <ReminderBridge account={account} data={data} />
       <CampusSidebar
         page={page}
         unread={data.mailCount}

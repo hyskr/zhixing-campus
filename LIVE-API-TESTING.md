@@ -98,3 +98,11 @@ mise run test:live -- --module learning --report output/live-api/learning.json
 ```
 
 完成 SSO 登录后只读取智慧课程的会话、学期、课程、作业、资源和回放。终端会显示授权跳转的主机、路径与响应状态，以及当前账号是否匹配；不输出 URL 查询参数、密码或登录票据。
+
+## 邮箱会话恢复专项
+
+```bash
+mise run test:live -- --module mail --reuse-session --report output/live-api/mail.json
+```
+
+优先使用应用保存的会话，覆盖旧邮箱 sid 检查、会话重建、收件箱、已发送、已读邮件正文和附件。该模式不调用发信和标记已读接口。

@@ -47,17 +47,11 @@ export default function CampusSidebar({
   unread: number;
 }) {
   const [menu, setMenu] = useState(false);
-  const mainItems = [
-    "overview",
-    "mail",
-    "schedule",
-    "homework",
-    "grades",
-    "resources",
-  ].map((id) => navItems.find((item) => item.id === id)!);
-  const tools = navItems.filter(
-    (item) => !mainItems.some((main) => main.id === item.id),
-  );
+  const groups = [
+    { label: "日常", ids: ["overview", "mail", "schedule", "homework"] },
+    { label: "学习", ids: ["resources", "grades", "classrooms"] },
+    { label: "工具", ids: ["downloads", "files", "services"] },
+  ];
   return (
     <AnimatedSidebar ariaLabel="主导航" panelClassName="campus-sidebar-panel">
       <AnimatedSidebarHeader className="campus-sidebar-header">
@@ -80,63 +74,46 @@ export default function CampusSidebar({
         </AnimatedSidebarTrigger>
       </AnimatedSidebarHeader>
       <AnimatedSidebarContent className="campus-sidebar-content">
-        <AnimatedSidebarGroup>
-          <AnimatedSidebarGroupLabel>学习与消息</AnimatedSidebarGroupLabel>
-          <AnimatedSidebarMenu>
-            {mainItems.map((item) => {
-              const Icon = icons[item.icon as keyof typeof icons];
-              return (
-                <AnimatedSidebarMenuItem key={item.id}>
-                  <AnimatedSidebarMenuButton
-                    className="campus-nav-link"
-                    isActive={page === item.id}
-                    icon={<Icon size={18} strokeWidth={1.7} />}
-                    onSelect={() => navigate(item.id)}
-                    badge={
-                      item.id === "mail" && unread > 0 ? (
-                        <span
-                          className="nav-count mail-count"
-                          aria-label={`${unread} 封未读`}
-                        >
-                          {unread}
-                        </span>
-                      ) : item.id === "homework" && pending > 0 ? (
-                        <span className="nav-count">{pending}</span>
-                      ) : undefined
-                    }
-                  >
-                    {item.label}
-                  </AnimatedSidebarMenuButton>
-                </AnimatedSidebarMenuItem>
-              );
-            })}
-          </AnimatedSidebarMenu>
-        </AnimatedSidebarGroup>
-        <AnimatedSidebarGroup>
-          <AnimatedSidebarGroupLabel>校园与工具</AnimatedSidebarGroupLabel>
-          <AnimatedSidebarMenu>
-            {tools.map((item) => {
-              const Icon = icons[item.icon as keyof typeof icons];
-              return (
-                <AnimatedSidebarMenuItem key={item.id}>
-                  <AnimatedSidebarMenuButton
-                    className="campus-nav-link"
-                    isActive={page === item.id}
-                    icon={<Icon size={18} strokeWidth={1.7} />}
-                    onSelect={() => navigate(item.id)}
-                    badge={
-                      item.id === "downloads" && downloading > 0 ? (
-                        <span className="nav-count">{downloading}</span>
-                      ) : undefined
-                    }
-                  >
-                    {item.label}
-                  </AnimatedSidebarMenuButton>
-                </AnimatedSidebarMenuItem>
-              );
-            })}
-          </AnimatedSidebarMenu>
-        </AnimatedSidebarGroup>
+        {groups.map((group) => (
+          <AnimatedSidebarGroup key={group.label}>
+            <AnimatedSidebarGroupLabel>{group.label}</AnimatedSidebarGroupLabel>
+            <AnimatedSidebarMenu>
+              {group.ids.map((id) => {
+                const item = navItems.find((item) => item.id === id)!;
+                const Icon = icons[item.icon as keyof typeof icons];
+                const count =
+                  id === "mail"
+                    ? unread
+                    : id === "homework"
+                      ? pending
+                      : id === "downloads"
+                        ? downloading
+                        : 0;
+                return (
+                  <AnimatedSidebarMenuItem key={id}>
+                    <AnimatedSidebarMenuButton
+                      className="campus-nav-link"
+                      isActive={page === id}
+                      icon={<Icon size={18} strokeWidth={1.7} />}
+                      onSelect={() => navigate(item.id)}
+                      badge={
+                        count > 0 ? (
+                          <span
+                            className={`nav-count ${id === "mail" ? "mail-count" : ""}`}
+                          >
+                            {count}
+                          </span>
+                        ) : undefined
+                      }
+                    >
+                      {item.label}
+                    </AnimatedSidebarMenuButton>
+                  </AnimatedSidebarMenuItem>
+                );
+              })}
+            </AnimatedSidebarMenu>
+          </AnimatedSidebarGroup>
+        ))}
       </AnimatedSidebarContent>
       <AnimatedSidebarFooter className="campus-sidebar-footer">
         <div className="workspace-status sidebar-expanded">

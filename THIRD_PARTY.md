@@ -58,3 +58,10 @@ BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存�
 ## 完整邮箱
 
 邮件协议和字段参考 KMP 的 `MailboxRemoteDataSource.kt`、`MailboxJsonParser.kt` 与 wan300/bjtu_mis_Android 的 `CoremailProvider.kt`；固定版本链接见 SOURCES.md。本项目用 Rust 与 React 实现邮箱请求、状态同步和写信界面。
+
+## Office 预览
+
+- `docx-preview` 0.4.1：Apache-2.0，许可证 `licenses/docx-preview.txt`。
+- `@web-ppt/core` 0.4.5：MIT，许可证 `licenses/web-ppt-core.txt`。
+
+接口、格式边界和本机渲染说明见 [OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。

@@ -267,6 +267,10 @@ export interface Preferences {
   mailNotifications: boolean;
   mailAccount: string;
   mailInterval: number;
+  gradeNotifications: boolean;
+  courseNotifications: boolean;
+  reminderAccount: string;
+  courseReminderMinutes: number;
 }
 
 export interface MailMessage {

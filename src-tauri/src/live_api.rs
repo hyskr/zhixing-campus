@@ -801,7 +801,10 @@ async fn saved_account_read_suite() {
                 continue;
             }
         };
-        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() != Ok("learning") {
+        if std::env::var("CAMPUS_PROBE_MODULE")
+            .unwrap_or_default()
+            .is_empty()
+        {
             let started = Instant::now();
             report.result(
                 &id,
@@ -882,10 +885,17 @@ async fn saved_account_read_suite() {
                     "教务连接失败；继续测试其他系统",
                 )
             }
+        }
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() != Ok("learning") {
             mailbox_checks(&session, &id, &mut report).await;
         }
-        learning_checks(&session, &id, &mut report, all_items).await;
-        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() != Ok("learning") {
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() != Ok("mail") {
+            learning_checks(&session, &id, &mut report, all_items).await;
+        }
+        if std::env::var("CAMPUS_PROBE_MODULE")
+            .unwrap_or_default()
+            .is_empty()
+        {
             let started = Instant::now();
             report.result(
                 &id,

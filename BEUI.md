@@ -40,7 +40,7 @@
 | Dock | [dock](https://beui.dev/r/dock.json) | `FilePreview.tsx`：全屏查看时的退出、下载和关闭入口 |
 | Text Animation | [text-reveal](https://beui.dev/r/text-reveal.json) | `App.tsx`：未连接账号的欢迎标题 |
 | Action Swap | [action-swap-blur](https://beui.dev/r/action-swap-blur.json) | `ResourceExplorer.tsx`：复制成功切换为“已复制” |
-| Bouncy Accordion | [bouncy-accordion](https://beui.dev/r/bouncy-accordion.json) | `SettingsGroups.tsx`：设置分类，单项展开 |
+| Bouncy Accordion | [bouncy-accordion](https://beui.dev/r/bouncy-accordion.json) | 源码已安装；设置现使用固定分类导航 |
 | Scroll Animation | [scroll-progress](https://beui.dev/r/scroll-progress.json) | `ResourceExplorer.tsx`：资料目录实际可滚动时显示位置 |
 | Loader | [loader](https://beui.dev/r/loader.json) | `ResourceExplorer.tsx、LearningResources.tsx、HomeworkDetail.tsx、FilePreview.tsx`：加载状态 |
 
@@ -91,3 +91,10 @@ bun run tauri build --bundles app
 - `HomeDashboard.tsx`：Card 承载四个固定信息区，AnimatedBadge 显示邮箱未读数，Button 提供入口，底部保留 Sortable List。
 - `AppearanceSettings.tsx`：Button 作为可选择的风格卡片，使用 aria-pressed 表达当前选择。外观令牌由 `appearance.css` 覆盖，复用现有 BeUI 组件。
 - 侧栏将邮箱放在首页之后，未读数即时更新；动态中的邮件可跳转到具体正文。
+
+## 0.11 使用位置
+
+- 设置使用 Button 分类导航，右侧直接展示完整设置组；通知控件使用 Switch、Select、Button。
+- 侧栏继续使用 Animated Sidebar，分为日常、学习和工具。
+- Office 查看器使用 Button 翻页与缩放、Loader 显示解析状态；错误使用全局 Toast。
+- 设置组已替换原折叠结构，`SettingsGroups.tsx` 不再使用 Bouncy Accordion。

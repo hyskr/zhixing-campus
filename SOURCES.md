@@ -147,3 +147,10 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 ## 0.10.3 智慧课程会话
 
 课程授权、业务 sessionId 与各上游文件的对照见 [SMART-SESSION.md](SMART-SESSION.md)。`quick_login.rs` 的 OAuth 授权入口识别依据学校当前授权链实测；`live_api.rs` 与 `scripts/test-live-api.ts` 支持单独巡检智慧课程。
+
+## 0.11 邮箱、通知与文件预览
+
+- 邮箱会话维护与上游源码／提交对照：[MAIL-SESSION.md](MAIL-SESSION.md)。
+- 成绩与课程提醒调度：[NOTIFICATIONS.md](NOTIFICATIONS.md)。系统投递使用已有 Tauri 通知插件，调度、缓存和去重在本项目实现。
+- 界面与导航调整：[UI-REVIEW.md](UI-REVIEW.md)，设置复用 BeUI Button／Switch／Select，保留现有 Sidebar、Tooltip。
+- DOCX、PPTX 本机预览及依赖来源：[OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。

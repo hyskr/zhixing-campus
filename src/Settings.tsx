@@ -17,6 +17,7 @@ import { Download, FolderUp, KeyRound, RefreshCw } from "lucide-react";
 import { PageHeading } from "./Pages";
 import MoreSettings from "./MoreSettings";
 import AppearanceSettings from "./AppearanceSettings";
+import NotificationSettings from "./NotificationSettings";
 import { usePreferences } from "./preferences";
 import type { Account, Preferences } from "./types";
 export default function Settings({ account }: { account?: Account }) {
@@ -62,8 +63,14 @@ export default function Settings({ account }: { account?: Account }) {
         title="设置"
         description="按自己的习惯，让校园日常更顺手。"
       />
-      <AppearanceSettings />
       <SettingsGroups>
+        <SettingsGroup
+          id="appearance"
+          title="界面风格"
+          description="即时预览，选择适合自己的工作空间。"
+        >
+          <AppearanceSettings />
+        </SettingsGroup>
         <SettingsGroup
           id="login"
           title="登录与连接"
@@ -100,7 +107,6 @@ export default function Settings({ account }: { account?: Account }) {
               </Button>
             )}
           </div>
-          
         </SettingsGroup>
         <SettingsGroup
           id="downloads"
@@ -201,9 +207,9 @@ export default function Settings({ account }: { account?: Account }) {
             />
           </label>
         </SettingsGroup>
+        <NotificationSettings account={account} />
         <MoreSettings account={account} />
       </SettingsGroups>
-      
     </div>
   );
 }

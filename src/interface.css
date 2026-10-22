@@ -1,0 +1,260 @@
+/* Settings keep navigation visible while each pane owns its scroll area. */
+.main-content:has(.settings-page) {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 66px);
+  overflow: hidden;
+  padding-bottom: 20px;
+}
+.main-content:has(.settings-page) > .page-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
+.settings-workspace {
+  display: grid;
+  grid-template-columns: 174px minmax(0, 1fr);
+  gap: 28px;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.settings-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
+}
+.settings-category {
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  width: 100%;
+  min-height: 38px;
+  font-size: 13px !important;
+  color: var(--muted-foreground);
+  border-radius: 7px !important;
+}
+.settings-category[aria-current="page"] {
+  color: var(--foreground);
+  background: var(--muted);
+  font-weight: 600;
+}
+.settings-pane {
+  overflow: auto;
+  min-height: 0;
+  padding: 0 12px 24px 0;
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+}
+.settings-pane-heading {
+  margin-bottom: 22px;
+}
+.settings-pane-heading h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.settings-pane-heading p {
+  color: var(--muted-foreground);
+  margin: 0;
+  font-size: 12px;
+}
+.settings-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.settings-groups .campus-settings-group {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  background: var(--card);
+  box-shadow: none;
+}
+.settings-section-heading h3 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 5px;
+}
+.settings-section-heading p {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin: 0 0 10px;
+}
+.settings-group-content {
+  padding: 0;
+}
+.setting-row {
+  min-height: 70px;
+  gap: 20px;
+}
+.setting-row > span:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.setting-row strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--foreground);
+}
+.setting-row small,
+.setting-foot {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.6;
+}
+.settings-page .setting-row > button,
+.settings-page .setting-row > form {
+  flex-shrink: 0;
+}
+.settings-page .port-setting {
+  max-width: 360px;
+}
+.settings-page .appearance-settings {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.settings-page .appearance-options {
+  gap: 14px;
+}
+.settings-page .appearance-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 16px !important;
+  min-height: 164px;
+  position: relative;
+}
+.settings-page .appearance-option > svg {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+}
+.settings-page .appearance-mini {
+  width: 100%;
+  height: 70px;
+}
+.settings-page .appearance-mini > i {
+  width: 26%;
+}
+.settings-page .appearance-mini > span {
+  padding: 12px;
+}
+.settings-page .appearance-copy strong {
+  font-size: 13px;
+}
+.settings-page .appearance-copy small {
+  font-size: 12px;
+}
+/* Each simultaneous course retains its room and teacher in the fixed week grid. */
+.schedule-page .schedule-course {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  border-radius: 6px;
+  padding: 5px;
+  gap: 2px;
+}
+.schedule-page .schedule-course strong {
+  flex-shrink: 0;
+  -webkit-line-clamp: 2;
+  font-size: 11px;
+  line-height: 1.25;
+  font-weight: 600;
+}
+.schedule-page .schedule-course span,
+.schedule-page .schedule-course small,
+.schedule-page
+  .schedule-cell:has(> .schedule-course:nth-child(2))
+  .schedule-course
+  span,
+.schedule-page
+  .schedule-cell:has(> .schedule-course:nth-child(2))
+  .schedule-course
+  small {
+  display: block;
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1.25;
+  color: inherit;
+  opacity: 0.9;
+  margin: 0;
+}
+.schedule-page .schedule-cell {
+  container-type: inline-size;
+}
+@container (max-width:105px) {
+  .schedule-page .schedule-course {
+    padding: 4px 3px;
+  }
+  .schedule-page .schedule-course strong {
+    font-size: 10px;
+  }
+  .schedule-page .schedule-course span,
+  .schedule-page .schedule-course small {
+    font-size: 10px;
+  }
+}
+@media (max-width: 1050px) {
+  .settings-workspace {
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .settings-groups .campus-settings-group {
+    padding: 16px;
+  }
+}
+.campus-sidebar-content {
+  gap: 10px !important;
+}
+.campus-sidebar-content [data-slot="sidebar-group-label"] {
+  margin-bottom: 4px;
+}
+.campus-nav-link {
+  min-height: 35px !important;
+}
+.campus-sidebar-footer {
+  gap: 6px !important;
+}
+.workspace-status {
+  padding: 7px 10px;
+}
+.workspace-status small {
+  display: none;
+}
+@media (max-height: 800px) {
+  .campus-sidebar-content {
+    gap: 6px !important;
+  }
+  .campus-nav-link {
+    min-height: 30px !important;
+  }
+  .campus-sidebar-footer {
+    padding-block: 6px !important;
+  }
+}
+.notification-test-section { padding-top:18px; border-top:1px solid var(--border); }
+.notification-test-section > strong,.setting-row strong:has(> svg) { display:flex; align-items:center; gap:7px; }
+.notification-test-section p { color:var(--muted-foreground); font-size:12px; line-height:1.7; margin:8px 0 14px; }
+@media(max-height:800px) {
+ .schedule-page .schedule-course { padding:3px; gap:1px; }
+ .schedule-page .schedule-course strong { font-size:10px; line-height:1.15; }
+ .schedule-page .schedule-course span,.schedule-page .schedule-course small,
+ .schedule-page .schedule-cell:has(> .schedule-course:nth-child(2)) .schedule-course span,
+ .schedule-page .schedule-cell:has(> .schedule-course:nth-child(2)) .schedule-course small { font-size:10px; line-height:1.1; }
+}
+.settings-page .setting-row > span:has(> button[role="switch"]) { flex:0 0 auto; }

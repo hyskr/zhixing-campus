@@ -1,0 +1,87 @@
+.office-preview {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+  background: var(--muted, #f5f5f4);
+  color: var(--foreground, #30332f);
+}
+.office-preview-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+  padding: 4px 12px;
+  border-bottom: 1px solid var(--border, #e6e6e2);
+  background: var(--background, #fff);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.office-zoom-controls,
+.office-slide-pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+.office-zoom-controls > span {
+  width: 38px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.office-document-scroll,
+.office-slide-scroll {
+  flex: 1;
+  min-height: 250px;
+  max-height: 62vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+}
+.office-docx-content {
+  min-width: min-content;
+  margin: auto;
+  color: #111;
+  background: transparent;
+}
+.office-docx-content .campus-docx-page-wrapper {
+  background: transparent;
+  padding: 0;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.office-docx-content section.campus-docx-page {
+  margin: 0;
+  box-shadow: 0 2px 14px #00000012;
+  flex-shrink: 0;
+  color: #111;
+}
+.office-slide-page {
+  min-width: 280px;
+  margin: auto;
+  background: white;
+  box-shadow: 0 2px 14px #00000012;
+  flex-shrink: 0;
+}
+.office-slide-page > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.file-viewer:fullscreen .office-document-scroll,
+.file-viewer:fullscreen .office-slide-scroll {
+  max-height: none;
+}
+@media (max-width: 750px) {
+  .office-document-scroll,
+  .office-slide-scroll {
+    padding: 12px;
+  }
+  .office-preview-controls {
+    gap: 8px;
+    padding: 4px 8px;
+  }
+}

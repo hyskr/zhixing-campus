@@ -224,3 +224,12 @@ it("教务不可达保留成绩和课表，邮箱仍可同步", () => {
   expect(next.mailInbox).toEqual([]);
   expect(next.mailCount).toBe(0);
 });
+
+it("分页同步只有取得教学周时更新提醒周次时间", () => {
+ const old=emptyData();old.currentWeek=6;old.syncedAt={currentWeek:"2026-10-19T00:00:00Z"};
+ const mail=applySync(old,{scope:"mail",mailInbox:[],failures:[]});
+ expect(mail.syncedAt?.currentWeek).toBe(old.syncedAt.currentWeek);
+ const course=applySync(mail,{scope:"resources",currentWeek:7,failures:[]});
+ expect(course.syncedAt?.currentWeek).not.toBe(old.syncedAt.currentWeek);
+ expect(course.currentWeek).toBe(7);
+});

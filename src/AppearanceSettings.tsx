@@ -18,13 +18,6 @@ export default function AppearanceSettings() {
   }
   return (
     <section className="appearance-settings surface" aria-label="界面风格">
-      <div className="appearance-heading">
-        <Palette size={17} />
-        <div>
-          <h2>界面风格</h2>
-          <p>即时切换，所有页面使用同一种风格。</p>
-        </div>
-      </div>
       <div className="appearance-options">
         {[
           {
@@ -35,7 +28,7 @@ export default function AppearanceSettings() {
           {
             id: "claude",
             name: "Claude App",
-            description: "暖纸色 · 陶土强调 · 衬线标题",
+            description: "暖纸色 · 低对比边框 · 清晰正文",
           },
         ].map((style) => (
           <Button

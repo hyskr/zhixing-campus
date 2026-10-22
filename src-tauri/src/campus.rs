@@ -56,22 +56,41 @@ async fn mail_session_locked(session: &Session, force: bool) -> Result<String, S
             )
             .send()
             .await
-            .map_err(network_error)?
-            .error_for_status()
-            .map_err(network_error)?
-            .json::<Value>()
-            .await
             .map_err(network_error)?;
-        match root["code"].as_str() {
-            Some("S_OK") => return Ok(sid),
-            Some(
-                "FA_INVALID_SESSION" | "S_INVALID_SESSION" | "S_SESSION_TIMEOUT" | "FA_SECURITY",
-            ) => {}
-            Some(code) => return Err(format!("邮箱会话检查失败：{code}")),
-            None => return Err("邮箱会话检查未返回有效结果".into()),
+        #[cfg(test)]
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("mail") {
+            eprintln!("mail cached check HTTP {}", root.status());
+        }
+        // 保存的 Coremail.sid 失效时，目录检查也可能返回 HTTP 500 而非 JSON 会话错误。
+        // 此检查不修改邮件；重新经 MIS 换取 sid 后由调用者继续原读取操作。
+        if root.status() != reqwest::StatusCode::INTERNAL_SERVER_ERROR {
+            let root = root
+                .error_for_status()
+                .map_err(network_error)?
+                .json::<Value>()
+                .await
+                .map_err(network_error)?;
+            match root["code"].as_str() {
+                Some("S_OK") => return Ok(sid),
+                Some(
+                    "FA_INVALID_SESSION" | "S_INVALID_SESSION" | "S_SESSION_TIMEOUT"
+                    | "FA_SECURITY",
+                ) => {}
+                Some(code) => return Err(format!("邮箱会话检查失败：{code}")),
+                None => return Err("邮箱会话检查未返回有效结果".into()),
+            }
         }
     }
     let response = get(session, "https://mis.bjtu.edu.cn/osys_sso_email/", None).await?;
+    #[cfg(test)]
+    if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("mail") {
+        eprintln!(
+            "mail SSO HTTP {} host={} path={}",
+            response.status(),
+            response.url().host_str().unwrap_or(""),
+            response.url().path()
+        );
+    }
     if is_login_url(response.url()) || response.url().host_str() != Some("mail.bjtu.edu.cn") {
         return Err(AUTH_EXPIRED.into());
     }

@@ -1,7 +1,7 @@
 {
   "name": "zhixing-campus",
   "private": true,
-  "version": "0.10.3",
+  "version": "0.11.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 1420",
@@ -20,7 +20,9 @@
     "@tauri-apps/plugin-clipboard-manager": "^2.5.0",
     "@tauri-apps/plugin-notification": "^2.7.0",
     "@tauri-apps/plugin-opener": "^2.7.2",
+    "@web-ppt/core": "0.4.5",
     "clsx": "^2.1.1",
+    "docx-preview": "0.4.1",
     "dompurify": "^3.4.17",
     "gm-crypto": "^0.1.12",
     "hls.js": "^1.7.3",

@@ -156,6 +156,7 @@ export function applySync(old: CampusData, result: SyncResult): CampusData {
   ] as const) {
     if (result[field] !== undefined) syncedAt[key] = time;
   }
+  if (result.currentWeek !== undefined) syncedAt.currentWeek = time;
   if (result.homeworkPatches?.length) syncedAt.homework = time;
   if (!result.failures.length) syncedAt[result.scope ?? "all"] = time;
   return {

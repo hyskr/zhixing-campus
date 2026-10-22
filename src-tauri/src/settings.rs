@@ -15,6 +15,10 @@ pub struct Preferences {
     pub mail_notifications: bool,
     pub mail_account: String,
     pub mail_interval: u64,
+    pub grade_notifications: bool,
+    pub course_notifications: bool,
+    pub reminder_account: String,
+    pub course_reminder_minutes: i64,
 }
 impl Default for Preferences {
     fn default() -> Self {
@@ -31,6 +35,10 @@ impl Default for Preferences {
             mail_notifications: false,
             mail_account: String::new(),
             mail_interval: 10,
+            grade_notifications: false,
+            course_notifications: false,
+            reminder_account: String::new(),
+            course_reminder_minutes: 0,
         }
     }
 }
@@ -60,6 +68,7 @@ pub fn set_preferences(
     }
     preferences.network_interval = preferences.network_interval.clamp(1, 3600);
     preferences.mail_interval = preferences.mail_interval.clamp(1, 1440);
+    preferences.course_reminder_minutes = preferences.course_reminder_minutes.clamp(0, 30);
     preferences.download_concurrency = preferences.download_concurrency.clamp(1, 8);
     let path = state.directory.parent().unwrap().join("settings.json");
     fs::write(

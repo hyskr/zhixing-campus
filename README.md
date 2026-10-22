@@ -162,3 +162,12 @@ git commit -m "Describe the change"
 ## 0.10.3 智慧课程登录
 
 首次进入智慧课程时，继续完成 SSO OAuth 授权回调，再验证账号并初始化课程业务会话。支持 `mise run test:live -- --module learning` 单独巡检课程接口。接口设计与参考来源见 [SMART-SESSION.md](SMART-SESSION.md)。
+
+## 0.11.0
+
+- 邮箱保存会话返回 HTTP 500 时重新完成邮箱 SSO，恢复收件箱、已发送及正文读取。
+- 通知设置集中管理新邮件、新成绩和上课提醒，提供三类原生测试按钮；应用退出后停止检查。
+- 设置改为分类导航，Claude 风格统一字体与控件颜色，侧栏分为日常、学习和工具；并排课程保留地点和教师。
+- DOCX 与 PPTX 在本机解析预览，支持缩放、幻灯片翻页与全屏。
+
+实现与验证见 [MAIL-SESSION.md](MAIL-SESSION.md)、[NOTIFICATIONS.md](NOTIFICATIONS.md)、[UI-REVIEW.md](UI-REVIEW.md)、[OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。

@@ -10,6 +10,7 @@ mod mailbox;
 mod media;
 mod parsers;
 mod quick_login;
+mod reminders;
 mod settings;
 mod sso;
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -947,6 +948,9 @@ async fn sync_account(
     if result.as_object().is_some_and(|o| o.len() == 1) {
         return Err(failures.join("；"));
     }
+    if let Err(error) = reminders::record_sync(&app, &username, &result) {
+        let _ = app.emit("campus-reminder-error", error);
+    }
     result["authExpired"] = json!(failures.iter().any(|e| e.contains("登录状态已失效")));
     result["failures"] = json!(failures);
     progress(&app, &username, "同步完成");
@@ -1000,6 +1004,7 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .manage(campus::Features::default())
+        .manage(reminders::Reminders::default())
         .manage(devices::DeviceJobs::default())
         .manage(sso::SsoState::default())
         .manage(media::DownloadState::default())
@@ -1029,10 +1034,25 @@ pub fn run() {
                 *feature.baselines.lock().unwrap() = baseline;
                 *feature.directory.lock().unwrap() = dir;
             }
+            reminders::init(
+                &app.state::<reminders::Reminders>(),
+                app.path().app_data_dir()?.join("reminders.json"),
+            );
+            reminders::start_background(app.handle().clone());
             campus::start_background(app.handle().clone());
+            let args: Vec<_> = std::env::args().collect();
+            if let Some(index) = args.iter().position(|arg| arg == "--test-notification") {
+                let kind = args.get(index + 1).cloned();
+                match reminders::test_notification(app.handle().clone(), kind) {
+                    Ok(()) => eprintln!("notification test: submitted to system"),
+                    Err(error) => eprintln!("notification test: {error}"),
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            reminders::test_notification,
+            reminders::cache_reminder_data,
             campus::open_school_page,
             mailbox::mail_detail,
             mailbox::mail_sent,

@@ -21,6 +21,10 @@ export const defaultPreferences: Preferences = {
   mailNotifications: false,
   mailAccount: "",
   mailInterval: 10,
+  gradeNotifications: false,
+  courseNotifications: false,
+  reminderAccount: "",
+  courseReminderMinutes: 0,
 };
 const Context = createContext<{
   preferences: Preferences;

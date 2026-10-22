@@ -1,20 +1,27 @@
-/* Claude App 的暖纸色与排版方向；知行经典使用 styles.css 中的默认令牌。
- * https://academy.claude.com/tutorials/navigating-the-claude-desktop-app
+/* Claude Desktop reference: warm canvas, quiet chrome and a restrained clay accent.
+ * https://claude.com/download
  */
 :root[data-appearance="claude"] {
   --background: #faf9f5;
-  --foreground: #302f2c;
+  --foreground: #302e2a;
   --card: #fffefa;
-  --primary: #b95638;
-  --muted: #eeece5;
-  --muted-foreground: #716e66;
-  --border: #e3dfd5;
+  --primary: #a34b31;
+  --primary-foreground: #fffaf6;
+  --secondary: #efede6;
+  --secondary-foreground: #393730;
+  --muted: #efede6;
+  --muted-foreground: #6e6a62;
+  --accent: #e9e5dc;
+  --accent-foreground: #35322c;
+  --border: #e1ddd4;
+  --input: #e1ddd4;
+  --ring: #a34b31;
   --canvas: #faf9f5;
-  --text: #302f2c;
-  --sub: #77746c;
-  --claude-sidebar: #f0eee6;
+  --text: #302e2a;
+  --sub: #6e6a62;
   --color-popover: var(--card);
-  --color-ring: #b95638;
+  --color-ring: var(--ring);
+  --sidebar-background: #f1efe8;
 }
 [data-appearance="claude"] body,
 [data-appearance="claude"] .app-shell,
@@ -26,116 +33,162 @@
 [data-appearance="claude"] .campus-sidebar-panel,
 [data-appearance="claude"] .campus-sidebar-header,
 [data-appearance="claude"] .campus-sidebar-footer {
-  background: var(--claude-sidebar) !important;
+  background: #f1efe8 !important;
   border-color: var(--border) !important;
 }
 [data-appearance="claude"] .campus-nav-link {
   color: #625f56 !important;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 [data-appearance="claude"] .campus-nav-link[data-active="true"],
 [data-appearance="claude"] .campus-nav-link[aria-current="page"] {
-  background: #e4e0d5 !important;
+  background: #e5e1d7 !important;
   color: #332f29 !important;
 }
+[data-appearance="claude"] .campus-nav-link:hover {
+  background: #eae6dd !important;
+}
 [data-appearance="claude"] .brand-symbol {
-  background: #b95638;
-  color: #fffaf2;
-  border-radius: 9px;
+  background: #a34b31;
+  color: #fffaf6;
+  border-radius: 8px;
 }
 [data-appearance="claude"] .topbar {
-  background: #faf9f5;
+  background: var(--background);
   border-color: var(--border);
 }
 [data-appearance="claude"] .page-heading h1,
 [data-appearance="claude"] .home-heading h1,
 [data-appearance="claude"] .modal-heading h2 {
-  font-family: Georgia, "Iowan Old Style", "Songti SC", "STSong", SimSun, serif;
-  font-weight: 500;
-  letter-spacing: -0.5px;
-  color: #37322c;
+  font-family: inherit;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--foreground);
 }
-[data-appearance="claude"] .home-heading h1 {
-  font-size: 25px;
-}
-[data-appearance="claude"] .surface,
-[data-appearance="claude"] .grade-panel,
-[data-appearance="claude"] .resource-main,
-[data-appearance="claude"] .resource-detail-panel,
-[data-appearance="claude"] .file-space,
-[data-appearance="claude"] .campus-modal,
-[data-appearance="claude"] .mail-workspace,
-[data-appearance="claude"] .mail-index,
-[data-appearance="claude"] .mail-reader,
-[data-appearance="claude"] .settings-section,
-[data-appearance="claude"] .dashboard-panel {
+[data-appearance="claude"]
+  :is(
+    .surface,
+    .grade-panel,
+    .resource-main,
+    .resource-detail-panel,
+    .file-space,
+    .campus-modal,
+    .mail-workspace,
+    .mail-index,
+    .mail-reader,
+    .dashboard-panel,
+    .campus-settings-group,
+    .resource-explorer
+  ) {
   background: var(--card) !important;
   border-color: var(--border) !important;
   color: var(--foreground);
+  box-shadow: none;
 }
-[data-appearance="claude"] .mail-folder-rail,
-[data-appearance="claude"] .mail-message-list,
-[data-appearance="claude"] .resource-course-list,
-[data-appearance="claude"] .campus-file-tree,
-[data-appearance="claude"] .resource-explorer-tree {
+[data-appearance="claude"]
+  :is(
+    .mail-folder-rail,
+    .mail-message-list,
+    .resource-course-list,
+    .campus-file-tree,
+    .resource-explorer-tree
+  ) {
   background: #f5f3ed !important;
 }
-[data-appearance="claude"] .mail-list-item.selected,
-[data-appearance="claude"] .mail-folder-item.active,
-[data-appearance="claude"] .resource-course-item.active,
-[data-appearance="claude"] .account-switcher {
-  background: #eae6dc !important;
+[data-appearance="claude"]
+  :is(
+    .mail-list-item.selected,
+    .mail-folder-item.active,
+    .resource-course-item.active,
+    .account-switcher
+  ) {
+  background: #ebe7dd !important;
   color: #3c352d !important;
+}
+[data-appearance="claude"]
+  :is(
+    .mail-search,
+    .assignment-filters select,
+    .resource-search,
+    .settings-category[aria-current="page"]
+  ) {
+  background: var(--muted);
+  color: var(--foreground);
+  border-color: var(--border);
 }
 [data-appearance="claude"] .home-summary {
   background: #f1eee6;
   border-color: var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
 }
-[data-appearance="claude"] .home-summary strong,
-[data-appearance="claude"] .dashboard-mail-dot,
-[data-appearance="claude"] .dashboard-course-time {
-  color: #b95638;
+[data-appearance="claude"] :is(.dashboard-mail-dot, .dashboard-course-time) {
+  color: var(--primary);
 }
 [data-appearance="claude"] .dashboard-mail-dot {
-  background: #b95638;
-}
-[data-appearance="claude"] .dashboard-panel header h2 > svg,
-[data-appearance="claude"] .appearance-heading > svg {
-  color: #ae5339;
+  background: var(--primary);
 }
 [data-appearance="claude"] .dashboard-category.mail {
   background: #f4e2d8;
   color: #98452e;
 }
-[data-appearance="claude"] .dashboard-rows > button:hover,
-[data-appearance="claude"] .dashboard-footer {
-  background: #f0ece3;
+[data-appearance="claude"]
+  :is(.dashboard-rows > button:hover, .dashboard-footer) {
+  background: #f2efe8;
 }
-[data-appearance="claude"] .campus-nav-link:hover,
-[data-appearance="claude"] .home-quick-sort li:hover {
-  background: #e9e5da !important;
-}
-[data-appearance="claude"] .grades-table th,
-[data-appearance="claude"] .rooms-table thead th,
-[data-appearance="claude"] .course-schedule thead th {
-  background: #eeebe3 !important;
+[data-appearance="claude"]
+  :is(
+    .grades-table th,
+    .rooms-table thead th,
+    .course-schedule thead th,
+    .day-head,
+    .period-head,
+    .table-corner
+  ) {
+  background: #f2f0e9 !important;
   color: #5e594f !important;
+  border-color: var(--border);
 }
-[data-appearance="claude"] .campus-settings-group,
-[data-appearance="claude"] .resource-explorer {
-  border-color: var(--border) !important;
-  background: var(--card) !important;
-}
-[data-appearance="claude"] .home-heading p,
-[data-appearance="claude"] .page-heading p,
-[data-appearance="claude"] .breadcrumb {
-  color: #777167;
+[data-appearance="claude"]
+  :is(.home-heading p, .page-heading p, .breadcrumb, .table-caption) {
+  color: var(--muted-foreground);
 }
 [data-appearance="claude"] .nav-count {
-  background: #e3ddcf;
-  color: #6b513e;
+  background: #e4ddd1;
+  color: #694c36;
+}
+[data-appearance="claude"] .mail-count {
+  background: #e7d1c5;
+  color: #873e2b;
 }
 [data-appearance="claude"] .status-dot {
-  background: #b95638;
+  background: #a34b31;
 }
+[data-appearance="claude"] .settings-pane-heading h2 {
+  font-size: 18px;
+}
+[data-appearance="claude"] .schedule-course {
+  color: #45463f;
+  background: #efefe9;
+  border-color: #dfdfd6;
+}
+[data-appearance="claude"] .schedule-course.orange {
+  color: #715134;
+  background: #f4ebde;
+  border-color: #ead9c4;
+}
+[data-appearance="claude"] .schedule-course.blue {
+  color: #3a5261;
+  background: #e9eeef;
+  border-color: #d8e1e4;
+}
+[data-appearance="claude"] .schedule-course.teal {
+  color: #3e5e50;
+  background: #e9eee7;
+  border-color: #d6e0d5;
+}
+[data-appearance="claude"] .schedule-course.purple {
+  color: #5b4b60;
+  background: #efeaef;
+  border-color: #e1d7e1;
+}
+[data-appearance="claude"] .campus-nav-link > span.absolute { background:#e5e1d7!important; }

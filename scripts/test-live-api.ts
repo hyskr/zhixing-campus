@@ -4,7 +4,7 @@ const root = resolve(import.meta.dir, "..");
 const args = process.argv.slice(2);
 if (args.includes("--help")) {
   console.log(
-    `用法：mise run test:live -- [--account 学号] [--data-dir 路径] [--report 路径] [--reuse-session] [--all-items] [--module learning]\n默认读取全部已保存账号，使用已保存密码进行一次 SSO 登录，逐项测试应用的只读接口。\n--module learning 只巡检智慧课程，并输出不含查询参数的授权路径与账号匹配状态。\n--reuse-session 优先复用保存的会话；--all-items 深入读取所有作业详情和课程文件，不只抽取代表项。\n写操作不执行；邮件正文只选已读邮件，避免改变未读状态。`,
+    `用法：mise run test:live -- [--account 学号] [--data-dir 路径] [--report 路径] [--reuse-session] [--all-items] [--module learning|mail]\n默认读取全部已保存账号，使用已保存密码进行一次 SSO 登录，逐项测试应用的只读接口。\n--module learning 只巡检智慧课程；--module mail 只巡检邮箱。\n--reuse-session 优先复用保存的会话；--all-items 深入读取所有作业详情和课程文件，不只抽取代表项。\n写操作不执行；邮件正文只选已读邮件，避免改变未读状态。`,
   );
   process.exit(0);
 }
@@ -28,8 +28,8 @@ for (let i = 0; i < args.length; i++) {
   if (["--account", "--data-dir", "--report", "--module"].includes(args[i]))
     i++;
 }
-if (option("--module") && option("--module") !== "learning")
-  throw Error("--module 目前支持 learning");
+if (option("--module") && !["learning", "mail"].includes(option("--module")!))
+  throw Error("--module 目前支持 learning、mail");
 const defaultData =
   process.platform === "darwin"
     ? join(homedir(), "Library/Application Support/cn.zhixing.bjtu")
