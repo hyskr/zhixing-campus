@@ -44,6 +44,11 @@
       "../SOURCES.md": "SOURCES.md",
       "../BEUI.md": "BEUI.md",
       "../beui.components.json": "beui.components.json"
+    },
+    "windows": {
+      "wix": {
+        "language": "zh-CN"
+      }
     }
   }
 }

@@ -11,7 +11,9 @@
 | macOS | Intel x64 | `.dmg` |
 | Linux | x64 | `.deb`、`.AppImage` |
 
-每个平台先运行 TypeScript、前端测试和 Rust 单元测试，再进行 Release 构建。真实学校接口巡检属于手动忽略测试，不在云端运行。
+每个平台先运行 TypeScript 和前端测试，再进行 Release 构建；通用 Rust 单元测试在 Linux 运行。真实学校接口巡检属于手动忽略测试，不在云端运行。
+
+Windows MSI 使用 `zh-CN` 语言，支持中文产品名称。
 
 工具版本取自 `mise.toml`；前端依赖使用 `bun.lock`，Rust 使用 `Cargo.lock`。Linux 构建安装 WebKitGTK 4.1、GTK 相关开发包和 DBus；凭据保存使用 Secret Service，桌面环境需要可用的 GNOME Keyring 或其他兼容服务。
 
