@@ -198,3 +198,14 @@
 - 模拟周四 10:30：当前周标记第二节；切换下一周与选课课表时取消高亮。
 - 首页在 1440×900、1040×720、840×1031、730×1031 下无横向溢出或页面纵向滚动。
 - 验证课程空间 Select 打开课程详情，730px 主导航图标可见且能展开全部导航。
+
+## GitHub Actions 三平台安装包
+
+2026-10-22 云端 Release 构建产物已上传至 [Desktop packages](https://github.com/hyskr/zhixing-campus/actions/runs/39767433123)：
+
+- Windows x64：`知行 Campus_0.11.1_x64-setup.exe`、`知行 Campus_0.11.1_x64_zh-CN.msi`；下载产物确认两种安装包均存在。
+- macOS Apple Silicon 与 Intel：分别生成对应架构的 DMG。
+- Linux x64：DEB 与 AppImage。
+- 云端前端检查与测试通过，Linux Rust 单元测试通过；真实校园接口巡检不在 CI 中执行。
+
+工具版本由 mise 固定，依赖使用锁文件；本机账号凭据与会话文件不属于构建输入。
