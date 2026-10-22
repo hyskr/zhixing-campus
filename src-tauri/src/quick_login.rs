@@ -6,11 +6,27 @@ pub async fn current_user(session: &Session) -> Result<bool, String> {
         None,
     )
     .await?;
+    #[cfg(test)]
+    if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("learning") {
+        eprintln!(
+            "VE user response status={} path={}",
+            response.status(),
+            response.url().path()
+        );
+    }
     let body = response.text().await.map_err(network_error)?;
     let Ok(root) = parsers::smart_response(&body) else {
         return Ok(false);
     };
-    Ok(string(&root["result"]["loginName"]) == session.username)
+    let matches = string(&root["result"]["loginName"]) == session.username;
+    #[cfg(test)]
+    if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("learning") {
+        eprintln!(
+            "VE identity match={matches} keys={:?}",
+            root.as_object().map(|v| v.keys().collect::<Vec<_>>())
+        );
+    }
+    Ok(matches)
 }
 // 参考来源：参考 quickUsername 恢复及失效处理；仅保存当前账号经 MIS 跳转取得的值。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/login-service.js
@@ -56,6 +72,12 @@ pub async fn restore(session: &Session) -> Result<bool, String> {
 const PORTAL_HOME: &str = "https://bksy.bjtu.edu.cn/login_introduce_t.html";
 const PORTAL_BRIDGE: &str =
     "https://bksycenter.bjtu.edu.cn/NoMasterJumpPage.aspx?URL=jwcZhjx&FPC=page:jwcZhjx";
+// 业务系统 OAuth 授权可复用已有 SSO Cookie；授权入口本身不表示登录过期。
+fn requires_login(url: &Url) -> bool {
+    is_login_url(url)
+        && !(url.host_str() == Some("sso.bjtu.edu.cn")
+            && url.path().trim_end_matches('/') == "/o/authorize")
+}
 fn next_url(
     url: &Url,
     location: Option<&str>,
@@ -70,7 +92,16 @@ fn next_url(
         {
             let _ = target.set_scheme("https");
         }
-        if is_login_url(&target) {
+        #[cfg(test)]
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("learning") {
+            eprintln!(
+                "VE redirect host={} path={} login={}",
+                target.host_str().unwrap_or(""),
+                target.path(),
+                requires_login(&target)
+            );
+        }
+        if requires_login(&target) {
             return Err(AUTH_EXPIRED.into());
         }
         return Ok(Some(target));
@@ -93,7 +124,7 @@ fn next_url(
         .and_then(|e| e.value().attr("action"))
     {
         let target = url.join(action).map_err(|_| "智慧课程跳转地址无效")?;
-        if is_login_url(&target) {
+        if requires_login(&target) {
             return Err(AUTH_EXPIRED.into());
         }
         return Ok(Some(target));
@@ -121,7 +152,16 @@ async fn follow_entry(
             .send()
             .await
             .map_err(network_error)?;
-        if is_login_url(response.url()) {
+        #[cfg(test)]
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("learning") {
+            eprintln!(
+                "VE entry status={} host={} path={}",
+                response.status(),
+                url.host_str().unwrap_or(""),
+                url.path()
+            );
+        }
+        if requires_login(response.url()) {
             return Err(AUTH_EXPIRED.into());
         }
         let location = if response.status().is_redirection() {
@@ -260,7 +300,7 @@ mod tests {
         );
     }
     #[test]
-    fn relative_redirect_replaces_old_query_and_login_expiry_stops() {
+    fn relative_redirect_replaces_old_query_and_authorization_continues() {
         let url = Url::parse("https://mis.bjtu.edu.cn/module/module/28/?old=1").unwrap();
         assert_eq!(
             next_url(
@@ -274,12 +314,40 @@ mod tests {
             .as_str(),
             "https://mis.bjtu.edu.cn/bridge?new=2"
         );
+        let authorize = next_url(
+            &url,
+            Some("https://sso.bjtu.edu.cn/o/authorize/?state=1"),
+            "",
+            true,
+        )
+        .unwrap()
+        .unwrap();
+        assert!(!requires_login(&authorize));
+        assert_eq!(authorize.query(), Some("state=1"));
+        let callback = next_url(
+            &authorize,
+            Some("http://123.121.147.7/oauth/token/callBack?code=test"),
+            "",
+            false,
+        )
+        .unwrap()
+        .unwrap();
+        assert_eq!(callback.path(), "/oauth/token/callBack");
+        for login in [
+            "https://sso.bjtu.edu.cn/sso/login",
+            "https://cas.bjtu.edu.cn/auth/login",
+        ] {
+            assert_eq!(
+                next_url(&url, Some(login), "", true).unwrap_err(),
+                AUTH_EXPIRED
+            );
+        }
         assert_eq!(
             next_url(
-                &url,
-                Some("https://sso.bjtu.edu.cn/o/authorize/?state=1"),
-                "",
-                true
+                &authorize,
+                None,
+                "<input type='password' name='password'>",
+                false
             )
             .unwrap_err(),
             AUTH_EXPIRED

@@ -143,3 +143,7 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 ## 真实接口巡检脚本
 
 `src-tauri/src/live_api.rs` 直接复用本项目已有 SSO、MIS、教务、作业、资料、回放和邮箱请求与解析；脚本未另行移植学校接口。`scripts/encrypt-sso.ts` 通过标准输入衔接同一 `src/ssoCrypto.ts` 实现。模块的上游参考关系沿用各实现文件的固定版本注释。
+
+## 0.10.3 智慧课程会话
+
+课程授权、业务 sessionId 与各上游文件的对照见 [SMART-SESSION.md](SMART-SESSION.md)。`quick_login.rs` 的 OAuth 授权入口识别依据学校当前授权链实测；`live_api.rs` 与 `scripts/test-live-api.ts` 支持单独巡检智慧课程。

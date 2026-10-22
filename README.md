@@ -158,3 +158,7 @@ git commit -m "Describe the change"
 ## 真实接口巡检
 
 `mise run test:live` 从本机保存的账号密码进行 SSO 登录，一次检查已接入的只读业务接口，并生成 `output/live-api/report.json`。支持指定账号、复用会话及深入遍历；发信、提交作业、上传和设备下线不执行。用法与覆盖范围见 [LIVE-API-TESTING.md](LIVE-API-TESTING.md)。
+
+## 0.10.3 智慧课程登录
+
+首次进入智慧课程时，继续完成 SSO OAuth 授权回调，再验证账号并初始化课程业务会话。支持 `mise run test:live -- --module learning` 单独巡检课程接口。接口设计与参考来源见 [SMART-SESSION.md](SMART-SESSION.md)。

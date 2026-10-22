@@ -801,112 +801,116 @@ async fn saved_account_read_suite() {
                 continue;
             }
         };
-        let started = Instant::now();
-        report.result(
-            &id,
-            "mis.profile",
-            started,
-            data_text(&session, &format!("{MIS}/home/"))
-                .await
-                .and_then(|v| parsers::student(&v, &id)),
-            |_| "个人资料解析成功".into(),
-        );
-        let started = Instant::now();
-        report.result(
-            &id,
-            "services.balances",
-            started,
-            data_text(&session, &format!("{MIS}/osys_ajax_wrap/"))
-                .await
-                .and_then(|body| {
-                    serde_json::from_str::<Value>(&body).map_err(|_| "余额响应格式无效".into())
-                }),
-            |v| {
-                format!(
-                    "校园卡字段 {}，校园网字段 {}",
-                    v.get("ecard_yuer").is_some(),
-                    v.get("net_fee").is_some()
-                )
-            },
-        );
-        let started = Instant::now();
-        let academic = report.result(
-            &id,
-            "academic.session",
-            started,
-            ensure_aa(&session).await,
-            |_| "教务会话有效".into(),
-        );
-        if academic.is_some() {
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() != Ok("learning") {
             let started = Instant::now();
             report.result(
                 &id,
-                "academic.grades",
+                "mis.profile",
                 started,
-                fetch_grades(&session).await,
-                |v| format!("{} 条成绩", v.len()),
+                data_text(&session, &format!("{MIS}/home/"))
+                    .await
+                    .and_then(|v| parsers::student(&v, &id)),
+                |_| "个人资料解析成功".into(),
             );
             let started = Instant::now();
             report.result(
                 &id,
-                "academic.schedule",
+                "services.balances",
                 started,
-                fetch_courses(&session).await,
-                |v| format!("{} 个课表时段", v.len()),
-            );
-            let started = Instant::now();
-            report.result(
-                &id,
-                "academic.classrooms",
-                started,
-                data_text(
-                    &session,
-                    &format!(
-                        "{AA}/classroom/timeholdresult/room_view/?zc=1&jxlh=1&page=1&perpage=500"
-                    ),
-                )
-                .await
-                .and_then(|v| classrooms::parse_page(&v, 1, "1")),
+                data_text(&session, &format!("{MIS}/osys_ajax_wrap/"))
+                    .await
+                    .and_then(|body| {
+                        serde_json::from_str::<Value>(&body).map_err(|_| "余额响应格式无效".into())
+                    }),
                 |v| {
                     format!(
-                        "{} 间教室",
-                        v["rooms"].as_array().map(Vec::len).unwrap_or(0)
+                        "校园卡字段 {}，校园网字段 {}",
+                        v.get("ecard_yuer").is_some(),
+                        v.get("net_fee").is_some()
                     )
                 },
             );
-        } else {
-            report.skip(
+            let started = Instant::now();
+            let academic = report.result(
                 &id,
-                "academic.grades/schedule/classrooms",
-                "教务连接失败；继续测试其他系统",
-            )
+                "academic.session",
+                started,
+                ensure_aa(&session).await,
+                |_| "教务会话有效".into(),
+            );
+            if academic.is_some() {
+                let started = Instant::now();
+                report.result(
+                    &id,
+                    "academic.grades",
+                    started,
+                    fetch_grades(&session).await,
+                    |v| format!("{} 条成绩", v.len()),
+                );
+                let started = Instant::now();
+                report.result(
+                    &id,
+                    "academic.schedule",
+                    started,
+                    fetch_courses(&session).await,
+                    |v| format!("{} 个课表时段", v.len()),
+                );
+                let started = Instant::now();
+                report.result(
+                    &id,
+                    "academic.classrooms",
+                    started,
+                    data_text(
+                        &session,
+                        &format!(
+                        "{AA}/classroom/timeholdresult/room_view/?zc=1&jxlh=1&page=1&perpage=500"
+                    ),
+                    )
+                    .await
+                    .and_then(|v| classrooms::parse_page(&v, 1, "1")),
+                    |v| {
+                        format!(
+                            "{} 间教室",
+                            v["rooms"].as_array().map(Vec::len).unwrap_or(0)
+                        )
+                    },
+                );
+            } else {
+                report.skip(
+                    &id,
+                    "academic.grades/schedule/classrooms",
+                    "教务连接失败；继续测试其他系统",
+                )
+            }
+            mailbox_checks(&session, &id, &mut report).await;
         }
-        mailbox_checks(&session, &id, &mut report).await;
         learning_checks(&session, &id, &mut report, all_items).await;
-        let started = Instant::now();
-        report.result(
-            &id,
-            "network.devices",
-            started,
-            devices::devices(&session).await,
-            |v| format!("{} 台在线设备", v.len()),
-        );
-        let started = Instant::now();
-        report.result(
-            &id,
-            "sso.userCenter",
-            started,
-            get(&session, campus::shortcut("sso").unwrap(), None)
-                .await
-                .and_then(|r| {
-                    if r.url().host_str() == Some("uc.bjtu.edu.cn") {
-                        Ok(())
-                    } else {
-                        Err(AUTH_EXPIRED.into())
-                    }
-                }),
-            |_| "用户中心票据回调可达".into(),
-        );
+        if std::env::var("CAMPUS_PROBE_MODULE").as_deref() != Ok("learning") {
+            let started = Instant::now();
+            report.result(
+                &id,
+                "network.devices",
+                started,
+                devices::devices(&session).await,
+                |v| format!("{} 台在线设备", v.len()),
+            );
+            let started = Instant::now();
+            report.result(
+                &id,
+                "sso.userCenter",
+                started,
+                get(&session, campus::shortcut("sso").unwrap(), None)
+                    .await
+                    .and_then(|r| {
+                        if r.url().host_str() == Some("uc.bjtu.edu.cn") {
+                            Ok(())
+                        } else {
+                            Err(AUTH_EXPIRED.into())
+                        }
+                    }),
+                |_| "用户中心票据回调可达".into(),
+            );
+        }
         for name in [
             "mail.send/upload/cancelCompose/markRead",
             "learning.upload/submitHomework",
