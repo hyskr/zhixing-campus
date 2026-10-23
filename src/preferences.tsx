@@ -22,6 +22,7 @@ export const defaultPreferences: Preferences = {
   mailAccount: "",
   mailInterval: 10,
   gradeNotifications: false,
+  gradeInterval: 10,
   courseNotifications: false,
   reminderAccount: "",
   courseReminderMinutes: 0,

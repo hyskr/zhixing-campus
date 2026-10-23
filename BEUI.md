@@ -103,3 +103,5 @@ bun run tauri build --bundles app
 
 - 摘要条统一外框与四项分隔；页首 BeUI Select 打开课程空间。
 - 移除底部重复入口；窄窗口 SidebarTrigger 显式显示导航图标。
+
+- `AppUpdater.tsx`：Button 用于检查、安装、重启与发布入口；Loader 用于更新检查和安装状态。

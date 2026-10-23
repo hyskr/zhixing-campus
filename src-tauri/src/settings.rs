@@ -16,6 +16,7 @@ pub struct Preferences {
     pub mail_account: String,
     pub mail_interval: u64,
     pub grade_notifications: bool,
+    pub grade_interval: u64,
     pub course_notifications: bool,
     pub reminder_account: String,
     pub course_reminder_minutes: i64,
@@ -36,6 +37,7 @@ impl Default for Preferences {
             mail_account: String::new(),
             mail_interval: 10,
             grade_notifications: false,
+            grade_interval: 10,
             course_notifications: false,
             reminder_account: String::new(),
             course_reminder_minutes: 0,
@@ -68,6 +70,7 @@ pub fn set_preferences(
     }
     preferences.network_interval = preferences.network_interval.clamp(1, 3600);
     preferences.mail_interval = preferences.mail_interval.clamp(1, 1440);
+    preferences.grade_interval = preferences.grade_interval.clamp(1, 1440);
     preferences.course_reminder_minutes = preferences.course_reminder_minutes.clamp(0, 30);
     preferences.download_concurrency = preferences.download_concurrency.clamp(1, 8);
     let path = state.directory.parent().unwrap().join("settings.json");
@@ -94,6 +97,18 @@ pub fn set_preferences(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn mail_and_grade_intervals_are_independent_and_keep_existing_defaults() {
+        let old: Preferences = serde_json::from_value(json!({"mailInterval":30})).unwrap();
+        assert_eq!(old.mail_interval, 30);
+        assert_eq!(old.grade_interval, 10);
+        let mut selected = old;
+        selected.grade_interval = 5;
+        let restored: Preferences =
+            serde_json::from_value(serde_json::to_value(selected).unwrap()).unwrap();
+        assert_eq!(restored.mail_interval, 30);
+        assert_eq!(restored.grade_interval, 5);
+    }
     #[test]
     fn appearance_defaults_for_existing_settings_and_persists_selection() {
         let old: Preferences = serde_json::from_value(json!({"quickLogin":false})).unwrap();

@@ -250,7 +250,7 @@ pub fn start_background(app: tauri::AppHandle) {
             }
             if prefs.grade_notifications
                 && !prefs.reminder_account.is_empty()
-                && last_grade.elapsed().as_secs() >= 600
+                && last_grade.elapsed().as_secs() >= prefs.grade_interval * 60
             {
                 last_grade = std::time::Instant::now();
                 let result = async {

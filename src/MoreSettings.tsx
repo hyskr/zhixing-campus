@@ -209,22 +209,25 @@ export default function MoreSettings({ account }: { account?: Account }) {
       <SettingsGroup
         id="credentials"
         title="账号凭据保存方式"
-        description="选择本机保存、系统钥匙串或仅本次使用。"
+        description="选择系统凭据库、本机文件或仅本次使用。"
       >
-        <div className="setting-row">
+        <div className="setting-row credential-storage-row">
           <span>
             <strong>{account?.name || "当前账号"}</strong>
+            <small>Windows 使用凭据管理器，macOS 使用钥匙串。</small>
           </span>
-          <div className="port-setting">
-            <Select value={String(mode)} onValueChange={(e) => setMode(e)}>
+          <div className="port-setting credential-storage-controls">
+            <Select
+              className="credential-storage-picker"
+              value={String(mode)}
+              onValueChange={(e) => setMode(e)}
+            >
               <SelectTrigger>
                 <span className="sr-only">{"凭据保存方式"}：</span>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="keychain">
-                  系统凭据库 / macOS 钥匙串
-                </SelectItem>
+                <SelectItem value="keychain">系统凭据库（推荐）</SelectItem>
                 <SelectItem value="file">本机文件（保存密码）</SelectItem>
                 <SelectItem value="session">仅本次使用</SelectItem>
               </SelectContent>

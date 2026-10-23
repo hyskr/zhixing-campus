@@ -25,7 +25,7 @@ mise run dev
 | `mise run build:app` | macOS 应用 |
 
 任务通过项目锁定的工具执行，无需额外激活 Shell 环境。`bun.lock` 与 `src-tauri/Cargo.lock` 纳入 Git。
-浏览器打开 `http://127.0.0.1:1420`。演示账户可体验页面、搜索、详情和账号切换；校园登录在 Tauri 桌面应用中使用。
+浏览器打开 `http://127.0.0.1:1420`。首次使用为空白账号列表；校园登录在 Tauri 桌面应用中使用。
 
 ## 界面与组件
 
@@ -179,4 +179,11 @@ git commit -m "Describe the change"
 
 ## GitHub Actions 三平台安装包
 
-推送 `main` 或手动运行 **Desktop packages**，自动构建 Windows x64、macOS arm64／Intel、Linux x64。安装包从对应 Actions 运行的 Artifacts 下载，保留 14 天。平台依赖、下载命令及签名说明见 [BUILDING.md](BUILDING.md)。
+推送 `v*` 版本 tag 自动构建 Windows x64、macOS arm64／Intel、Linux x64，并将安装包、签名和更新清单发布到 [GitHub Releases](https://github.com/hyskr/zhixing-campus/releases)。设置 → 应用更新可查看当前版本、最新正式版与发布说明，下载安装后重启。平台依赖和签名配置见 [BUILDING.md](BUILDING.md)。
+
+## 0.12.0
+
+- 应用内检查版本、查看发布说明、下载安装和重启；更新包使用 Tauri 签名验证。
+- 新安装不创建演示账号，已有真实账号及缓存继续保留。
+- 邮件和成绩支持分别设置检查间隔；凭据保存选择框自适应宽度。
+- 智慧课程快捷入口完成业务会话建立后直接打开课程首页。

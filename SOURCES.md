@@ -158,3 +158,7 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 ## 0.11.1 上游维护
 
 两个仓库的版本范围、对应文件、适用性与本次吸收项见 [UPSTREAM-20261022.md](UPSTREAM-20261022.md)。邮件实体正文参考 HFDLYS `HtmlEmailRenderer.kt`；当前节次参考同版本 `CourseScheduleScreen.kt`。首页布局按本项目需求调整，继续使用 BeUI。
+
+## 应用内更新
+
+`src/AppUpdater.tsx`、`src/updater.ts` 使用 [Tauri 官方 Updater 插件](https://v2.tauri.app/plugin/updater/) 的检查、下载签名验证、安装流程及 Process 插件重启。Release 的资源归档与清单生成在 `scripts/stage-release.ts`、`scripts/update-manifest.ts` 实现，通过公开 GitHub Releases 分发。

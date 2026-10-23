@@ -6,9 +6,16 @@ import {
   Palette,
   Stethoscope,
   Wifi,
+  ArrowUpCircle,
 } from "lucide-react";
 import { Button } from "@/components/motion/button";
 const sections = [
+  {
+    id: "updates",
+    title: "应用更新",
+    description: "版本与发布说明",
+    icon: ArrowUpCircle,
+  },
   {
     id: "appearance",
     title: "外观",

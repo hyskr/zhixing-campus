@@ -161,7 +161,9 @@ pub fn shortcut(name: &str) -> Option<&'static str> {
     match name {
         "mis" => Some("https://mis.bjtu.edu.cn/home/"),
         "academic" => Some("https://mis.bjtu.edu.cn/module/module/10/"),
-        "courses" => Some("https://mis.bjtu.edu.cn/module/module/28/"),
+        "courses" => {
+            Some("http://123.121.147.7:88/ve/back/core/main/index.shtml?method=index&type=qxkt")
+        }
         "vpn" => Some("https://webvpn.bjtu.edu.cn/"),
         "recharge" => Some("https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html"),
         // 用户中心先经过票据兑换接口建立 UC 会话。
@@ -211,7 +213,9 @@ async fn refresh_school_session(session: &Session, target: &str) -> Result<(), S
     match target {
         "academic" => ensure_aa(session).await?,
         "courses" => {
-            quick_login::enter_from_mis(session).await?;
+            // 完成课程认证和业务初始化后，网页直接进入首页，避免重复 MIS/OAuth 跳转。
+            // 首页落地地址参考 SmartPlatformHandshake.kt，固定来源见 SMART-SESSION.md。
+            prepare_smart(session).await?;
             *session.smart.lock().map_err(|e| e.to_string())? = None;
         }
         "vpn" | "sso" | "recharge" => {

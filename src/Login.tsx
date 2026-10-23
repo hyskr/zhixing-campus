@@ -244,9 +244,7 @@ export default function LoginModal({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="keychain">
-                系统凭据库 / macOS 钥匙串
-              </SelectItem>
+              <SelectItem value="keychain">系统凭据库（推荐）</SelectItem>
               <SelectItem value="file">本机文件（保存密码）</SelectItem>
               <SelectItem value="session">仅本次使用</SelectItem>
             </SelectContent>

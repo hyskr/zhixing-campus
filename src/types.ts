@@ -268,6 +268,7 @@ export interface Preferences {
   mailAccount: string;
   mailInterval: number;
   gradeNotifications: boolean;
+  gradeInterval: number;
   courseNotifications: boolean;
   reminderAccount: string;
   courseReminderMinutes: number;

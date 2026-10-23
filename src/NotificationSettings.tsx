@@ -108,7 +108,8 @@ export default function NotificationSettings({
           value={String(preferences.mailInterval)}
           onValueChange={(value) => update({ mailInterval: Number(value) })}
         >
-          <SelectTrigger aria-label="邮件检查间隔" className="w-36">
+          <SelectTrigger className="w-36">
+            <span className="sr-only">邮件检查间隔：</span>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -125,7 +126,10 @@ export default function NotificationSettings({
           <strong>
             <GraduationCap size={15} /> 新成绩
           </strong>
-          <small>每 10 分钟检查；同步成绩时也提醒新增成绩与分数变化</small>
+          <small>
+            每 {preferences.gradeInterval}{" "}
+            分钟检查；同步成绩时也提醒新增成绩与分数变化
+          </small>
         </span>
         <Switch
           ariaLabel="新成绩通知"
@@ -135,6 +139,28 @@ export default function NotificationSettings({
             void toggle("gradeNotifications", checked)
           }
         />
+      </div>
+      <div className="setting-row">
+        <span>
+          <strong>成绩检查间隔</strong>
+          <small>与邮箱分别设置，按此间隔检查新增成绩及分数变化</small>
+        </span>
+        <Select
+          value={String(preferences.gradeInterval)}
+          onValueChange={(value) => update({ gradeInterval: Number(value) })}
+        >
+          <SelectTrigger className="w-36">
+            <span className="sr-only">成绩检查间隔：</span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[1, 5, 10, 15, 30, 60].map((value) => (
+              <SelectItem key={value} value={String(value)}>
+                {value} 分钟
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
       <div className="setting-row">
         <span>
@@ -163,7 +189,8 @@ export default function NotificationSettings({
             update({ courseReminderMinutes: Number(value) })
           }
         >
-          <SelectTrigger aria-label="上课提醒时间" className="w-36">
+          <SelectTrigger className="w-36">
+            <span className="sr-only">上课提醒时间：</span>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -180,7 +207,8 @@ export default function NotificationSettings({
           <Bell size={15} /> 检查系统通知
         </strong>
         <p className="settings-group-description">
-          点击后在系统通知中心查看。若未出现，请在系统设置 → 通知中允许知行；专注模式和屏幕共享可能隐藏提醒。
+          点击后在系统通知中心查看。若未出现，请在系统设置 →
+          通知中允许知行；专注模式和屏幕共享可能隐藏提醒。
         </p>
         <div className="flex gap-2 flex-wrap">
           {[

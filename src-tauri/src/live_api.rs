@@ -374,6 +374,14 @@ async fn learning_checks(session: &Session, id: &str, report: &mut Report, all_i
     let started = Instant::now();
     report.result(
         id,
+        "learning.webHome",
+        started,
+        data_text(session, campus::shortcut("courses").unwrap()).await,
+        |_| "课程网页首页连接成功".into(),
+    );
+    let started = Instant::now();
+    report.result(
+        id,
         "learning.currentWeek",
         started,
         smart_json(

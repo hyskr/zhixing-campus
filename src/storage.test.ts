@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { applySync } from "./storage";
+import { describe, expect, it, vi } from "vitest";
+import { applySync, loadStore } from "./storage";
 import { emptyData } from "./types";
 import { makeDemoData } from "./demo";
 describe("同步快照与缓存", () => {
@@ -226,10 +226,53 @@ it("教务不可达保留成绩和课表，邮箱仍可同步", () => {
 });
 
 it("分页同步只有取得教学周时更新提醒周次时间", () => {
- const old=emptyData();old.currentWeek=6;old.syncedAt={currentWeek:"2026-10-19T00:00:00Z"};
- const mail=applySync(old,{scope:"mail",mailInbox:[],failures:[]});
- expect(mail.syncedAt?.currentWeek).toBe(old.syncedAt.currentWeek);
- const course=applySync(mail,{scope:"resources",currentWeek:7,failures:[]});
- expect(course.syncedAt?.currentWeek).not.toBe(old.syncedAt.currentWeek);
- expect(course.currentWeek).toBe(7);
+  const old = emptyData();
+  old.currentWeek = 6;
+  old.syncedAt = { currentWeek: "2026-10-19T00:00:00Z" };
+  const mail = applySync(old, { scope: "mail", mailInbox: [], failures: [] });
+  expect(mail.syncedAt?.currentWeek).toBe(old.syncedAt.currentWeek);
+  const course = applySync(mail, {
+    scope: "resources",
+    currentWeek: 7,
+    failures: [],
+  });
+  expect(course.syncedAt?.currentWeek).not.toBe(old.syncedAt.currentWeek);
+  expect(course.currentWeek).toBe(7);
+});
+
+it("新安装从未登录状态开始，不创建演示账户", () => {
+  vi.stubGlobal("localStorage", { getItem: () => null });
+  try {
+    expect(loadStore()).toEqual({ accounts: [], activeId: "", data: {} });
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+it("已有缓存只移除演示账户，保留真实账号和数据", () => {
+  const real = {
+    id: "10001",
+    name: "测试",
+    studentId: "10001",
+    department: "学院",
+    identity: "学生",
+    demo: false,
+    color: "blue",
+  };
+  const data = emptyData();
+  data.currentWeek = 6;
+  const saved = {
+    accounts: [{ ...real, id: "demo-lin", demo: true }, real],
+    activeId: "demo-lin",
+    data: { "demo-lin": emptyData(), "10001": data },
+  };
+  vi.stubGlobal("localStorage", { getItem: () => JSON.stringify(saved) });
+  try {
+    const store = loadStore();
+    expect(store.accounts).toEqual([real]);
+    expect(store.activeId).toBe(real.id);
+    expect(store.data[real.id]).toEqual(data);
+    expect(store.data).not.toHaveProperty("demo-lin");
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

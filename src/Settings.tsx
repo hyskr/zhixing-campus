@@ -15,6 +15,7 @@ import { Button } from "@/components/motion/button";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Download, FolderUp, KeyRound, RefreshCw } from "lucide-react";
 import { PageHeading } from "./Pages";
+import AppUpdateSettings from "./AppUpdater";
 import MoreSettings from "./MoreSettings";
 import AppearanceSettings from "./AppearanceSettings";
 import NotificationSettings from "./NotificationSettings";
@@ -64,6 +65,7 @@ export default function Settings({ account }: { account?: Account }) {
         description="按自己的习惯，让校园日常更顺手。"
       />
       <SettingsGroups>
+        <AppUpdateSettings />
         <SettingsGroup
           id="appearance"
           title="界面风格"

@@ -1,26 +1,6 @@
 import type { MailMessage } from "./types";
-import type { Account, AppStore, CampusData, Course, Resource } from "./types";
+import type { CampusData, Course, Resource } from "./types";
 
-export const demoAccounts: Account[] = [
-  {
-    id: "demo-lin",
-    name: "林同学",
-    studentId: "演示账户 · 本科生",
-    department: "计算机与信息技术学院",
-    identity: "本科生",
-    demo: true,
-    color: "blue",
-  },
-  {
-    id: "demo-chen",
-    name: "陈同学",
-    studentId: "演示账户 · 研究生",
-    department: "电子信息工程学院",
-    identity: "研究生",
-    demo: true,
-    color: "purple",
-  },
-];
 const courses: Course[] = [
   {
     id: "c1",
@@ -340,14 +320,6 @@ export function makeDemoData(second = false): CampusData {
   }));
   return data;
 }
-export function initialStore(): AppStore {
-  return {
-    accounts: demoAccounts,
-    activeId: demoAccounts[0].id,
-    data: { "demo-lin": makeDemoData(), "demo-chen": makeDemoData(true) },
-  };
-}
-
 export function makeDemoMail(second = false): MailMessage[] {
   return [
     {

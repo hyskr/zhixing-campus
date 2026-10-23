@@ -247,16 +247,84 @@
     padding-block: 6px !important;
   }
 }
-.notification-test-section { padding-top:18px; border-top:1px solid var(--border); }
-.notification-test-section > strong,.setting-row strong:has(> svg) { display:flex; align-items:center; gap:7px; }
-.notification-test-section p { color:var(--muted-foreground); font-size:12px; line-height:1.7; margin:8px 0 14px; }
-@media(max-height:800px) {
- .schedule-page .schedule-course { padding:3px; gap:1px; }
- .schedule-page .schedule-course strong { font-size:10px; line-height:1.15; }
- .schedule-page .schedule-course span,.schedule-page .schedule-course small,
- .schedule-page .schedule-cell:has(> .schedule-course:nth-child(2)) .schedule-course span,
- .schedule-page .schedule-cell:has(> .schedule-course:nth-child(2)) .schedule-course small { font-size:10px; line-height:1.1; }
+.notification-test-section {
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
 }
-.settings-page .setting-row > span:has(> button[role="switch"]) { flex:0 0 auto; }
-.schedule-page .schedule-cell.current-slot { box-shadow:inset 0 0 0 2px var(--primary); background:color-mix(in srgb,var(--primary) 5%,transparent); }
-.schedule-page .schedule-course[aria-current="time"] { box-shadow:inset 0 0 0 1px var(--primary); }
+.notification-test-section > strong,
+.setting-row strong:has(> svg) {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.notification-test-section p {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 1.7;
+  margin: 8px 0 14px;
+}
+@media (max-height: 800px) {
+  .schedule-page .schedule-course {
+    padding: 3px;
+    gap: 1px;
+  }
+  .schedule-page .schedule-course strong {
+    font-size: 10px;
+    line-height: 1.15;
+  }
+  .schedule-page .schedule-course span,
+  .schedule-page .schedule-course small,
+  .schedule-page
+    .schedule-cell:has(> .schedule-course:nth-child(2))
+    .schedule-course
+    span,
+  .schedule-page
+    .schedule-cell:has(> .schedule-course:nth-child(2))
+    .schedule-course
+    small {
+    font-size: 10px;
+    line-height: 1.1;
+  }
+}
+.settings-page .setting-row > span:has(> button[role="switch"]) {
+  flex: 0 0 auto;
+}
+.schedule-page .schedule-cell.current-slot {
+  box-shadow: inset 0 0 0 2px var(--primary);
+  background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+.schedule-page .schedule-course[aria-current="time"] {
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
+.settings-page .credential-storage-row {
+  flex-wrap: wrap;
+}
+.settings-page .credential-storage-row > span:first-child {
+  min-width: 140px;
+}
+.settings-page .credential-storage-controls {
+  width: 320px;
+  max-width: 100%;
+  min-width: 0;
+}
+.settings-page .credential-storage-controls > .credential-storage-picker {
+  width: auto;
+  flex: 1;
+  min-width: 0;
+}
+.credential-storage-picker [aria-haspopup="listbox"] {
+  width: 100%;
+  min-width: 0;
+}
+.credential-storage-picker [aria-haspopup="listbox"] > span:not(.sr-only) {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.credential-storage-controls > button {
+  flex: 0 0 auto;
+}
+
+.app-update-summary{display:flex;align-items:center;gap:16px;padding:16px 0}.app-update-summary strong{font-size:17px}.app-update-summary p,.app-update-hint{color:var(--muted-foreground);font-size:12px;line-height:1.7}.app-update-status{display:flex;align-items:center;gap:9px;min-height:36px;font-size:13px}.app-update-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.app-update-progress{width:100%;height:6px;accent-color:var(--foreground)}.app-release-notes{border-top:1px solid var(--border);margin-top:24px;padding-top:20px}.app-release-notes h4{font-size:14px;margin:0 0 6px}.app-release-notes time{font-size:12px;color:var(--muted-foreground)}.app-release-notes>div{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.8;margin-top:14px}
+.app-release-markdown{white-space:normal!important}.app-release-markdown :is(h1,h2,h3){font-size:15px;margin:18px 0 10px;font-weight:600}.app-release-markdown ul{list-style:disc;padding-left:20px}.app-release-markdown ol{list-style:decimal;padding-left:20px}.app-release-markdown li{margin:5px 0}.app-release-markdown a{text-decoration:underline;text-underline-offset:3px}.app-release-markdown table{border-collapse:collapse;width:100%;font-size:12px}.app-release-markdown :is(th,td){padding:8px;text-align:left;border:1px solid var(--border)}.app-release-markdown code{font-family:var(--font-geist-mono);font-size:.92em;background:var(--muted);padding:2px 4px;border-radius:4px}.app-release-markdown pre{overflow:auto;padding:12px;background:var(--muted)}

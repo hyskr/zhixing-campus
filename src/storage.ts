@@ -1,5 +1,4 @@
 import type { AppStore, CampusData, Change, SyncResult } from "./types";
-import { initialStore, makeDemoData } from "./demo";
 const key = "zhixing.campus.v1";
 export function loadStore(): AppStore {
   const saved = localStorage.getItem(key);
@@ -7,15 +6,11 @@ export function loadStore(): AppStore {
     try {
       const value: AppStore = JSON.parse(saved);
       if (Array.isArray(value.accounts) && value.data) {
-        for (const account of value.accounts) {
-          if (
-            account.demo &&
-            !value.data[account.id]?.resources[0]?.children.some(
-              (node) => !!node.docType,
-            )
-          )
-            value.data[account.id] = makeDemoData(account.id === "demo-chen");
-        }
+        const removed = value.accounts.filter((account) => account.demo);
+        value.accounts = value.accounts.filter((account) => !account.demo);
+        for (const account of removed) delete value.data[account.id];
+        if (!value.accounts.some((account) => account.id === value.activeId))
+          value.activeId = value.accounts[0]?.id ?? "";
         for (const account of value.accounts.filter(
           (account) => !account.demo,
         )) {
@@ -50,10 +45,10 @@ export function loadStore(): AppStore {
         return value;
       }
     } catch {
-      /* 无可读取的缓存时展示演示账户。 */
+      /* 缓存不可读取时从未登录状态开始。 */
     }
   }
-  return initialStore();
+  return { accounts: [], activeId: "", data: {} };
 }
 export function saveStore(store: AppStore) {
   localStorage.setItem(key, JSON.stringify(store));

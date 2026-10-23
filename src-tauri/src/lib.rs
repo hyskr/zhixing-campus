@@ -996,6 +996,11 @@ async fn remove_account(
     }
     Ok(())
 }
+#[tauri::command]
+fn supports_in_app_update() -> bool {
+    !cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1003,6 +1008,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(campus::Features::default())
         .manage(reminders::Reminders::default())
         .manage(devices::DeviceJobs::default())
@@ -1051,6 +1058,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            supports_in_app_update,
             reminders::test_notification,
             reminders::cache_reminder_data,
             campus::open_school_page,
