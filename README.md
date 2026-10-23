@@ -181,7 +181,7 @@ git commit -m "Describe the change"
 
 推送 `v*` 版本 tag 自动构建 Windows x64、macOS arm64／Intel、Linux x64，并将安装包、签名和更新清单发布到 [GitHub Releases](https://github.com/hyskr/zhixing-campus/releases)。设置 → 应用更新可查看当前版本、最新正式版与发布说明，下载安装后重启。平台依赖和签名配置见 [BUILDING.md](BUILDING.md)。
 
-## 0.12.0
+## 0.12.3
 
 - 应用内检查版本、查看发布说明、下载安装和重启；更新包使用 Tauri 签名验证。
 - 新安装不创建演示账号，已有真实账号及缓存继续保留。

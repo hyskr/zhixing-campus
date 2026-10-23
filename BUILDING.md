@@ -23,8 +23,8 @@ Windows MSI 使用 `zh-CN` 语言，支持中文产品名称。
 
 ```bash
 git push origin main
-git tag -a v0.12.0 -m "知行 Campus 0.12.0"
-git push origin v0.12.0
+git tag -a v0.13.0 -m "知行 Campus 0.12.0"
+git push origin v0.13.0
 ```
 
 Tag 与三个版本号必须一致。正式 tag 发布到稳定更新通道；含连字符的版本作为预发布，不覆盖稳定版。PR 仅构建安装包，不使用签名私钥或发布 Release。
@@ -90,3 +90,11 @@ TAURI_SIGNING_PRIVATE_KEY="$HOME/.tauri/zhixing-campus.key" TAURI_SIGNING_PRIVAT
 ```bash
 mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
+
+## 体积组成与官方建议
+
+0.12.3 前端产物在嵌入应用前共约 31.43 MiB，其中 ONNX 推理 WASM 13.58 MiB、验证码模型 10.40 MiB，PDF Worker 1.21 MiB。这是未按安装包压缩的资源大小，不等同于 DMG、EXE 或 AppImage 体积。
+
+[Tauri 应用大小文档](https://v2.tauri.app/zh-cn/concept/size/) 提供 `strip`、LTO、`codegen-units` 与 `opt-level` 等 Release 配置。优化原生二进制与调整模型、预览器资源分别影响不同部分；本项目保留本地验证码识别和文件预览所需资源。
+
+更新配置遵循 [Tauri Updater 文档](https://v2.tauri.app/zh-cn/plugin/updater/)：`createUpdaterArtifacts`、固定公钥、CI 私钥环境变量、HTTPS 静态清单、平台 URL 与签名、显式下载安装和 Process 插件重启。macOS 构建同时使用 `app,dmg`，生成普通安装包与 `.app.tar.gz` 更新归档。
