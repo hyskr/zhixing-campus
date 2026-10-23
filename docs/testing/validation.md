@@ -240,3 +240,6 @@
 - 63 项前端及发布清单测试通过。
 
 - macOS 0.13.1 原生预览版已实际读取公开静态清单，显示发布说明并完成版本检查；该路径不再调用 GitHub REST API。Windows 的完整网络环境仍需用户在修复包上复核。
+
+- [0.13.1 四平台构建与发布](https://github.com/hyskr/zhixing-campus/actions/runs/39895520457) 全部通过。公开 `latest.json` 包含四个平台，Windows EXE 下载匿名请求返回 HTTP 200。
+- macOS 原生修复版发布后重新检查，显示当前及最新版本均为 0.13.1，并正常展示说明。

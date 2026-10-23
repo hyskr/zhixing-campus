@@ -109,17 +109,17 @@ mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":f
 
 ### 正式包体积对比
 
-相同平台及安装格式，保留模型和预览资源；0.13.0 同时新增托盘与单实例功能。
+相同平台及安装格式，保留模型和预览资源；0.13.1 包含托盘、单实例与原生更新信息查询。
 
-| 安装格式与平台 | 0.12.3 MiB | 0.13.0 MiB | 减少 |
+| 平台及安装格式 | 0.12.3 MiB | 0.13.1 MiB | 减少 |
 | --- | ---: | ---: | ---: |
-| aarch64-apple-darwin.app.tar.gz | 23.16 | 19.99 | 13.7% |
-| aarch64-apple-darwin.dmg | 22.94 | 19.88 | 13.3% |
-| x86_64-apple-darwin.app.tar.gz | 23.51 | 20.24 | 13.9% |
-| x86_64-apple-darwin.dmg | 23.37 | 20.17 | 13.7% |
-| x86_64-pc-windows-msvc-setup.exe | 20.53 | 19.06 | 7.2% |
-| x86_64-pc-windows-msvc.msi | 22.78 | 20.40 | 10.5% |
-| x86_64-unknown-linux-gnu.AppImage | 101.14 | 97.33 | 3.8% |
-| x86_64-unknown-linux-gnu.deb | 25.44 | 20.75 | 18.4% |
+| aarch64-apple-darwin.app.tar.gz | 23.16 | 20.00 | 13.6% |
+| aarch64-apple-darwin.dmg | 22.94 | 19.89 | 13.3% |
+| x86_64-apple-darwin.app.tar.gz | 23.51 | 20.25 | 13.9% |
+| x86_64-apple-darwin.dmg | 23.37 | 20.18 | 13.7% |
+| x86_64-pc-windows-msvc-setup.exe | 20.53 | 19.07 | 7.1% |
+| x86_64-pc-windows-msvc.msi | 22.78 | 20.41 | 10.4% |
+| x86_64-unknown-linux-gnu.AppImage | 101.14 | 97.35 | 3.7% |
+| x86_64-unknown-linux-gnu.deb | 25.44 | 20.76 | 18.4% |
 
 应用的版本信息与发布说明通过 Rust 读取同一 HTTPS 更新清单，客户端不依赖 GitHub REST API，也不需要 GitHub 令牌。
