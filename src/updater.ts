@@ -37,7 +37,7 @@ export async function installUpdate(
   onEvent: (event: DownloadEvent) => void,
   onInstalling: () => void,
 ) {
-  await update.download(onEvent);
+  await update.download(onEvent, { timeout: 30 * 60_000 });
   onInstalling();
   await update.install();
 }

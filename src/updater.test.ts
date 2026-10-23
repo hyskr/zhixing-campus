@@ -42,6 +42,7 @@ it("下载完成后才进入安装，下载失败不安装", async () => {
     order.push("installing");
   });
   expect(order).toEqual(["download", "installing", "install"]);
+  expect(download).toHaveBeenCalledWith(expect.any(Function), { timeout: 1_800_000 });
   download.mockRejectedValueOnce(Error("签名无效"));
   install.mockClear();
   await expect(installUpdate(update, vi.fn(), vi.fn())).rejects.toThrow(
