@@ -23,7 +23,7 @@
 | 邮箱 | `Mail.tsx`、`MailCompose.tsx`、`mailbox.ts` | `mailbox.rs`、`campus.rs` |
 | 文件预览 | `FilePreview.tsx`、`OfficePreview.tsx`、`PdfNavigation.tsx` | `files.rs` |
 | 校园服务与提醒 | `Services.tsx`、`NotificationSettings.tsx`、`ReminderBridge.tsx` | `campus.rs`、`devices.rs`、`reminders.rs` |
-| 托盘与更新 | `AppUpdater.tsx`、`updater.ts` | `tray.rs`、`lib.rs` |
+| 托盘与更新 | `AppUpdater.tsx`、`updater.ts` | `tray.rs`、`updates.rs`、`lib.rs` |
 
 ## 配置与发布
 

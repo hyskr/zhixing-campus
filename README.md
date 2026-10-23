@@ -57,4 +57,4 @@ docs/                 使用指南、功能、协议、设计、来源与验证�
 
 版本 tag 触发 GitHub Actions，构建 Windows x64、macOS Apple Silicon／Intel、Linux x64，发布安装包、更新签名与清单。应用内入口为“设置 → 应用更新”；Linux DEB 使用手动安装包更新。
 
-[构建与发布指南](docs/guides/building.md) · [发布说明](docs/releases/0.13.0.md) · [验证记录](docs/testing/validation.md) · [第三方许可](docs/references/third-party.md)
+[构建与发布指南](docs/guides/building.md) · [发布说明](docs/releases/0.13.1.md) · [验证记录](docs/testing/validation.md) · [第三方许可](docs/references/third-party.md)

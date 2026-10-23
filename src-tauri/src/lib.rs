@@ -14,6 +14,7 @@ mod reminders;
 mod settings;
 mod sso;
 mod tray;
+mod updates;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use parsers::{selector, string, text};
 use reqwest::{Client, Url};
@@ -1071,6 +1072,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             supports_in_app_update,
+            updates::update_release,
             reminders::test_notification,
             reminders::cache_reminder_data,
             campus::open_school_page,

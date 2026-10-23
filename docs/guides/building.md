@@ -106,3 +106,20 @@ mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":f
 本地验证码模型、推理 WASM、PDF 字体和渲染资源、Office 预览器均随安装包保留。体积比较使用相同平台、架构和安装格式的 0.12.3 与 0.13.0 正式 Release 资源。
 
 系统托盘使用官方 Rust Tray API，macOS 使用模板图标，Windows 左键显示窗口、右键显示菜单；macOS 与 Linux 点击托盘菜单操作。主窗口关闭后默认隐藏，后台任务继续运行，“设置 → 外观”可关闭该行为。托盘菜单提供退出，单实例插件负责再次启动时唤回已有窗口。托盘创建失败时保留正常窗口关闭行为。
+
+### 正式包体积对比
+
+相同平台及安装格式，保留模型和预览资源；0.13.0 同时新增托盘与单实例功能。
+
+| 安装格式与平台 | 0.12.3 MiB | 0.13.0 MiB | 减少 |
+| --- | ---: | ---: | ---: |
+| aarch64-apple-darwin.app.tar.gz | 23.16 | 19.99 | 13.7% |
+| aarch64-apple-darwin.dmg | 22.94 | 19.88 | 13.3% |
+| x86_64-apple-darwin.app.tar.gz | 23.51 | 20.24 | 13.9% |
+| x86_64-apple-darwin.dmg | 23.37 | 20.17 | 13.7% |
+| x86_64-pc-windows-msvc-setup.exe | 20.53 | 19.06 | 7.2% |
+| x86_64-pc-windows-msvc.msi | 22.78 | 20.40 | 10.5% |
+| x86_64-unknown-linux-gnu.AppImage | 101.14 | 97.33 | 3.8% |
+| x86_64-unknown-linux-gnu.deb | 25.44 | 20.75 | 18.4% |
+
+应用的版本信息与发布说明通过 Rust 读取同一 HTTPS 更新清单，客户端不依赖 GitHub REST API，也不需要 GitHub 令牌。

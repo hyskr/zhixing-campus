@@ -1,3 +1,4 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import {
   check,
   type Update,
@@ -12,20 +13,20 @@ export interface ReleaseInfo {
   date: string;
 }
 export async function latestRelease(): Promise<ReleaseInfo> {
+  if (isTauri()) return invoke<ReleaseInfo>("update_release");
   const response = await fetch(
-    "https://api.github.com/repos/hyskr/zhixing-campus/releases/latest",
+    "https://github.com/hyskr/zhixing-campus/releases/latest/download/latest.json",
     {
-      headers: { Accept: "application/vnd.github+json" },
       signal: AbortSignal.timeout(20_000),
     },
   );
   if (!response.ok) throw Error(`获取更新信息失败（HTTP ${response.status}）`);
   const data = await response.json();
   return {
-    version: data.tag_name.replace(/^v/, ""),
-    notes: data.body ?? "",
-    url: data.html_url,
-    date: data.published_at,
+    version: data.version,
+    notes: data.notes ?? "",
+    url: RELEASES_URL + "/latest",
+    date: data.pub_date ?? "",
   };
 }
 export async function checkUpdate() {
