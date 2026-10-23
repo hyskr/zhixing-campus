@@ -168,3 +168,5 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 - `src-tauri/src/tray.rs`、`lib.rs`：使用 [Tauri 官方 System Tray API](https://v2.tauri.app/learn/system-tray/) 与 [Single Instance 插件](https://v2.tauri.app/plugin/single-instance/)。关闭驻留偏好接入本项目已有设置存储。
 - `src-tauri/Cargo.toml`、`tauri.conf.json`：Release 配置与未使用命令裁剪参考 [官方应用体积文档](https://v2.tauri.app/zh-cn/concept/size/)。
 - `src-tauri/icons/tray.svg`、`tray.png`：本项目书本图标的单色托盘版本。
+
+- `src-tauri/src/updates.rs` 使用项目已有 reqwest 客户端读取官方 Updater 格式的静态发布清单，供版本与说明展示；安装及签名校验继续由 Tauri Updater 插件完成。
