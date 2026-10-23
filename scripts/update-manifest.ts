@@ -24,7 +24,13 @@ export async function updateManifest(release: Release, directory: string) {
       await readFile(path.join(directory, name + ".sig"), "utf8")
     ).trim();
     if (!signature) throw Error(`Missing signature: ${name}`);
-    platforms[platform] = { url: asset.browser_download_url, signature };
+    platforms[platform] = {
+      url: asset.browser_download_url.replace(
+        /\/releases\/download\/[^/]+\//,
+        `/releases/download/${encodeURIComponent(release.tag_name)}/`,
+      ),
+      signature,
+    };
   }
   return {
     version,

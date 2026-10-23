@@ -24,7 +24,7 @@ it("四个平台均使用已上传资源和对应签名；缺少任一平台不�
       published_at: null,
       assets: names.map((name) => ({
         name,
-        browser_download_url: `https://example.com/${name}`,
+        browser_download_url: `https://github.com/hyskr/zhixing-campus/releases/download/untagged-draft/${name}`,
       })),
     };
     const manifest = await updateManifest(release, directory);
@@ -34,6 +34,9 @@ it("四个平台均使用已上传资源和对应签名；缺少任一平台不�
       "windows-x86_64",
       "linux-x86_64",
     ]);
+    expect(manifest.platforms["darwin-aarch64"].url).toContain(
+      "/releases/download/v0.12.0/",
+    );
     expect(manifest.platforms["windows-x86_64"].signature).toContain(
       "-setup.exe",
     );
