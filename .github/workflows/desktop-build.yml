@@ -31,12 +31,12 @@ jobs:
           - name: macOS Apple Silicon
             runner: macos-14
             target: aarch64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
             artifact: macos-arm64
           - name: macOS Intel
             runner: macos-15-intel
             target: x86_64-apple-darwin
-            bundles: dmg
+            bundles: app,dmg
             artifact: macos-x64
           - name: Linux x64
             runner: ubuntu-22.04
@@ -159,7 +159,8 @@ jobs:
           shopt -s globstar nullglob
           files=(release/*)
           gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
-          gh api "repos/$GH_REPO/releases/tags/$RELEASE_TAG" > output-release.json
+          release_id=$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)
+          gh api "repos/$GH_REPO/releases/$release_id" > output-release.json
           bun scripts/update-manifest.ts output-release.json release release/latest.json
           gh release upload "$RELEASE_TAG" release/latest.json --clobber
           gh release edit "$RELEASE_TAG" --draft=false
