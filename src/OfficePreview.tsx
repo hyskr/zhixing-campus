@@ -7,7 +7,7 @@ import { Loader } from "@/components/motion/loader";
 import { useErrorState } from "./ui";
 import "./office-preview.css";
 
-// 浏览器内解析；API 与格式边界见 OFFICE-PREVIEW.md。
+// 浏览器内解析；API 与格式边界见 docs/features/office-preview.md。
 // https://github.com/VolodymyrBaydalka/docxjs/blob/master/src/docx-preview.ts
 // https://github.com/unStone/web-ppt/blob/master/packages/core/src/index.ts
 export default function OfficePreview({

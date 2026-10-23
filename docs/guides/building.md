@@ -24,7 +24,7 @@ Windows MSI 使用 `zh-CN` 语言，支持中文产品名称。
 ```bash
 git push origin main
 git tag -a v0.13.0 -m "知行 Campus 0.12.0"
-git push origin v0.13.0
+git push origin v0.14.0
 ```
 
 Tag 与三个版本号必须一致。正式 tag 发布到稳定更新通道；含连字符的版本作为预发布，不覆盖稳定版。PR 仅构建安装包，不使用签名私钥或发布 Release。

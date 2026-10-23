@@ -1,189 +1,60 @@
 # 知行 Campus
 
-北京交通大学校园信息桌面客户端，使用 Tauri 2、React、TypeScript、BeUI 与 Tailwind CSS。
+北京交通大学校园桌面工作台，使用 Tauri 2、React、TypeScript 和 BeUI 构建，支持 Windows、macOS 和 Linux。
 
-## 启动
+[下载安装包](https://github.com/hyskr/zhixing-campus/releases/latest) · [文档目录](docs/index.md) · [构建与发布](docs/guides/building.md)
 
-项目用 [mise](https://mise.jdx.dev/) 固定 Node 22.23.2、Bun 1.4.3 与 Rust 1.98.1；仍需对应系统的 [Tauri 构建环境](https://v2.tauri.app/start/prerequisites/)。在项目目录执行：
+## 功能
+
+- 校园账号 SSO 登录、多账号和凭据保存方式选择。
+- 课表、成绩、作业、课程资源、教学日历与多视角回放。
+- 课件与附件的单个、递归及批量下载，下载记录与进度。
+- 邮箱收件箱、已发送、正文与附件、新建与回复、已读同步。
+- 校园网与校园卡服务、教室占用、学校网站快捷入口。
+- PDF、DOCX、PPTX 在线预览，邮件、成绩和上课提醒。
+- 可切换界面风格、系统托盘与应用内签名更新。
+
+[完整功能说明](docs/guides/features.md) · [功能来源对照](docs/references/sources.md)
+
+## 开发
+
+安装 [Tauri 平台依赖](https://v2.tauri.app/start/prerequisites/) 和 mise 后，在项目根目录执行：
 
 ```bash
-git clone https://github.com/hyskr/zhixing-campus.git
-cd zhixing-campus
-mise trust
 mise install
 mise run setup
 mise run dev
 ```
 
-| 命令 | 用途 |
-|---|---|
-| `mise run dev` | Tauri 桌面开发 |
-| `mise run web` | 浏览器界面预览 |
-| `mise run check` | TypeScript 检查 |
-| `mise run test` | 前端和 Rust 单元测试 |
-| `mise run build` | 当前平台安装包 |
-| `mise run build:app` | macOS 应用 |
-
-任务通过项目锁定的工具执行，无需额外激活 Shell 环境。`bun.lock` 与 `src-tauri/Cargo.lock` 纳入 Git。
-浏览器打开 `http://127.0.0.1:1420`。首次使用为空白账号列表；校园登录在 Tauri 桌面应用中使用。
-
-## 界面与组件
-
-设置页“界面风格”可在知行经典和 Claude App 风格间即时切换，并保存到本机。Claude App 风格采用暖纸色、陶土色强调、统一的无衬线字体与柔和侧栏，覆盖所有页面及弹窗；保留现有功能和紧凑标题。
-
-首页固定展示校园邮箱、待办作业、校园动态和今日课表，邮件与动态不依赖标签切换。邮箱在侧栏首页之后，显示未读数量。首页邮件和邮箱动态可直接进入对应邮件；新收件和新发送记录进入统一动态，首次同步建立基线，已读变化和加载历史记录不重复提醒。
-
-桌面界面使用 BeUI 源码组件、Motion 与 Tailwind CSS。首页与课表适配最小桌面窗口的一屏显示，课表同一时段的多门课程水平并列；页首选择器进入课程空间。课程资料使用可勾选文件树与详情双栏，目录勾选会先刷新并递归读取子目录。设置在需要时滚动；错误、复制与同步等反馈使用浮动 Toast。
-
-组件从用户指定的 [BeUI MCP](https://mcp.beui.dev/mcp) 获取，保存在 `src/components/motion/`，使用清单见 [BEUI.md](BEUI.md) 与 `beui.components.json`。Bun 管理依赖及运行命令，唯一依赖锁文件为 `bun.lock`。
-
-作业正文及已交正文使用 [shadcn/typeset](https://ui.shadcn.com/docs/typeset) 排版，DOCX 预览保留独立样式；Vite 入口在 `index.html` 和 `src/main.tsx` 加载本地 Geist 与 Geist Mono 字体。邮箱三栏布局的参考文件与 BeUI 组件见 [BEUI.md](BEUI.md)。
-
-## 功能
-
-- 校园邮箱支持收件箱与已发送记录，按收件人搜索发送记录、分页加载并分别缓存；发送成功后刷新已发送。支持完整正文、图片和附件，附件可预览或加入下载管理；新建／回复、抄送／密送、多附件上传及发送前核对。阅读后同步已读，支持单封／批量标记已读或未读，刷新时获取服务器状态。
-
-- 教室占用：按 AA 教学周、楼宇、学期查询，支持星期、时段、座位数和空闲筛选，查看整周占用。
-- 回放支持多视角同步、单路音频、倍速和 HLS；源码研究与选课方案见 [COURSE-RESEARCH.md](COURSE-RESEARCH.md)。
-
-- 默认使用新版统一身份认证 SSO，直接完成 MIS OAuth 授权；SM2 密码加密，学校要求时手动输入字母验证码。登录状态可恢复，凭据可保存至系统凭据库、本机文件或仅本次内存。
-- 设置页可开关课程平台极速恢复登录，默认开启；使用本人正常 MIS 跳转取得的凭据，失效时回到 MIS。
-- 旧 CAS 兼容入口保留本地算术验证码识别；新版 SSO 的字母验证码使用人工输入。
-- 学生姓名、学号、院系与身份。
-- 各账号独立的会话、数据缓存与切换；缓存可离线查看。
-- 主页全部同步；成绩、课表、作业、资料、邮箱与校园余额各自刷新，分别记录同步时间。工具页使用自身操作按钮，部分失败保留对应缓存。
-- 成绩列表与详情、本学期与选课任务课表。
-- 作业、实验、课程设计支持类型与状态组合筛选；待完成、已提交、已逾期分别展示，历史任务默认收起。
-- 首页待办只展示未截止任务；剩余时间按天、小时、分钟计算并自动更新。
-- 作业按接口总数分页获取，按课程逐步更新，单门课程失败可重试。
-- 课程资料分为电子课件、教案设计、实验、教材教辅、MOOC 资源五类；按需加载，独立显示状态并支持目录重试。
-- 作业详情保留正文、图片与教师附件；显示开放与截止时间、提交状态、提交人数、批改状态和分数，并可查看已交正文、附件及批语。
-- 作业支持文字和多个附件提交，提交前核对；允许重复提交的任务可再次提交，成功后刷新状态。
-- 文件支持选择、拖拽、粘贴上传，剪贴板文字可转为 TXT 文件；各账号独立保存上传记录、复制链接及复用附件。
-- 个人资源空间支持搜索、单个或多选下载及批量复制链接。
-- 课件支持单个、多选、文件夹或整门课程递归下载。多选文件保存为“课程／分类／原子目录／文件”，从子目录递归下载也保留其全部父目录；原始链接可获取和复制，页面未开放标记作为提示，以接口结果为准。未开放下载的资源（例如部分 PPT）会通过学校预览接口取得 PDF 转换版，下载并保存为同名 `.pdf`。
-- 课程行的日历图标可读取学校已发布的教学日历 PDF，查看并下载。
-- 附件、课程资料和已上传文件支持 PDF、图片、文本、DOCX 与 PPTX 在线查看；PDF 支持翻页、缩放、目录跳转及全文文字搜索，全屏查看适用于所有预览类型。未开放下载的课件（如部分 PPT）在预览、复制链接与下载时统一使用学校提供的 PDF 转换版。
-- 独立下载管理页支持进行中任务、历史记录、搜索、状态筛选、逐文件速度与剩余时间；记录按账号保存在本机，重启后可查看文件位置。可设置 1–8 个并行任务，同名文件自动另存；失败任务可直接重试，并下载回原保存目录。统计卡和任务卡高度固定，速度保持单行；显示加入／开始时间、结束时间及耗时。
-- 未开放课件的下载端口可在设置中修改，默认 1936，使用 `/kk/rp/` 文件路径；普通资源和回放保持原地址。
-- 课程回放支持列表、授课简介、录制状态、学生／教师／课件视角、播放、下载与各视角原始链接复制。
-- 点击课表或成绩中的课程名，右侧课程空间通过文字标签展示课程信息、相关作业、资料和回放。自动匹配教务的培养层次后缀；无法匹配时可手动选择智慧课程。默认课程自动读取资源分类，目录显示加载、空内容与失败重试状态。
-- 登录成功后自动同步，显示当前进度；部分失败时保留旧缓存并展示具体原因。
-- 校园邮箱使用可独立滚动的收件列表和摘要阅读区，顶部搜索与筛选保持固定；三栏布局展示主题、摘要、发件人、时间和未读状态；可携带当前登录态在应用内的独立窗口打开原邮件与完整邮箱。
-- 新邮件通知首次建立基线，之后只通知新增未读邮件；按设定间隔后台检查，登录失效时尝试用已保存凭据恢复。
-- 学校网站入口打开前先校验并更新 MIS 与对应平台会话，失效时使用已保存凭据恢复；需要手动认证时打开登录入口。更新后的 Cookie 写入网页窗口再导航。教务 AA 在网页窗口中经 MIS 模块 10 完成授权跳转；后台只在到达 `/notice/item/` 且没有登录表单时确认认证成功。网页 Cookie 只包含有效记录，并保留绝对到期时间。校园服务显示校园网与校园卡余额，提供 MIS、教务 AA、智慧课程、邮箱、WebVPN、新版 SSO 和校园网充值入口；充值链接可复制后粘贴到微信。
-- 校园网自动重连可保存上网账号和密码，按间隔认证，连接恢复时发送系统通知。
-- 校园服务中的设备管理支持查询当前账号在线设备、单个或批量下线、按列表中的 IP 选择设备、循环操作、停止、进度和日志。批量操作逐个等待接口结果，离开页面时停止。
-- 环境诊断检查学校连接、本地验证码模型、凭据与数据目录。
-
-密码按登录时选择的方式保存：系统凭据库、本机 `credentials.json`，或仅本次内存。“仅本次使用”不持久保存密码和登录 Cookie。其他模式的 Cookie 位于应用数据目录 `sessions/`；校园数据按账号缓存在 WebView 本地存储中。下载历史单独保存为 `downloads.json`。
-
-## 打包
-
-在目标系统上运行：
-
 ```bash
-bun run tauri build
+mise run check       # TypeScript
+mise run test        # 前端及 Rust 单元测试
+mise run test:live   # 使用本机保存账号巡检真实只读接口
+mise run build      # 当前平台正式安装包
 ```
 
-macOS 可单独构建应用：
+真实巡检依赖校园网络和有效账号，不在 CI 中执行。签名构建与无签名开发构建命令见[构建指南](docs/guides/building.md)。
 
-```bash
-bun run tauri build --bundles app
+## 项目结构
+
+```text
+.github/workflows/      三平台构建与版本发布
+src/                   React 界面、状态与业务服务
+  components/motion/   BeUI 组件
+src-tauri/
+  src/                 Rust 校园接口、会话、下载、提醒与托盘
+  capabilities/        桌面权限
+  icons/               应用与托盘图标
+public/                OCR 模型、PDF 资源及预览测试文件
+scripts/               接口巡检、发布归档与更新清单生成
+licenses/              第三方依赖许可
+docs/                 使用指南、功能、协议、设计、来源与验证文档
 ```
 
-产物位于 `src-tauri/target/release/bundle/`。Windows 版本需要在 Windows 构建。
+源码导航见[项目结构说明](docs/architecture/project-structure.md)。依赖、构建产物、真实账号与会话、测试输出不纳入 Git。
 
-## 验证
+## 发布与更新
 
-```bash
-bun run build
-bun run test
-cd src-tauri
-cargo test --lib
-cargo test --lib live_school_login_challenge -- --ignored --nocapture
-```
+版本 tag 触发 GitHub Actions，构建 Windows x64、macOS Apple Silicon／Intel、Linux x64，发布安装包、更新签名与清单。应用内入口为“设置 → 应用更新”；Linux DEB 使用手动安装包更新。
 
-## 登录与数据获取
-
-通过 MIS 首页进入 SSO OAuth 认证并建立 MIS 会话，经学校模块入口连接教务与智慧课程平台。按账号保存 Cookie，使用平台 sessionId 请求课程接口，并优先选择当前学期标记。下载和回放在操作时获取有效链接。启用极速恢复后，课程平台会话失效时先使用本人 `quickUsername` 恢复；登录后核对账号身份，失败再通过 MIS 进入。正常登录跳转中获取该凭据，不依赖外部账号库；快速登录凭据沿用当前账号选择的保存方式。
-
-## 已知限制
-
-- GitHub Actions 提供 Windows、macOS 与 Linux 构建；Windows 和 Linux 的业务功能仍需安装后实机核验。
-- 真实登录与校园数据同步需要可访问学校系统的网络和有效账号。各账号使用独立的 CookieStore 和本人的 SSO/MIS 登录状态访问学校接口。
-- 回放与教学日历取决于学校是否发布相应内容以及账号权限。浏览器不支持的视频格式可在外部播放器中播放。
-- 邮件与网络后台任务在应用运行时有效，退出应用后停止。收件箱当前展示最近 100 封邮件，完整历史可在应用内学校邮箱窗口查看。
-- DOCX 分页和字体可能与 Word 有差异；PPTX 展示静态页。复杂版式、加密文档和压缩包可下载后使用系统应用打开。
-
-## 登录使用
-
-1. 打开桌面应用，点击右上角“连接校园账号”。
-2. 使用默认的统一身份认证 SSO，输入学号和密码，并选择凭据保存方式。
-3. 点击“登录并同步校园数据”。通常无需验证码；学校要求时手动输入图片中的字母，并可刷新图片。
-4. 同步完成后查看真实资料、课表、成绩、作业和未读邮件。课程资料中可复制链接、单个或多选下载；回放可选择视角播放、下载或复制链接。
-5. 点击作业打开“作业要求／提交记录／提交作业”。选择或上传附件后核对正文和文件，再确认提交。
-6. “文件空间”分别展示学校个人资源与本机上传记录；点击“查看”在线预览文件，“下载管理”集中查看任务和历史。
-7. “校园邮箱”整理收件箱；“校园服务”查看余额、访问常用网站，并可切换到“校园网设备”管理在线设备。
-8. “设置”中配置极速登录、课件端口、并行数、上传记录、网络重连、邮件通知、凭据保存和环境诊断。
-
-当前版本的实际接口验证与登录耗时见 [VALIDATION.md](VALIDATION.md)。
-
-## 来源
-
-逐项功能、参考文件、固定版本链接及本项目实现范围见 [功能实现与参考来源](SOURCES.md)。
-
-- 学校系统登录流程与数据结构参考 [BJTUselfService](https://github.com/HFDLYS/BJTUselfService) 、[bjtu-cli](https://github.com/fish2lab/bjtu-cli) 、[BJTUselfService-KMP-Refreshed](https://github.com/JasonZhang1225/BJTUselfService-KMP-Refreshed) 和 [BJTU-course-assistant](https://github.com/s1y4x1/BJTU-course-assistant)。
-- 验证码模型：[hyskr/bjtu-captcha-ocr](https://github.com/hyskr/bjtu-captcha-ocr)，使用 `projects/omis/models/` 的 ONNX 模型及字符表，灰度、64 像素高度、CTC 解码。
-- 模型随应用打包，使用 ONNX Runtime Web 的 WebAssembly 后端在本地推理。
-
-## Git 管理
-
-本目录是独立 Git 仓库，默认分支为 `main`。源码、项目配置、模型与查看器资源、第三方许可和锁文件纳入版本管理；依赖目录、构建产物、浏览器检查输出及本机凭据和会话数据由 `.gitignore` 排除。
-
-```bash
-git status
-git diff
-git add <修改的文件>
-git commit -m "Describe the change"
-```
-
-远程仓库尚未配置。
-
-登录协议更新对照见 [AUTH-20261020.md](AUTH-20261020.md)。
-
-## 0.10.2 连接维护
-
-智慧课程主入口失败后，自动经本科教学平台备用入口建立课程会话；登录过期仍由统一 SSO 恢复。教务认证独占执行，普通教务数据请求等待认证结束，已有效的教务会话直接复用。邮箱正文与列表读取遇到 FA_SECURITY 等会话错误时只刷新邮箱会话并重试一次；发送与上传保持显式操作。SSO 快捷入口通过用户中心 `/api/login` 完成票据兑换。具体来源见 [MAINTENANCE-20261022.md](MAINTENANCE-20261022.md)。
-
-## 真实接口巡检
-
-`mise run test:live` 从本机保存的账号密码进行 SSO 登录，一次检查已接入的只读业务接口，并生成 `output/live-api/report.json`。支持指定账号、复用会话及深入遍历；发信、提交作业、上传和设备下线不执行。用法与覆盖范围见 [LIVE-API-TESTING.md](LIVE-API-TESTING.md)。
-
-## 0.10.3 智慧课程登录
-
-首次进入智慧课程时，继续完成 SSO OAuth 授权回调，再验证账号并初始化课程业务会话。支持 `mise run test:live -- --module learning` 单独巡检课程接口。接口设计与参考来源见 [SMART-SESSION.md](SMART-SESSION.md)。
-
-## 0.11.0
-
-- 邮箱保存会话返回 HTTP 500 时重新完成邮箱 SSO，恢复收件箱、已发送及正文读取。
-- 通知设置集中管理新邮件、新成绩和上课提醒，提供三类原生测试按钮；应用退出后停止检查。
-- 设置改为分类导航，Claude 风格统一字体与控件颜色，侧栏分为日常、学习和工具；并排课程保留地点和教师。
-- DOCX 与 PPTX 在本机解析预览，支持缩放、幻灯片翻页与全屏。
-
-实现与验证见 [MAIL-SESSION.md](MAIL-SESSION.md)、[NOTIFICATIONS.md](NOTIFICATIONS.md)、[UI-REVIEW.md](UI-REVIEW.md)、[OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。
-
-## 0.11.1
-
-对照两个上游最新提交，补充实体转义邮件 HTML 的显示兼容与当前课次高亮。首页摘要条统一外框，课程空间入口移到标题栏，窄窗口主导航按钮显示图标。版本范围和参考实现见 [UPSTREAM-20261022.md](UPSTREAM-20261022.md)。
-
-## GitHub Actions 三平台安装包
-
-推送 `v*` 版本 tag 自动构建 Windows x64、macOS arm64／Intel、Linux x64，并将安装包、签名和更新清单发布到 [GitHub Releases](https://github.com/hyskr/zhixing-campus/releases)。设置 → 应用更新可查看当前版本、最新正式版与发布说明，下载安装后重启。平台依赖和签名配置见 [BUILDING.md](BUILDING.md)。
-
-## 0.12.3
-
-- 应用内检查版本、查看发布说明、下载安装和重启；更新包使用 Tauri 签名验证。
-- 新安装不创建演示账号，已有真实账号及缓存继续保留。
-- 邮件和成绩支持分别设置检查间隔；凭据保存选择框自适应宽度。
-- 智慧课程快捷入口完成业务会话建立后直接打开课程首页。
+[构建与发布指南](docs/guides/building.md) · [发布说明](docs/releases/0.13.0.md) · [验证记录](docs/testing/validation.md) · [第三方许可](docs/references/third-party.md)

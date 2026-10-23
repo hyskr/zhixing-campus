@@ -214,7 +214,7 @@ async fn refresh_school_session(session: &Session, target: &str) -> Result<(), S
         "academic" => ensure_aa(session).await?,
         "courses" => {
             // 完成课程认证和业务初始化后，网页直接进入首页，避免重复 MIS/OAuth 跳转。
-            // 首页落地地址参考 SmartPlatformHandshake.kt，固定来源见 SMART-SESSION.md。
+            // 首页落地地址参考 SmartPlatformHandshake.kt，固定来源见 docs/protocols/smart-session.md。
             prepare_smart(session).await?;
             *session.smart.lock().map_err(|e| e.to_string())? = None;
         }

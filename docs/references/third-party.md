@@ -1,6 +1,6 @@
 # 第三方来源
 
-具体功能和上游文件的对应关系见 [SOURCES.md](SOURCES.md)。参考关系与运行库许可分别记录。
+具体功能和上游文件的对应关系见 [来源对照](sources.md)。参考关系与运行库许可分别记录。
 
 学校系统访问与解析逻辑参考 HFDLYS/BJTUselfService 、fish2lab/bjtu-cli 、JasonZhang1225/BJTUselfService-KMP-Refreshed 和 s1y4x1/BJTU-course-assistant。
 
@@ -40,7 +40,7 @@ ONNX Runtime Web、BeUI、Motion、React、Tailwind CSS、Tauri 及其他依赖�
 
 ## BeUI 界面组件
 
-BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存在 `licenses/beui.txt`。组件源码由 https://mcp.beui.dev/mcp 获取，使用位置和改动范围见 [BEUI.md](BEUI.md)。新增组件也来自 BeUI 公共 Registry。辅助依赖包括 Motion、clsx、tailwind-merge、TanStack Virtual 和 Lenis，许可随各自发行包提供。
+BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存在 `licenses/beui.txt`。组件源码由 https://mcp.beui.dev/mcp 获取，使用位置和改动范围见 [BeUI 组件](../design/beui.md)。新增组件也来自 BeUI 公共 Registry。辅助依赖包括 Motion、clsx、tailwind-merge、TanStack Virtual 和 Lenis，许可随各自发行包提供。
 
 ## 邮箱界面与排版
 
@@ -52,16 +52,16 @@ BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存�
 
 ## 回放与课件阅读
 
-- 多视角同步、单路音频和阅读器功能组织参考 [57Darling02/BjtuCoursePlatform](https://github.com/57Darling02/BjtuCoursePlatform)，由本项目用 React 与 PDF.js API 实现，未复制 Vue 组件或其 PDF.js 发行目录。固定文件链接见 SOURCES.md。
+- 多视角同步、单路音频和阅读器功能组织参考 [57Darling02/BjtuCoursePlatform](https://github.com/57Darling02/BjtuCoursePlatform)，由本项目用 React 与 PDF.js API 实现，未复制 Vue 组件或其 PDF.js 发行目录。固定文件链接见 docs/references/sources.md。
 - hls.js：Apache-2.0，用于不具备原生 HLS 支持的 WebView；许可见 `licenses/hls-js.txt`。
 
 ## 完整邮箱
 
-邮件协议和字段参考 KMP 的 `MailboxRemoteDataSource.kt`、`MailboxJsonParser.kt` 与 wan300/bjtu_mis_Android 的 `CoremailProvider.kt`；固定版本链接见 SOURCES.md。本项目用 Rust 与 React 实现邮箱请求、状态同步和写信界面。
+邮件协议和字段参考 KMP 的 `MailboxRemoteDataSource.kt`、`MailboxJsonParser.kt` 与 wan300/bjtu_mis_Android 的 `CoremailProvider.kt`；固定版本链接见 docs/references/sources.md。本项目用 Rust 与 React 实现邮箱请求、状态同步和写信界面。
 
 ## Office 预览
 
 - `docx-preview` 0.4.1：Apache-2.0，许可证 `licenses/docx-preview.txt`。
 - `@web-ppt/core` 0.4.5：MIT，许可证 `licenses/web-ppt-core.txt`。
 
-接口、格式边界和本机渲染说明见 [OFFICE-PREVIEW.md](OFFICE-PREVIEW.md)。
+接口、格式边界和本机渲染说明见 [Office 预览](../features/office-preview.md)。

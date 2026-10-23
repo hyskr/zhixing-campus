@@ -4,7 +4,7 @@
 
 ## 组件来源与使用位置
 
-基础源码于 2026-10-18 从 https://mcp.beui.dev/mcp 通过 `get_component` 读取，按其返回的路径安装组件及辅助文件。上游项目：[starc007/ui-components](https://github.com/starc007/ui-components)，MIT 许可见 [licenses/beui.txt](licenses/beui.txt)。原始文件清单保存在 [beui.components.json](beui.components.json)。
+基础源码于 2026-10-18 从 https://mcp.beui.dev/mcp 通过 `get_component` 读取，按其返回的路径安装组件及辅助文件。上游项目：[starc007/ui-components](https://github.com/starc007/ui-components)，MIT 许可见 [licenses/beui.txt](../../licenses/beui.txt)。原始文件清单保存在 [beui.components.json](../../beui.components.json)。
 
 | BeUI 组件 | 上游文档 | 本项目使用位置 |
 |---|---|---|

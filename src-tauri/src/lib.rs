@@ -1002,11 +1002,22 @@ fn supports_in_app_update() -> bool {
     !cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some()
 }
 
+fn handle_startup_notification(app: &tauri::AppHandle, args: &[String]) {
+    if let Some(index) = args.iter().position(|arg| arg == "--test-notification") {
+        let kind = args.get(index + 1).cloned();
+        match reminders::test_notification(app.clone(), kind) {
+            Ok(()) => eprintln!("notification test: submitted to system"),
+            Err(error) => eprintln!("notification test: {error}"),
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            tray::show_main(app)
+        .plugin(tauri_plugin_single_instance::init(|app, args, _| {
+            tray::show_main(app);
+            handle_startup_notification(app, &args);
         }))
         .on_window_event(tray::on_window_event)
         .plugin(tauri_plugin_dialog::init())
@@ -1055,14 +1066,7 @@ pub fn run() {
             }
             reminders::start_background(app.handle().clone());
             campus::start_background(app.handle().clone());
-            let args: Vec<_> = std::env::args().collect();
-            if let Some(index) = args.iter().position(|arg| arg == "--test-notification") {
-                let kind = args.get(index + 1).cloned();
-                match reminders::test_notification(app.handle().clone(), kind) {
-                    Ok(()) => eprintln!("notification test: submitted to system"),
-                    Err(error) => eprintln!("notification test: {error}"),
-                }
-            }
+            handle_startup_notification(app.handle(), &std::env::args().collect::<Vec<_>>());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

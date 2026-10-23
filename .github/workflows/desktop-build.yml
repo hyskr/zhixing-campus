@@ -151,8 +151,8 @@ jobs:
               prerelease=true
             fi
             notes=(--generate-notes)
-            if [[ -f "releases/${RELEASE_TAG#v}.md" ]]; then
-              notes=(--notes-file "releases/${RELEASE_TAG#v}.md")
+            if [[ -f "docs/releases/${RELEASE_TAG#v}.md" ]]; then
+              notes=(--notes-file "docs/releases/${RELEASE_TAG#v}.md")
             fi
             gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease="$prerelease" "${notes[@]}" --title "知行 Campus $RELEASE_TAG"
           fi

@@ -41,10 +41,10 @@
     ],
     "resources": {
       "../licenses": "licenses",
-      "../THIRD_PARTY.md": "THIRD_PARTY.md",
-      "../SOURCES.md": "SOURCES.md",
-      "../BEUI.md": "BEUI.md",
-      "../beui.components.json": "beui.components.json"
+      "../beui.components.json": "beui.components.json",
+      "../docs/design/beui.md": "BEUI.md",
+      "../docs/references/sources.md": "SOURCES.md",
+      "../docs/references/third-party.md": "THIRD_PARTY.md"
     },
     "windows": {
       "wix": {
