@@ -105,3 +105,5 @@ bun run tauri build --bundles app
 - 移除底部重复入口；窄窗口 SidebarTrigger 显式显示导航图标。
 
 - `AppUpdater.tsx`：Button 用于检查、安装、重启与发布入口；Loader 用于更新检查和安装状态。
+
+- `Settings.tsx`：使用已有 Switch 控制关闭主窗口后驻留托盘，样式与其他偏好保持一致。

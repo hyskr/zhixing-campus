@@ -98,3 +98,11 @@ mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":f
 [Tauri 应用大小文档](https://v2.tauri.app/zh-cn/concept/size/) 提供 `strip`、LTO、`codegen-units` 与 `opt-level` 等 Release 配置。优化原生二进制与调整模型、预览器资源分别影响不同部分；本项目保留本地验证码识别和文件预览所需资源。
 
 更新配置遵循 [Tauri Updater 文档](https://v2.tauri.app/zh-cn/plugin/updater/)：`createUpdaterArtifacts`、固定公钥、CI 私钥环境变量、HTTPS 静态清单、平台 URL 与签名、显式下载安装和 Process 插件重启。macOS 构建同时使用 `app,dmg`，生成普通安装包与 `.app.tar.gz` 更新归档。
+
+## 0.13 正式构建优化与托盘
+
+按照 [Tauri 体积文档](https://v2.tauri.app/zh-cn/concept/size/) 配置 `codegen-units = 1`、`lto = true`、`opt-level = "s"`、`strip = true`。panic 策略维持 unwind，保留现有错误隔离行为。`build.removeUnusedCommands = true` 根据静态能力文件裁剪未启用的插件 IPC 命令；本项目自定义校园命令继续保留，Rust 侧调用的文件对话框、通知与打开文件功能继续编译。
+
+本地验证码模型、推理 WASM、PDF 字体和渲染资源、Office 预览器均随安装包保留。体积比较使用相同平台、架构和安装格式的 0.12.3 与 0.13.0 正式 Release 资源。
+
+系统托盘使用官方 Rust Tray API，macOS 使用模板图标，Windows 左键显示窗口、右键显示菜单；macOS 与 Linux 点击托盘菜单操作。主窗口关闭后默认隐藏，后台任务继续运行，“设置 → 外观”可关闭该行为。托盘菜单提供退出，单实例插件负责再次启动时唤回已有窗口。托盘创建失败时保留正常窗口关闭行为。

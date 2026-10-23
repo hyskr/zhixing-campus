@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase", default)]
 pub struct Preferences {
     pub appearance: String,
+    pub close_to_tray: bool,
     pub quick_login: bool,
     pub resource_port: u16,
     pub download_concurrency: usize,
@@ -25,6 +26,7 @@ impl Default for Preferences {
     fn default() -> Self {
         Self {
             appearance: "classic".into(),
+            close_to_tray: true,
             quick_login: true,
             resource_port: 1936,
             download_concurrency: 3,
@@ -97,6 +99,17 @@ pub fn set_preferences(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn tray_preference_defaults_for_existing_users_and_keeps_opt_out() {
+        let old: Preferences = serde_json::from_value(json!({"mailInterval":30})).unwrap();
+        assert!(old.close_to_tray);
+        let mut selected = old;
+        selected.close_to_tray = false;
+        let restored: Preferences =
+            serde_json::from_value(serde_json::to_value(selected).unwrap()).unwrap();
+        assert!(!restored.close_to_tray);
+        assert_eq!(restored.mail_interval, 30);
+    }
     #[test]
     fn mail_and_grade_intervals_are_independent_and_keep_existing_defaults() {
         let old: Preferences = serde_json::from_value(json!({"mailInterval":30})).unwrap();

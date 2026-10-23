@@ -162,3 +162,9 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 ## 应用内更新
 
 `src/AppUpdater.tsx`、`src/updater.ts` 使用 [Tauri 官方 Updater 插件](https://v2.tauri.app/plugin/updater/) 的检查、下载签名验证、安装流程及 Process 插件重启。Release 的资源归档与清单生成在 `scripts/stage-release.ts`、`scripts/update-manifest.ts` 实现，通过公开 GitHub Releases 分发。
+
+## 系统托盘与体积优化
+
+- `src-tauri/src/tray.rs`、`lib.rs`：使用 [Tauri 官方 System Tray API](https://v2.tauri.app/learn/system-tray/) 与 [Single Instance 插件](https://v2.tauri.app/plugin/single-instance/)。关闭驻留偏好接入本项目已有设置存储。
+- `src-tauri/Cargo.toml`、`tauri.conf.json`：Release 配置与未使用命令裁剪参考 [官方应用体积文档](https://v2.tauri.app/zh-cn/concept/size/)。
+- `src-tauri/icons/tray.svg`、`tray.png`：本项目书本图标的单色托盘版本。

@@ -13,6 +13,7 @@ mod quick_login;
 mod reminders;
 mod settings;
 mod sso;
+mod tray;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use parsers::{selector, string, text};
 use reqwest::{Client, Url};
@@ -1004,6 +1005,10 @@ fn supports_in_app_update() -> bool {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            tray::show_main(app)
+        }))
+        .on_window_event(tray::on_window_event)
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
@@ -1045,6 +1050,9 @@ pub fn run() {
                 &app.state::<reminders::Reminders>(),
                 app.path().app_data_dir()?.join("reminders.json"),
             );
+            if let Err(error) = tray::init(app) {
+                eprintln!("系统托盘不可用：{error}");
+            }
             reminders::start_background(app.handle().clone());
             campus::start_background(app.handle().clone());
             let args: Vec<_> = std::env::args().collect();
@@ -1112,8 +1120,16 @@ pub fn run() {
             saved_password,
             remove_account
         ])
-        .run(tauri::generate_context!())
-        .expect("无法启动知行校园");
+        .build(tauri::generate_context!())
+        .expect("无法启动知行校园")
+        .run(|app, event| {
+            #[cfg(target_os = "macos")]
+            if matches!(event, tauri::RunEvent::Reopen { .. }) {
+                tray::show_main(app);
+            }
+            #[cfg(not(target_os = "macos"))]
+            let _ = (app, event);
+        });
 }
 
 #[cfg(test)]

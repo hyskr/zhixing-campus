@@ -10,6 +10,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import type { Preferences } from "./types";
 export const defaultPreferences: Preferences = {
   appearance: "classic",
+  closeToTray: true,
   quickLogin: true,
   resourcePort: 1936,
   downloadConcurrency: 3,

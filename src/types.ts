@@ -256,6 +256,7 @@ export interface SpaceFile {
 }
 export interface Preferences {
   appearance: "classic" | "claude";
+  closeToTray: boolean;
   quickLogin: boolean;
   resourcePort: number;
   downloadConcurrency: number;
