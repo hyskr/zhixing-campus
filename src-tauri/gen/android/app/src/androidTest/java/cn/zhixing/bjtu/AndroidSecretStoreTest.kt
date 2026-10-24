@@ -8,6 +8,17 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AndroidSecretStoreTest {
+    @Test fun downloadedFilesCanBeSharedThroughFileProvider() {
+        val context=InstrumentationRegistry.getInstrumentation().targetContext
+        val file=java.io.File(context.filesDir,"downloads/provider-test.txt")
+        file.parentFile!!.mkdirs()
+        file.writeText("Android download sharing")
+        try {
+            val uri=androidx.core.content.FileProvider.getUriForFile(context,"${context.packageName}.fileprovider",file)
+            val text=context.contentResolver.openInputStream(uri)!!.bufferedReader().use{it.readText()}
+            assertEquals("Android download sharing",text)
+        } finally { file.delete() }
+    }
     @Test fun encryptedCredentialsPersistAndCanBeRemoved() {
         val context=InstrumentationRegistry.getInstrumentation().targetContext
         val id="test:credential-roundtrip"

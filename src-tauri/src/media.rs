@@ -472,6 +472,7 @@ pub async fn download_items(
             .path()
             .app_data_dir()
             .map_err(|e| e.to_string())?
+            .join("files")
             .join("downloads");
         fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
         folder
@@ -747,6 +748,7 @@ pub async fn export_download(
             .path()
             .app_data_dir()
             .map_err(|e| e.to_string())?
+            .join("files")
             .join("downloads");
         let relative = path
             .strip_prefix(root)
