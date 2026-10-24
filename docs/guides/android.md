@@ -17,6 +17,8 @@
 
 ## 构建
 
+真机开发时，电脑和手机连接同一网络；Tauri 通过 `TAURI_DEV_HOST` 设置开发服务器监听地址。模拟器可直接选择已启动设备。
+
 安装 Java 17、Android SDK Platform 36、Build Tools 36.0.0、NDK 27.1.12297006。设置 `JAVA_HOME`、`ANDROID_HOME` 和 `NDK_HOME`。原生 Android 工程已保存在 `src-tauri/gen/android/`，无需重新初始化。
 
 ```bash
