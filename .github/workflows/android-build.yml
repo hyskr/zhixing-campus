@@ -86,4 +86,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --notes-file docs/releases/android-0.14.0.md
+          version=$(bun -p '(await Bun.file("package.json").json()).version')
+          notes="docs/releases/android-${version}.md"
+          if test -f "$notes"; then
+            gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --notes-file "$notes"
+          else
+            gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --generate-notes
+          fi

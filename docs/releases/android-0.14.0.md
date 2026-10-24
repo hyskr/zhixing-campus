@@ -13,3 +13,5 @@
 下载安装 APK；后续使用同签名版本覆盖安装。提醒需要应用进程运行，系统冻结后不保证后台检查。真实账号登录和各校内业务仍需在实际手机与校园网络下验证。
 
 验证：63 项前端、51 项 Rust 与 Android Keystore 原生测试通过；Android 14 模拟器验证启动、系统通知、目录导出和三种文档格式的本地渲染。
+
+[下载 Android APK](https://github.com/hyskr/zhixing-campus/releases/download/android-v0.14.0-preview.3/zhixing-campus_0.14.0_android-arm64.apk) · [使用与构建](../guides/android.md)

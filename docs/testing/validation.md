@@ -254,3 +254,5 @@
 - 安装包内的预览模块在 Android WebView 113 上使用本地样例验证：PDF 2 页渲染与文字流读取、DOCX 2 页、PPTX 2 张幻灯片。PDF 使用 legacy 构建；文字搜索使用 ReadableStream reader。
 - 63 项前端测试、51 项 Rust 测试通过；6 项外部环境测试忽略。Release APK 签名验证、16 KB ZIP 对齐及原生 ELF LOAD 对齐通过。
 - 真实账号完整登录、课程与邮件收发未在 Android 真机验证。后台进程被冻结时不保证检查与提醒。
+
+Android 云端构建 [40087633738](https://github.com/hyskr/zhixing-campus/actions/runs/40087633738) 完成并发布 `android-v0.14.0-preview.3`。下载云端 APK 后签名与 ZIP 对齐检查通过，并成功覆盖安装本机签名 APK；桌面最新稳定版仍为 `v0.13.1`。最终 APK 为 29,528,599 字节。
