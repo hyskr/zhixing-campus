@@ -1,7 +1,9 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
+#[cfg(desktop)]
 use tauri_plugin_dialog::DialogExt;
+#[cfg(desktop)]
 use tauri_plugin_opener::OpenerExt;
 use tokio::io::AsyncWriteExt;
 use tokio::sync::watch;
@@ -464,20 +466,33 @@ pub async fn download_items(
     if items.is_empty() {
         return Err("请先选择要下载的文件".into());
     }
-    let picker = app.clone();
-    let folder = tauri::async_runtime::spawn_blocking(move || {
-        picker
-            .dialog()
-            .file()
-            .set_title("选择下载保存文件夹")
-            .blocking_pick_folder()
-    })
-    .await
-    .map_err(|e| e.to_string())?;
-    let Some(folder) = folder else {
-        return Ok(false);
+    #[cfg(target_os = "android")]
+    let folder = {
+        let folder = app
+            .path()
+            .app_data_dir()
+            .map_err(|e| e.to_string())?
+            .join("downloads");
+        fs::create_dir_all(&folder).map_err(|e| e.to_string())?;
+        folder
     };
-    let folder = folder.into_path().map_err(|e| e.to_string())?;
+    #[cfg(desktop)]
+    let folder = {
+        let picker = app.clone();
+        let folder = tauri::async_runtime::spawn_blocking(move || {
+            picker
+                .dialog()
+                .file()
+                .set_title("选择下载保存文件夹")
+                .blocking_pick_folder()
+        })
+        .await
+        .map_err(|e| e.to_string())?;
+        let Some(folder) = folder else {
+            return Ok(false);
+        };
+        folder.into_path().map_err(|e| e.to_string())?
+    };
     run_downloads(username, items, folder, app, state).await
 }
 
@@ -682,7 +697,7 @@ pub fn cancel_download(id: String, state: tauri::State<'_, DownloadState>) -> Re
     Ok(())
 }
 #[tauri::command]
-pub fn open_download(
+pub async fn open_download(
     id: String,
     app: tauri::AppHandle,
     state: tauri::State<'_, DownloadState>,
@@ -701,10 +716,53 @@ pub fn open_download(
             })
         })
         .ok_or("此下载记录没有文件路径")?;
-    app.opener()
-        .reveal_item_in_dir(path)
-        .map_err(|e| e.to_string())
+    #[cfg(desktop)]
+    {
+        app.opener()
+            .reveal_item_in_dir(path)
+            .map_err(|e| e.to_string())
+    }
+    #[cfg(target_os = "android")]
+    {
+        mobile::open_file(&app, &path)
+    }
 }
+#[tauri::command]
+pub async fn export_download(
+    id: String,
+    app: tauri::AppHandle,
+    state: tauri::State<'_, DownloadState>,
+) -> Result<String, String> {
+    #[cfg(target_os = "android")]
+    {
+        let path = state
+            .history
+            .lock()
+            .map_err(|e| e.to_string())?
+            .get(&id)
+            .and_then(|v| v["path"].as_str())
+            .map(PathBuf::from)
+            .ok_or("此下载记录没有文件路径")?;
+        let root = app
+            .path()
+            .app_data_dir()
+            .map_err(|e| e.to_string())?
+            .join("downloads");
+        let relative = path
+            .strip_prefix(root)
+            .ok()
+            .and_then(|p| p.parent())
+            .unwrap_or(std::path::Path::new(""))
+            .to_string_lossy();
+        mobile::export_file(&app, &path, &relative)
+    }
+    #[cfg(desktop)]
+    {
+        let _ = (id, app, state);
+        Err("请使用显示文件打开下载目录".into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

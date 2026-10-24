@@ -1,3 +1,4 @@
+import { isAndroid } from "./platform";
 import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { SettingsGroup } from "./SettingsGroups";
@@ -214,7 +215,11 @@ export default function MoreSettings({ account }: { account?: Account }) {
         <div className="setting-row credential-storage-row">
           <span>
             <strong>{account?.name || "当前账号"}</strong>
-            <small>Windows 使用凭据管理器，macOS 使用钥匙串。</small>
+            <small>
+              {isAndroid
+                ? "使用 Android Keystore 加密保存，仅本应用可读取。"
+                : "Windows 使用凭据管理器，macOS 使用钥匙串。"}
+            </small>
           </span>
           <div className="port-setting credential-storage-controls">
             <Select
@@ -227,7 +232,11 @@ export default function MoreSettings({ account }: { account?: Account }) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="keychain">系统凭据库（推荐）</SelectItem>
+                <SelectItem value="keychain">
+                  {isAndroid
+                    ? "Android 安全存储（推荐）"
+                    : "系统凭据库（推荐）"}
+                </SelectItem>
                 <SelectItem value="file">本机文件（保存密码）</SelectItem>
                 <SelectItem value="session">仅本次使用</SelectItem>
               </SelectContent>

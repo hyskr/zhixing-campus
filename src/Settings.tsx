@@ -1,3 +1,4 @@
+import { isAndroid } from "./platform";
 import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { SettingsGroup, SettingsGroups } from "./SettingsGroups";
@@ -72,20 +73,24 @@ export default function Settings({ account }: { account?: Account }) {
           description="即时预览，选择适合自己的工作空间。"
         >
           <AppearanceSettings />
-          <label className="setting-row">
-            <span>
-              <strong>关闭主窗口后驻留托盘</strong>
-              <small>
-                后台继续下载和提醒。可通过托盘菜单显示窗口或退出应用。
-              </small>
-            </span>
-            <Switch
-              ariaLabel="关闭主窗口后驻留托盘"
-              checked={preferences.closeToTray}
-              disabled={disabled}
-              onCheckedChange={(closeToTray) => void update({ closeToTray })}
-            />
-          </label>
+          {!isAndroid && (
+            <label
+              className={`setting-row ${isAndroid ? "android-hidden" : ""}`}
+            >
+              <span>
+                <strong>关闭主窗口后驻留托盘</strong>
+                <small>
+                  后台继续下载和提醒。可通过托盘菜单显示窗口或退出应用。
+                </small>
+              </span>
+              <Switch
+                ariaLabel="关闭主窗口后驻留托盘"
+                checked={preferences.closeToTray}
+                disabled={disabled}
+                onCheckedChange={(closeToTray) => void update({ closeToTray })}
+              />
+            </label>
+          )}
         </SettingsGroup>
         <SettingsGroup
           id="login"

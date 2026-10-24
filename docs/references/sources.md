@@ -170,3 +170,7 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 - `src-tauri/icons/tray.svg`、`tray.png`：本项目书本图标的单色托盘版本。
 
 - `src-tauri/src/updates.rs` 使用项目已有 reqwest 客户端读取官方 Updater 格式的静态发布清单，供版本与说明展示；安装及签名校验继续由 Tauri Updater 插件完成。
+
+## Android
+
+Android 平台桥接为本项目实现，依照 Tauri 移动插件和 Android Keystore、MediaStore、WebView 官方接口；对应 `src-tauri/src/mobile.rs` 与 `src-tauri/gen/android/app/src/main/java/cn/zhixing/bjtu/`。手机底部抽屉使用 BeUI `bottom-sheet`，其余课程、邮箱、教务等业务继续复用本文已有来源标注。

@@ -1,3 +1,5 @@
+import MobileNavigation from "./MobileNavigation";
+import { useCompactLayout } from "./platform";
 import ReminderBridge from "./ReminderBridge";
 import { makeDemoMail } from "./demo";
 import Classrooms from "./Classrooms";
@@ -33,6 +35,7 @@ import {
   CircleHelp,
   GraduationCap,
   LoaderCircle,
+  RefreshCw,
   LogOut,
   Mail,
   Plus,
@@ -77,6 +80,7 @@ import {
 } from "./types";
 
 export default function App() {
+  const compactLayout = useCompactLayout();
   const [store, setStore] = useState(loadStore);
   const { tasks: downloadTasks } = useDownloads();
   const now = useNow();
@@ -124,6 +128,45 @@ export default function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+  useEffect(() => {
+    const back = () => {
+      const event = new Event("campus:before-back", { cancelable: true });
+      window.dispatchEvent(event);
+      if (event.defaultPrevented) return true;
+      if (document.fullscreenElement) {
+        void document.exitFullscreen();
+        return true;
+      }
+      if (document.querySelector('[role="dialog"]')) {
+        document.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
+        );
+        return true;
+      }
+      if (searchOpen) {
+        setSearchOpen(false);
+        return true;
+      }
+      if (notificationsOpen) {
+        setNotificationsOpen(false);
+        return true;
+      }
+      if (courseName) {
+        setCourseName(null);
+        return true;
+      }
+      if (page !== "overview") {
+        setPage("overview");
+        setQuery("");
+        return true;
+      }
+      return false;
+    };
+    (window as Window & { __campusBack?: () => boolean }).__campusBack = back;
+    return () => {
+      delete (window as Window & { __campusBack?: () => boolean }).__campusBack;
+    };
+  }, [page, searchOpen, notificationsOpen, courseName]);
   const navigate = (next: Page) => {
     setMailTarget(null);
     setPage(next);
@@ -475,144 +518,198 @@ export default function App() {
       style={{ "--sidebar-width": "236px", "--sidebar-width-icon": "68px" }}
     >
       <ReminderBridge account={account} data={data} />
-      <CampusSidebar
-        page={page}
-        unread={data.mailCount}
-        account={account}
-        accounts={store.accounts}
-        navigate={navigate}
-        onSwitch={switchAccount}
-        onAdd={() => setLogin({})}
-        pending={
-          data.homework.filter((h) => homeworkState(h, now) === "pending")
-            .length
-        }
-        downloading={
-          downloadTasks.filter(
-            (t) =>
-              t.accountId === account?.id &&
-              (t.state === "queued" || t.state === "downloading"),
-          ).length
-        }
-      />
+      {!compactLayout && (
+        <CampusSidebar
+          page={page}
+          unread={data.mailCount}
+          account={account}
+          accounts={store.accounts}
+          navigate={navigate}
+          onSwitch={switchAccount}
+          onAdd={() => setLogin({})}
+          pending={
+            data.homework.filter((h) => homeworkState(h, now) === "pending")
+              .length
+          }
+          downloading={
+            downloadTasks.filter(
+              (t) =>
+                t.accountId === account?.id &&
+                (t.state === "queued" || t.state === "downloading"),
+            ).length
+          }
+        />
+      )}
       <div className="main-shell">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <AnimatedSidebarTrigger
-              className="mobile-sidebar-trigger"
-              aria-label="展开主导航"
-            >
-              <PanelLeft size={18} aria-hidden="true" />
-            </AnimatedSidebarTrigger>
-            <Breadcrumb className="workspace-breadcrumb">
-              <BreadcrumbList maxItems={3}>
-                <BreadcrumbItem>
-                  <BreadcrumbLink
-                    href="#overview"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      navigate("overview");
-                    }}
-                  >
-                    工作空间
-                  </BreadcrumbLink>
-                </BreadcrumbItem>
-                <BreadcrumbItem>
-                  <BreadcrumbSeparator />
-                  <BreadcrumbPage>
-                    {page === "settings"
-                      ? "设置"
-                      : page === "accounts"
-                        ? "账号与数据"
-                        : navItems.find((item) => item.id === page)?.label}
-                  </BreadcrumbPage>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-          <div className="topbar-actions">
-            <MorphingSearch
-              items={searchItems}
-              open={searchOpen}
-              onOpenChange={setSearchOpen}
-              shortcut=""
-              placeholder="搜索课程、作业或页面"
-              emptyMessage="没有找到匹配内容"
-              className="global-morphing-search"
-            />
-            {query && (
-              <Button size="sm" variant="ghost" onClick={() => setQuery("")}>
-                清除筛选
+        {compactLayout ? (
+          <header className="mobile-topbar">
+            <strong>
+              {page === "overview"
+                ? "知行 Campus"
+                : page === "settings"
+                  ? "设置"
+                  : page === "accounts"
+                    ? "账号与数据"
+                    : navItems.find((item) => item.id === page)?.label}
+            </strong>
+            <div>
+              <Button
+                variant="ghost"
+                aria-label="搜索课程与作业"
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search size={21} />
               </Button>
-            )}
-            <button
-              className="topbar-icon"
-              aria-label="打开校园邮箱"
-              onClick={() => navigate("mail")}
-            >
-              <Mail size={19} />
-              {data.mailCount > 0 && <span className="notification-dot" />}
-            </button>
-            <button
-              className="topbar-icon"
-              aria-label="查看数据变更"
-              ref={notificationsTrigger}
-              onClick={() => setNotificationsOpen((value) => !value)}
-              aria-expanded={notificationsOpen}
-            >
-              <Bell size={19} />
-              {data.changes.length > 0 && <span className="notification-dot" />}
-            </button>
-            {notificationsOpen && (
-              <UpdatesPopover
-                changes={data.changes}
-                trigger={notificationsTrigger}
-                onClose={() => setNotificationsOpen(false)}
-                onSelect={openChange}
-                onViewAll={() => {
-                  setNotificationsOpen(false);
-                  setDialog("changes");
-                }}
-              />
-            )}
-            <span
-              className="header-sync"
-              title={
-                (data.syncedAt?.[pageScope ?? "all"] ?? data.lastSync)
-                  ? `上次同步 ${new Date(data.syncedAt?.[pageScope ?? "all"] ?? data.lastSync).toLocaleString("zh-CN")}`
-                  : "尚未同步"
-              }
-            >
-              {" "}
-              {account?.demo && (
+              <Button
+                variant="ghost"
+                aria-label="查看校园动态"
+                onClick={() => setDialog("changes")}
+              >
+                <Bell size={21} />
+              </Button>
+              {pageScope && account ? (
                 <Button
-                  className="connect-campus"
-                  size="sm"
-                  onClick={() => setLogin({})}
+                  variant="ghost"
+                  aria-label={pageScope === "all" ? "全部同步" : "刷新本页"}
+                  disabled={syncing}
+                  onClick={() => void sync()}
                 >
-                  <Plus size={14} />
-                  连接校园账号
+                  <RefreshCw size={21} className={syncing ? "spin" : ""} />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  aria-label="校园账号"
+                  onClick={() =>
+                    account ? navigate("accounts") : setLogin({})
+                  }
+                >
+                  <UserRound size={21} />
                 </Button>
               )}
-              {pageScope && (
-                <SyncButton
-                  idleLabel={pageScope === "all" ? "全部同步" : "刷新本页"}
-                  syncing={syncing}
-                  label={syncLabel}
-                  onPress={() => void sync()}
+            </div>
+          </header>
+        ) : (
+          <header className="topbar">
+            <div className="breadcrumb">
+              <AnimatedSidebarTrigger
+                className="mobile-sidebar-trigger"
+                aria-label="展开主导航"
+              >
+                <PanelLeft size={18} aria-hidden="true" />
+              </AnimatedSidebarTrigger>
+              <Breadcrumb className="workspace-breadcrumb">
+                <BreadcrumbList maxItems={3}>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink
+                      href="#overview"
+                      onClick={(event) => {
+                        event.preventDefault();
+                        navigate("overview");
+                      }}
+                    >
+                      工作空间
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbPage>
+                      {page === "settings"
+                        ? "设置"
+                        : page === "accounts"
+                          ? "账号与数据"
+                          : navItems.find((item) => item.id === page)?.label}
+                    </BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            </div>
+            <div className="topbar-actions">
+              <MorphingSearch
+                items={searchItems}
+                open={searchOpen}
+                onOpenChange={setSearchOpen}
+                shortcut=""
+                placeholder="搜索课程、作业或页面"
+                emptyMessage="没有找到匹配内容"
+                className="global-morphing-search"
+              />
+              {query && (
+                <Button size="sm" variant="ghost" onClick={() => setQuery("")}>
+                  清除筛选
+                </Button>
+              )}
+              <button
+                className="topbar-icon"
+                aria-label="打开校园邮箱"
+                onClick={() => navigate("mail")}
+              >
+                <Mail size={19} />
+                {data.mailCount > 0 && <span className="notification-dot" />}
+              </button>
+              <button
+                className="topbar-icon"
+                aria-label="查看数据变更"
+                ref={notificationsTrigger}
+                onClick={() => setNotificationsOpen((value) => !value)}
+                aria-expanded={notificationsOpen}
+              >
+                <Bell size={19} />
+                {data.changes.length > 0 && (
+                  <span className="notification-dot" />
+                )}
+              </button>
+              {notificationsOpen && (
+                <UpdatesPopover
+                  changes={data.changes}
+                  trigger={notificationsTrigger}
+                  onClose={() => setNotificationsOpen(false)}
+                  onSelect={openChange}
+                  onViewAll={() => {
+                    setNotificationsOpen(false);
+                    setDialog("changes");
+                  }}
                 />
               )}
-            </span>
-            <span className="topbar-divider" />
-            <button
-              className="topbar-icon"
-              aria-label="使用帮助"
-              onClick={() => setDialog("help")}
-            >
-              <CircleHelp size={18} />
-            </button>
-          </div>
-        </header>
+              <span
+                className="header-sync"
+                title={
+                  (data.syncedAt?.[pageScope ?? "all"] ?? data.lastSync)
+                    ? `上次同步 ${new Date(data.syncedAt?.[pageScope ?? "all"] ?? data.lastSync).toLocaleString("zh-CN")}`
+                    : "尚未同步"
+                }
+              >
+                {" "}
+                {account?.demo && (
+                  <Button
+                    className="connect-campus"
+                    size="sm"
+                    onClick={() => setLogin({})}
+                  >
+                    <Plus size={14} />
+                    连接校园账号
+                  </Button>
+                )}
+                {pageScope && (
+                  <SyncButton
+                    idleLabel={pageScope === "all" ? "全部同步" : "刷新本页"}
+                    syncing={syncing}
+                    label={syncLabel}
+                    onPress={() => void sync()}
+                  />
+                )}
+              </span>
+              <span className="topbar-divider" />
+              <button
+                className="topbar-icon"
+                aria-label="使用帮助"
+                onClick={() => setDialog("help")}
+              >
+                <CircleHelp size={18} />
+              </button>
+            </div>
+          </header>
+        )}
         <main className="main-content">
           {page === "settings" ? (
             <div className="page-content">
@@ -905,6 +1002,15 @@ export default function App() {
         </Modal>
       )}
       <FeedbackAlerts />
+      {compactLayout && (
+        <MobileNavigation
+          page={page}
+          navigate={navigate}
+          account={account}
+          unread={data.mailCount}
+          onLogin={() => setLogin({})}
+        />
+      )}
     </AnimatedSidebarProvider>
   );
 }

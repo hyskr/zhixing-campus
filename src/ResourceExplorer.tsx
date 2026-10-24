@@ -1,3 +1,5 @@
+import { BottomSheet } from "@/components/motion/bottom-sheet";
+import { useCompactLayout } from "./platform";
 // BeUI 组件来源：https://beui.dev/r/file-tree.json
 import { ActionSwapBlurButton } from "@/components/motion/action-swap-blur";
 import { Loader } from "@/components/motion/loader";
@@ -143,6 +145,8 @@ export default function ResourceExplorer({
     };
   }, [expanded.join("|"), nodes.length, scrollProgress]);
 
+  const phone = useCompactLayout();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const effectiveKey =
     currentKey && byKey.has(currentKey) ? currentKey : (tree[0]?.key ?? null);
   const current = effectiveKey ? byKey.get(effectiveKey)?.node : undefined;
@@ -161,14 +165,17 @@ export default function ResourceExplorer({
     const pending = requests.current.get(entry.key);
     if (pending) return pending;
     setErrors((current) => ({ ...current, [entry.key]: "" }));
-    const request = Promise.resolve().then(() => onLoad(entry.node)).catch((reason) => {
-      setErrors((current) => ({ ...current, [entry.key]: String(reason) }));
-      notify(String(reason), "error");
-      return undefined;
-    }).finally(() => {
-      requests.current.delete(entry.key);
-      setLoadingKeys(new Set(requests.current.keys()));
-    });
+    const request = Promise.resolve()
+      .then(() => onLoad(entry.node))
+      .catch((reason) => {
+        setErrors((current) => ({ ...current, [entry.key]: String(reason) }));
+        notify(String(reason), "error");
+        return undefined;
+      })
+      .finally(() => {
+        requests.current.delete(entry.key);
+        setLoadingKeys(new Set(requests.current.keys()));
+      });
     requests.current.set(entry.key, request);
     setLoadingKeys(new Set(requests.current.keys()));
     return request;
@@ -182,28 +189,47 @@ export default function ResourceExplorer({
   function selectEntry(key: string) {
     setCurrentKey(key);
     const entry = byKey.get(key);
-    if (!entry || entry.node.kind === "file") return;
+    if (!entry) return;
+    if (entry.node.kind === "file") {
+      setDetailsOpen(true);
+      return;
+    }
     if (entry.node.loaded === false) void load(entry);
   }
   const currentEntry = effectiveKey ? byKey.get(effectiveKey) : undefined;
-  const firstCategory = currentEntry?.node.kind === "course" ? currentEntry.children.find((child) => child.node.docType === "1") : undefined;
+  const firstCategory =
+    currentEntry?.node.kind === "course"
+      ? currentEntry.children.find((child) => child.node.docType === "1")
+      : undefined;
   useEffect(() => {
     if (!currentEntry || currentEntry.node.kind !== "course") return;
     if (currentEntry.node.loaded === false || !currentEntry.children.length) {
       void load(currentEntry);
     } else if (firstCategory) {
-      setExpanded((current) => [...new Set([...current, currentEntry.key, firstCategory.key])]);
+      setExpanded((current) => [
+        ...new Set([...current, currentEntry.key, firstCategory.key]),
+      ]);
       if (firstCategory.node.loaded === false) void load(firstCategory);
     }
-  }, [effectiveKey, currentEntry?.node.loaded, firstCategory?.key, firstCategory?.node.loaded]);
+  }, [
+    effectiveKey,
+    currentEntry?.node.loaded,
+    firstCategory?.key,
+    firstCategory?.node.loaded,
+  ]);
   function descendantFiles(node: Resource): Resource[] {
-    return node.kind === "file" ? [node] : node.children.flatMap(descendantFiles);
+    return node.kind === "file"
+      ? [node]
+      : node.children.flatMap(descendantFiles);
   }
   async function toggleSelection(entry: Entry | null, checked: boolean) {
     if (selectionRunning.current) return;
     const next = { ...selected };
     if (!checked || entry?.node.kind === "file") {
-      if (!entry) { onSelectionChange({}); return; }
+      if (!entry) {
+        onSelectionChange({});
+        return;
+      }
       for (const file of descendantFiles(entry.node)) {
         if (checked) next[file.id] = file;
         else delete next[file.id];
@@ -217,22 +243,33 @@ export default function ResourceExplorer({
     async function collect(directory: Entry): Promise<Resource[]> {
       setSelectionProgress(`正在读取：${directory.node.name}`);
       const children = await load(directory);
-      if (!children) { failures++; return []; }
+      if (!children) {
+        failures++;
+        return [];
+      }
       const files: Resource[] = [];
       for (const child of entries(children, directory.key)) {
         if (child.node.kind === "file") files.push(child.node);
-        else files.push(...await collect(child));
+        else files.push(...(await collect(child)));
       }
       return files;
     }
     try {
       const targets = entry ? [entry] : tree;
       const files: Resource[] = [];
-      for (const target of targets) files.push(...await collect(target));
-      for (const target of targets) for (const oldFile of descendantFiles(target.node)) delete next[oldFile.id];
+      for (const target of targets) files.push(...(await collect(target)));
+      for (const target of targets)
+        for (const oldFile of descendantFiles(target.node))
+          delete next[oldFile.id];
       for (const file of files) next[file.id] = file;
       onSelectionChange(next);
-      notify(failures ? `已选择 ${files.length} 个文件，${failures} 个目录读取失败，可在目录中重试。` : files.length ? `目录已刷新，已选择 ${files.length} 个文件` : "目录已刷新，暂无可选文件");
+      notify(
+        failures
+          ? `已选择 ${files.length} 个文件，${failures} 个目录读取失败，可在目录中重试。`
+          : files.length
+            ? `目录已刷新，已选择 ${files.length} 个文件`
+            : "目录已刷新，暂无可选文件",
+      );
     } finally {
       selectionRunning.current = false;
       setSelectingKey("");
@@ -262,7 +299,15 @@ export default function ResourceExplorer({
         {!entry.children.length && (
           <FileTreeFile
             value={`${entry.key}/not-loaded`}
-            name={loadingKeys.has(entry.key) ? "正在读取子目录…" : errors[entry.key] ? "加载失败，点击右侧重试" : node.loaded === false ? "点击目录读取内容" : "此目录暂无资料"}
+            name={
+              loadingKeys.has(entry.key)
+                ? "正在读取子目录…"
+                : errors[entry.key]
+                  ? "加载失败，点击右侧重试"
+                  : node.loaded === false
+                    ? "点击目录读取内容"
+                    : "此目录暂无资料"
+            }
             disabled
             icon={<FolderOpen size={16} />}
           />
@@ -270,6 +315,153 @@ export default function ResourceExplorer({
       </FileTreeFolder>
     );
   }
+  const detailView = (
+    <article className="resource-explorer-detail">
+      {current ? (
+        <>
+          <div className="resource-detail-icon">{icon(current)}</div>
+          <p className="resource-detail-kind">
+            {current.kind === "course"
+              ? "课程"
+              : current.kind === "folder"
+                ? "文件夹"
+                : "课程文件"}
+          </p>
+          <h2>{current.name}</h2>
+          <p className="resource-detail-course">
+            {current.kind === "course" ? "课程目录" : current.course}
+          </p>
+          <div className="resource-detail-facts">
+            {current.kind === "file" ? (
+              <>
+                <span>文件大小</span>
+                <strong>{current.size || "未知"}</strong>
+              </>
+            ) : (
+              <>
+                <span>已加载文件</span>
+                <strong>{fileCount(current)} 个</strong>
+              </>
+            )}
+            {effectiveKey && loadingKeys.has(effectiveKey) ? (
+              <p role="status">
+                正在读取子目录
+                {current.children.length ? "，保留已有内容…" : "…"}
+              </p>
+            ) : current.loaded === false ? (
+              <p>尚未读取此目录。点击目录可加载内容。</p>
+            ) : current.kind !== "file" && !current.children.length ? (
+              <p>此目录已读取，学校未返回文件或子目录。</p>
+            ) : null}
+          </div>
+          {current.kind === "file" ? (
+            <>
+              <div className="resource-detail-actions">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setDetailsOpen(false);
+                    onPreview(current);
+                  }}
+                >
+                  <Eye size={15} />
+                  在线查看
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => onDownload([current])}
+                >
+                  <Download size={15} />
+                  下载
+                </Button>
+                <ActionSwapBlurButton
+                  size="sm"
+                  variant="ghost"
+                  cycle={false}
+                  value={copiedKey === effectiveKey ? "copied" : "copy"}
+                  items={[
+                    {
+                      id: "copy",
+                      label: "复制链接",
+                      icon: <Copy size={15} />,
+                    },
+                    {
+                      id: "copied",
+                      label: "已复制",
+                      icon: <Check size={15} />,
+                    },
+                  ]}
+                  onClick={async () => {
+                    if (await onCopy([current]))
+                      setCopiedKey(effectiveKey ?? "");
+                  }}
+                />
+              </div>
+              <button
+                className="resource-detail-more"
+                onClick={() => onDetail(current)}
+              >
+                查看文件详情与原始链接
+              </button>
+            </>
+          ) : (
+            <div className="resource-detail-actions">
+              <Button
+                size="sm"
+                onClick={() => {
+                  const entry = effectiveKey && byKey.get(effectiveKey);
+                  if (entry) void load(entry);
+                }}
+                disabled={!!effectiveKey && loadingKeys.has(effectiveKey)}
+              >
+                {!!effectiveKey && loadingKeys.has(effectiveKey) ? (
+                  <Loader size={15} label="加载目录" />
+                ) : (
+                  <RefreshCw size={15} />
+                )}
+                {!!effectiveKey && loadingKeys.has(effectiveKey)
+                  ? "加载中"
+                  : current.loaded === false
+                    ? "加载目录"
+                    : "刷新目录"}
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void onTreeDownload(current)}
+                disabled={busy}
+              >
+                <Download size={15} />
+                递归下载
+              </Button>
+              {current.kind === "course" && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void onCalendar(current)}
+                >
+                  <CalendarDays size={15} />
+                  教学日历
+                </Button>
+              )}
+            </div>
+          )}
+          {current.kind === "file" && selected[current.id] && (
+            <div className="resource-detail-selected">
+              <Check size={14} />
+              已加入批量选择
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="resource-detail-empty">
+          选择左侧课程或文件查看操作。
+        </div>
+      )}
+    </article>
+  );
+
   return (
     <section
       className={`surface resource-explorer ${compact ? "compact" : ""}`}
@@ -284,12 +476,20 @@ export default function ResourceExplorer({
         <div className="resource-explorer-toolbar-actions">
           <Checkbox
             aria-label="全选课程文件，读取全部目录"
-            checked={!!files.length && files.every((node) => !!selected[node.id])}
-            indeterminate={picked.length > 0 && !files.every((node) => !!selected[node.id])}
+            checked={
+              !!files.length && files.every((node) => !!selected[node.id])
+            }
+            indeterminate={
+              picked.length > 0 && !files.every((node) => !!selected[node.id])
+            }
             disabled={!roots.length || !!selectingKey || busy}
             onCheckedChange={(checked) => void toggleSelection(null, checked)}
           />
-          <span role="status">{selectingKey ? selectionProgress || "正在读取目录…" : `${picked.length} 个已选`}</span>
+          <span role="status">
+            {selectingKey
+              ? selectionProgress || "正在读取目录…"
+              : `${picked.length} 个已选`}
+          </span>
           <OverflowActions
             size="sm"
             openLabel="更多文件操作"
@@ -324,7 +524,9 @@ export default function ResourceExplorer({
               height={2}
             />
           )}
-          <div className="resource-explorer-caption">勾选文件直接选择；勾选目录先读取全部子目录</div>
+          <div className="resource-explorer-caption">
+            勾选文件直接选择；勾选目录先读取全部子目录
+          </div>
           {tree.length ? (
             <FileTree
               ariaLabel="课程资料目录"
@@ -337,15 +539,42 @@ export default function ResourceExplorer({
                 const entry = byKey.get(key);
                 if (!entry) return null;
                 const descendants = descendantFiles(entry.node);
-                const count = descendants.filter((file) => !!selected[file.id]).length;
-                if (selectingKey === key) return <Loader size={17} label="读取目录后选择文件" />;
-                return <Checkbox
-                  aria-label={entry.node.kind === "file" ? `选择文件 ${entry.node.name}` : `选择 ${entry.node.name}，刷新并读取全部子目录`}
-                  checked={!!descendants.length && count === descendants.length}
-                  indeterminate={count > 0 && count < descendants.length}
-                  disabled={!!selectingKey || busy}
-                  onCheckedChange={(checked) => void toggleSelection(entry, checked)}
-                />;
+                const count = descendants.filter(
+                  (file) => !!selected[file.id],
+                ).length;
+                if (selectingKey === key)
+                  return <Loader size={17} label="读取目录后选择文件" />;
+                return (
+                  <span className="mobile-resource-actions">
+                    {phone && entry.node.kind !== "file" && (
+                      <button
+                        aria-label={`${entry.node.name}的目录操作`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setCurrentKey(key);
+                          setDetailsOpen(true);
+                        }}
+                      >
+                        •••
+                      </button>
+                    )}
+                    <Checkbox
+                      aria-label={
+                        entry.node.kind === "file"
+                          ? `选择文件 ${entry.node.name}`
+                          : `选择 ${entry.node.name}，刷新并读取全部子目录`
+                      }
+                      checked={
+                        !!descendants.length && count === descendants.length
+                      }
+                      indeterminate={count > 0 && count < descendants.length}
+                      disabled={!!selectingKey || busy}
+                      onCheckedChange={(checked) =>
+                        void toggleSelection(entry, checked)
+                      }
+                    />
+                  </span>
+                );
               }}
               className="campus-file-tree"
             >
@@ -355,136 +584,19 @@ export default function ResourceExplorer({
             <p className="quiet-empty">暂无课程资料。</p>
           )}
         </aside>
-        <article className="resource-explorer-detail">
-          {current ? (
-            <>
-              <div className="resource-detail-icon">{icon(current)}</div>
-              <p className="resource-detail-kind">
-                {current.kind === "course"
-                  ? "课程"
-                  : current.kind === "folder"
-                    ? "文件夹"
-                    : "课程文件"}
-              </p>
-              <h2>{current.name}</h2>
-              <p className="resource-detail-course">
-                {current.kind === "course" ? "课程目录" : current.course}
-              </p>
-              <div className="resource-detail-facts">
-                {current.kind === "file" ? (
-                  <>
-                    <span>文件大小</span>
-                    <strong>{current.size || "未知"}</strong>
-                  </>
-                ) : (
-                  <>
-                    <span>已加载文件</span>
-                    <strong>{fileCount(current)} 个</strong>
-                  </>
-                )}
-                {effectiveKey && loadingKeys.has(effectiveKey) ? <p role="status">正在读取子目录{current.children.length ? "，保留已有内容…" : "…"}</p> : current.loaded === false ? <p>尚未读取此目录。点击目录可加载内容。</p> : current.kind !== "file" && !current.children.length ? <p>此目录已读取，学校未返回文件或子目录。</p> : null}
-              </div>
-              {current.kind === "file" ? (
-                <>
-                  <div className="resource-detail-actions">
-                    <Button size="sm" onClick={() => onPreview(current)}>
-                      <Eye size={15} />
-                      在线查看
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => onDownload([current])}
-                    >
-                      <Download size={15} />
-                      下载
-                    </Button>
-                    <ActionSwapBlurButton
-                      size="sm"
-                      variant="ghost"
-                      cycle={false}
-                      value={copiedKey === effectiveKey ? "copied" : "copy"}
-                      items={[
-                        {
-                          id: "copy",
-                          label: "复制链接",
-                          icon: <Copy size={15} />,
-                        },
-                        {
-                          id: "copied",
-                          label: "已复制",
-                          icon: <Check size={15} />,
-                        },
-                      ]}
-                      onClick={async () => {
-                        if (await onCopy([current]))
-                          setCopiedKey(effectiveKey ?? "");
-                      }}
-                    />
-                  </div>
-                  <button
-                    className="resource-detail-more"
-                    onClick={() => onDetail(current)}
-                  >
-                    查看文件详情与原始链接
-                  </button>
-                </>
-              ) : (
-                <div className="resource-detail-actions">
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      const entry = effectiveKey && byKey.get(effectiveKey);
-                      if (entry) void load(entry);
-                    }}
-                    disabled={!!effectiveKey && loadingKeys.has(effectiveKey)}
-                  >
-                    {!!effectiveKey && loadingKeys.has(effectiveKey) ? (
-                      <Loader size={15} label="加载目录" />
-                    ) : (
-                      <RefreshCw size={15} />
-                    )}
-                    {!!effectiveKey && loadingKeys.has(effectiveKey)
-                      ? "加载中"
-                      : current.loaded === false
-                        ? "加载目录"
-                        : "刷新目录"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void onTreeDownload(current)}
-                    disabled={busy}
-                  >
-                    <Download size={15} />
-                    递归下载
-                  </Button>
-                  {current.kind === "course" && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => void onCalendar(current)}
-                    >
-                      <CalendarDays size={15} />
-                      教学日历
-                    </Button>
-                  )}
-                </div>
-              )}
-              {current.kind === "file" && selected[current.id] && (
-                <div className="resource-detail-selected">
-                  <Check size={14} />
-                  已加入批量选择
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="resource-detail-empty">
-              选择左侧课程或文件查看操作。
-            </div>
-          )}
-          
-        </article>
+        {phone ? (
+          <BottomSheet
+            open={detailsOpen}
+            onOpenChange={setDetailsOpen}
+            snapPoints={[0.8]}
+            title="文件与目录操作"
+            className="resource-mobile-sheet"
+          >
+            {detailView}
+          </BottomSheet>
+        ) : (
+          detailView
+        )}
       </div>
     </section>
   );

@@ -1,3 +1,4 @@
+import "core-js/actual/promise/with-resolvers";
 import PdfNavigation from "./PdfNavigation";
 import { useErrorState } from "./ui";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
@@ -65,10 +66,11 @@ function Pdf({ bytes }: { bytes: Uint8Array }) {
   useEffect(() => {
     let active = true;
     let loading: import("pdfjs-dist").PDFDocumentLoadingTask | undefined;
-    void import("pdfjs-dist")
+    // PDF.js legacy build supports Android WebViews without newer Promise APIs.
+    // https://github.com/mozilla/pdf.js/wiki/Frequently-Asked-Questions#legacy-build
+    void import("pdfjs-dist/legacy/build/pdf.mjs")
       .then(async (pdf) => {
-        const worker = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url"))
-          .default;
+        const worker = (await import("./pdf.worker.ts?worker&url")).default;
         pdf.GlobalWorkerOptions.workerSrc = worker;
         loading = pdf.getDocument({
           data: bytes.slice(),

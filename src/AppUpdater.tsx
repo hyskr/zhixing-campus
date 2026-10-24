@@ -1,3 +1,4 @@
+import { isAndroid } from "./platform";
 import {
   createContext,
   useContext,
@@ -174,6 +175,28 @@ export default function AppUpdateSettings() {
     installed: "更新已安装，重启应用后生效。",
     error: "更新未完成，可重新检查后重试。",
   }[phase];
+  if (isAndroid)
+    return (
+      <SettingsGroup
+        id="updates"
+        title="知行 Campus · Android"
+        description="Android 预览版本与安装更新。"
+      >
+        <div className="app-update-summary">
+          <ArrowUpCircle size={30} />
+          <div>
+            <strong>当前版本 {version}</strong>
+            <p>Android 预览版</p>
+          </div>
+        </div>
+        <p className="app-update-hint">
+          Android 使用 APK 安装更新。下载新版后，由系统确认安装。
+        </p>
+        <Button onClick={() => void openUrl(RELEASES_URL)}>
+          查看 Android 安装包
+        </Button>
+      </SettingsGroup>
+    );
   return (
     <SettingsGroup
       id="updates"

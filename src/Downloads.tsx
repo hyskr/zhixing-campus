@@ -1,3 +1,4 @@
+import { isAndroid } from "./platform";
 import { useFeedback } from "./ui";
 import { useErrorState } from "./ui";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
@@ -33,7 +34,9 @@ function downloadDuration(task: DownloadTask): string {
   const seconds = Math.max(0, Math.floor((end - task.startedAt) / 1000));
   if (!seconds) return "耗时不足 1 秒";
   const minutes = Math.floor(seconds / 60);
-  return minutes ? `耗时 ${minutes} 分 ${seconds % 60} 秒` : `耗时 ${seconds} 秒`;
+  return minutes
+    ? `耗时 ${minutes} 分 ${seconds % 60} 秒`
+    : `耗时 ${seconds} 秒`;
 }
 const activeTask = (t: DownloadTask) =>
   t.state === "queued" || t.state === "downloading";
@@ -54,7 +57,8 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
       ({ payload }) => {
         if (active) {
           setTasks((prev) => ({ ...prev, [payload.id]: payload }));
-          if (payload.state === "failed") notify(`${payload.name}：${payload.error || "下载失败"}`);
+          if (payload.state === "failed")
+            notify(`${payload.name}：${payload.error || "下载失败"}`);
         }
       },
     );
@@ -234,7 +238,15 @@ export default function Downloads({ account }: { account?: Account }) {
                   <progress
                     aria-label={`${t.name} 下载进度`}
                     max={t.total || 1}
-                    value={t.state === "completed" ? t.total || 1 : t.total ? t.loaded : t.state === "downloading" ? undefined : 0}
+                    value={
+                      t.state === "completed"
+                        ? t.total || 1
+                        : t.total
+                          ? t.loaded
+                          : t.state === "downloading"
+                            ? undefined
+                            : 0
+                    }
                   />
                   <div className="download-file-meta">
                     <span>
@@ -251,13 +263,48 @@ export default function Downloads({ account }: { account?: Account }) {
                     )}
                   </div>
                   <div className="download-time">
-                    {t.startedAt || t.createdAt || t.updatedAt ? <time dateTime={new Date((t.startedAt ?? t.createdAt ?? t.updatedAt)!).toISOString()}>
-                      {t.startedAt ? "开始" : t.createdAt ? "加入" : "记录更新"}：{formatDownloadTime((t.startedAt ?? t.createdAt ?? t.updatedAt)!)}
-                    </time> : <span>下载时间未记录</span>}
-                    {t.finishedAt && <time dateTime={new Date(t.finishedAt).toISOString()}>{t.state === "completed" ? "完成" : "结束"}：{formatDownloadTime(t.finishedAt)}</time>}
+                    {t.startedAt || t.createdAt || t.updatedAt ? (
+                      <time
+                        dateTime={new Date(
+                          (t.startedAt ?? t.createdAt ?? t.updatedAt)!,
+                        ).toISOString()}
+                      >
+                        {t.startedAt
+                          ? "开始"
+                          : t.createdAt
+                            ? "加入"
+                            : "记录更新"}
+                        ：
+                        {formatDownloadTime(
+                          (t.startedAt ?? t.createdAt ?? t.updatedAt)!,
+                        )}
+                      </time>
+                    ) : (
+                      <span>下载时间未记录</span>
+                    )}
+                    {t.finishedAt && (
+                      <time dateTime={new Date(t.finishedAt).toISOString()}>
+                        {t.state === "completed" ? "完成" : "结束"}：
+                        {formatDownloadTime(t.finishedAt)}
+                      </time>
+                    )}
                     {t.startedAt && <span>{downloadDuration(t)}</span>}
                   </div>
-                  {t.error ? <button className="download-task-error" onClick={() => showDownloadError(t.error!)}>查看失败原因</button> : <p className="download-path" title={t.path ?? t.folder ?? ""}>{t.path ?? t.folder ?? "保存位置将在下载完成后显示"}</p>}
+                  {t.error ? (
+                    <button
+                      className="download-task-error"
+                      onClick={() => showDownloadError(t.error!)}
+                    >
+                      查看失败原因
+                    </button>
+                  ) : (
+                    <p
+                      className="download-path"
+                      title={t.path ?? t.folder ?? ""}
+                    >
+                      {t.path ?? t.folder ?? "保存位置将在下载完成后显示"}
+                    </p>
+                  )}
                 </div>
                 {activeTask(t) ? (
                   <Button
@@ -270,16 +317,39 @@ export default function Downloads({ account }: { account?: Account }) {
                     取消
                   </Button>
                 ) : t.state === "completed" ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      action(() => invoke("open_download", { id: t.id }))
-                    }
-                  >
-                    <FolderOpen size={14} />
-                    显示文件
-                  </Button>
+                  <div className="download-android-actions">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        action(() => invoke("open_download", { id: t.id }))
+                      }
+                    >
+                      <FolderOpen size={14} />
+                      {isAndroid ? "打开" : "显示文件"}
+                    </Button>
+                    {isAndroid && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          action(async () => {
+                            await invoke("export_download", { id: t.id });
+                            window.dispatchEvent(
+                              new CustomEvent("campus:feedback", {
+                                detail: {
+                                  message: "已导出到系统下载目录 · 知行Campus",
+                                  variant: "success",
+                                },
+                              }),
+                            );
+                          })
+                        }
+                      >
+                        导出
+                      </Button>
+                    )}
+                  </div>
                 ) : t.state === "failed" ? (
                   <Button
                     size="sm"
@@ -302,7 +372,6 @@ export default function Downloads({ account }: { account?: Account }) {
           </div>
         )}
       </section>
-      
     </>
   );
 }

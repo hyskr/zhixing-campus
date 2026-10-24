@@ -1,3 +1,4 @@
+import { useCompactLayout } from "./platform";
 import MailCompose from "./MailCompose";
 import {
   beginMail,
@@ -97,9 +98,23 @@ export default function Mail({
     setFolder(next);
     setFilter(nextFilter);
     setSelectedId(null);
+    setMobileReading(false);
     setChecked([]);
     setQuery("");
   }
+  const compactLayout = useCompactLayout();
+  const [mobileReading, setMobileReading] = useState(!!target);
+  useEffect(() => {
+    if (!compactLayout || !mobileReading) return;
+    const back = (event: Event) => {
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      setMobileReading(false);
+    };
+    window.addEventListener("campus:before-back", back);
+    return () => window.removeEventListener("campus:before-back", back);
+  }, [compactLayout, mobileReading]);
+
   const [selectedId, setSelectedId] = useState<string | null>(
     target?.id ?? null,
   );
@@ -123,6 +138,7 @@ export default function Mail({
     if (target) {
       setFolder(target.folder);
       setSelectedId(target.id);
+      setMobileReading(true);
       setFilter("all");
       setQuery("");
       setChecked([]);
@@ -180,7 +196,7 @@ export default function Mail({
   );
   const selected = sourceRows.find((item) => item.id === selectedId);
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || (compactLayout && !mobileReading)) return;
     let active = true;
     setReading(true);
     setDetail(null);
@@ -205,7 +221,14 @@ export default function Mail({
     return () => {
       active = false;
     };
-  }, [account.id, selected?.id, folder, revision]);
+  }, [
+    account.id,
+    selected?.id,
+    folder,
+    revision,
+    compactLayout,
+    mobileReading,
+  ]);
   async function mark(ids: string[], read: boolean) {
     if (!ids.length || marking) return;
     setMarking(true);
@@ -271,7 +294,10 @@ export default function Mail({
         title="校园邮箱"
         description="完整阅读、写信与已读状态同步"
       />
-      <section className="mail-workspace" aria-label="校园邮箱工作区">
+      <section
+        className={`mail-workspace ${mobileReading ? "mobile-reading" : ""}`}
+        aria-label="校园邮箱工作区"
+      >
         <aside className="mail-folder-rail" aria-label="邮箱导航">
           <div className="mail-folder-account">
             <span className="mail-folder-avatar">
@@ -442,7 +468,10 @@ export default function Mail({
                   <button
                     className={`mail-list-item ${selected?.id === message.id ? "selected" : ""} ${message.read ? "read" : "unread"}`}
                     key={message.id}
-                    onClick={() => setSelectedId(message.id)}
+                    onClick={() => {
+                      setSelectedId(message.id);
+                      setMobileReading(true);
+                    }}
                     aria-current={
                       selected?.id === message.id ? "true" : undefined
                     }
@@ -502,6 +531,13 @@ export default function Mail({
           {selected ? (
             <>
               <div className="mail-reader-toolbar">
+                <Button
+                  variant="ghost"
+                  className="mobile-mail-back"
+                  onClick={() => setMobileReading(false)}
+                >
+                  返回列表
+                </Button>
                 <span className="home-section-kicker">MESSAGE</span>
                 <AnimatedBadge
                   status={selected.read ? "neutral" : "info"}

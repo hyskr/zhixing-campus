@@ -269,7 +269,7 @@ pub fn start_background(app: tauri::AppHandle) {
     });
 }
 #[tauri::command]
-pub fn test_notification(app: tauri::AppHandle, kind: Option<String>) -> Result<(), String> {
+pub async fn test_notification(app: tauri::AppHandle, kind: Option<String>) -> Result<(), String> {
     let (title, body) = match kind.as_deref() {
         Some("grade") => (
             "成绩提醒测试",

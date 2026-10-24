@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "知行 Campus",
+        "width": 412,
+        "height": 892,
+        "backgroundColor": "#fafaf9",
+        "dragDropEnabled": false
+      }
+    ]
+  },
+  "bundle": {
+    "createUpdaterArtifacts": false,
+    "android": {
+      "minSdkVersion": 29
+    }
+  }
+}

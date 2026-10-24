@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+  <base-config cleartextTrafficPermitted="false" />
+  <domain-config cleartextTrafficPermitted="true">
+    <domain includeSubdomains="true">bjtu.edu.cn</domain>
+    <domain includeSubdomains="false">123.121.147.7</domain>
+    <domain includeSubdomains="true">tauri.localhost</domain>
+    <domain includeSubdomains="false">localhost</domain>
+    <domain includeSubdomains="false">10.0.0.55</domain>
+    <domain includeSubdomains="false">10.0.0.1</domain>
+  </domain-config>
+</network-security-config>

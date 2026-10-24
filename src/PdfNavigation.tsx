@@ -69,10 +69,23 @@ export default function PdfNavigation({
       const found = [];
       const needle = query.trim().toLocaleLowerCase();
       for (let page = 1; page <= doc.numPages; page++) {
-        const content = await (await doc.getPage(page)).getTextContent();
-        const text = content.items
-          .map((item) => ("str" in item ? item.str : ""))
-          .join(" ");
+        // ReadableStream readers work on Android WebViews without async stream iteration.
+        const reader = (await doc.getPage(page))
+          .streamTextContent()
+          .getReader();
+        const chunks: string[] = [];
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(
+              ...value.items.map((item) => ("str" in item ? item.str : "")),
+            );
+          }
+        } finally {
+          reader.releaseLock();
+        }
+        const text = chunks.join(" ");
         const at = text.toLocaleLowerCase().indexOf(needle);
         if (at >= 0)
           found.push({

@@ -1,3 +1,4 @@
+import { isAndroid } from "./platform";
 import { useErrorState } from "./ui";
 import { Input } from "@/components/motion/input";
 import {
@@ -244,7 +245,9 @@ export default function LoginModal({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="keychain">系统凭据库（推荐）</SelectItem>
+              <SelectItem value="keychain">
+                {isAndroid ? "Android 安全存储（推荐）" : "系统凭据库（推荐）"}
+              </SelectItem>
               <SelectItem value="file">本机文件（保存密码）</SelectItem>
               <SelectItem value="session">仅本次使用</SelectItem>
             </SelectContent>

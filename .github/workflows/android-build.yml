@@ -1,0 +1,87 @@
+name: Android APK
+
+on:
+  push:
+    tags: ['android-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: jdx/mise-action@v5
+      - name: Android SDK and Rust target
+        run: |
+          sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006'
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.1.12297006" >> "$GITHUB_ENV"
+          rustup target add aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          shared-key: android-arm64
+      - name: Check Android tag
+        if: startsWith(github.ref, 'refs/tags/android-v')
+        run: |
+          bun -e 'const version=(await Bun.file("package.json").json()).version; const tag=process.env.GITHUB_REF_NAME; if(tag!==`android-v${version}` && !tag.startsWith(`android-v${version}-`)) throw Error("Android tag does not match application version");'
+      - name: Frontend checks
+        run: |
+          bun install --frozen-lockfile
+          bun run check
+          bun run test
+      - name: Configure Android signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          python3 - <<'PY'
+          import os,base64
+          from pathlib import Path
+          app=Path('src-tauri/gen/android/app')
+          key=Path(os.environ['RUNNER_TEMP'])/'zhixing-campus.jks'
+          key.write_bytes(base64.b64decode(os.environ['ANDROID_KEYSTORE_BASE64']))
+          key.chmod(0o600)
+          values={'storeFile':str(key),'storePassword':os.environ['ANDROID_KEYSTORE_PASSWORD'],'keyPassword':os.environ['ANDROID_KEY_PASSWORD'],'keyAlias':os.environ['ANDROID_KEY_ALIAS']}
+          props=app/'key.properties'
+          props.write_text('\n'.join(f'{k}={v}' for k,v in values.items())+'\n')
+          props.chmod(0o600)
+          PY
+      - name: Build signed APK
+        run: bun run tauri android build --ci --target aarch64 --apk
+      - name: Prepare APK
+        run: |
+          mkdir -p output/android
+          version=$(bun -p '(await Bun.file("package.json").json()).version')
+          cp src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk "output/android/zhixing-campus_${version}_android-arm64.apk"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify output/android/*.apk
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c -P 16 4 output/android/*.apk
+      - uses: actions/upload-artifact@v6
+        with:
+          name: android-arm64-apk
+          path: output/android/*.apk
+          if-no-files-found: error
+      - name: Publish Android preview
+        if: startsWith(github.ref, 'refs/tags/android-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --notes-file docs/releases/android-0.14.0.md

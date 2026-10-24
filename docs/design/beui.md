@@ -107,3 +107,7 @@ bun run tauri build --bundles app
 - `AppUpdater.tsx`：Button 用于检查、安装、重启与发布入口；Loader 用于更新检查和安装状态。
 
 - `Settings.tsx`：使用已有 Switch 控制关闭主窗口后驻留托盘，样式与其他偏好保持一致。
+
+## Android
+
+`bottom-sheet` 来自 BeUI 公开 MCP；用于 `MobileNavigation.tsx` 的更多功能入口与 `ResourceExplorer.tsx` 的手机文件详情。触控布局沿用现有 Button、Input、Select、Checkbox、Tabs 与浮动 Toast。

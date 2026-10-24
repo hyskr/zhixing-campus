@@ -1,8 +1,8 @@
 # 知行 Campus
 
-北京交通大学校园桌面工作台，使用 Tauri 2、React、TypeScript 和 BeUI 构建，支持 Windows、macOS 和 Linux。
+北京交通大学校园工作台，使用 Tauri 2、React、TypeScript 和 BeUI 构建，支持 Windows、macOS、Linux 和 Android。
 
-[下载安装包](https://github.com/hyskr/zhixing-campus/releases/latest) · [文档目录](docs/index.md) · [构建与发布](docs/guides/building.md)
+[桌面安装包](https://github.com/hyskr/zhixing-campus/releases/latest) · [Android 使用与构建](docs/guides/android.md) · [文档目录](docs/index.md) · [构建与发布](docs/guides/building.md)
 
 ## 功能
 
@@ -43,7 +43,8 @@ src/                   React 界面、状态与业务服务
   components/motion/   BeUI 组件
 src-tauri/
   src/                 Rust 校园接口、会话、下载、提醒与托盘
-  capabilities/        桌面权限
+  capabilities/        平台权限
+  gen/android/         Android 原生工程与平台桥接
   icons/               应用与托盘图标
 public/                OCR 模型、PDF 资源及预览测试文件
 scripts/               接口巡检、发布归档与更新清单生成
@@ -58,3 +59,5 @@ docs/                 使用指南、功能、协议、设计、来源与验证�
 版本 tag 触发 GitHub Actions，构建 Windows x64、macOS Apple Silicon／Intel、Linux x64，发布安装包、更新签名与清单。应用内入口为“设置 → 应用更新”；Linux DEB 使用手动安装包更新。
 
 [构建与发布指南](docs/guides/building.md) · [发布说明](docs/releases/0.13.1.md) · [验证记录](docs/testing/validation.md) · [第三方许可](docs/references/third-party.md)
+
+Android 使用 `android-v*` tag 独立构建已签名 arm64 APK，发布为预览版；[Android 指南](docs/guides/android.md)。

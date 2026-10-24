@@ -65,3 +65,5 @@ BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存�
 - `@web-ppt/core` 0.4.5：MIT，许可证 `licenses/web-ppt-core.txt`。
 
 接口、格式边界和本机渲染说明见 [Office 预览](../features/office-preview.md)。
+
+- `core-js`：MIT；为 Android WebView 的 PDF 预览补齐 `Promise.withResolvers`；许可文件 `licenses/core-js.txt`。PDF 及 Worker 使用 PDF.js 官方 legacy 构建。

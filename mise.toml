@@ -34,3 +34,11 @@ run = "bun run tauri build --bundles app"
 [tasks."test:live"]
 description = "读取已保存凭据，逐项巡检真实只读接口并生成报告"
 run = "bun scripts/test-live-api.ts"
+
+[tasks."android:dev"]
+description = "启动 Android 开发环境"
+run = "bun run tauri android dev"
+
+[tasks."android:build"]
+description = "构建 Android arm64 APK"
+run = "bun run tauri android build --ci --target aarch64 --apk"

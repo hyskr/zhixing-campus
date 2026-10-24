@@ -30,3 +30,7 @@
 `package.json` 与 `bun.lock` 管理前端，`src-tauri/Cargo.toml` 与 `Cargo.lock` 管理 Rust。`mise.toml` 固定工具版本，`tauri.conf.json` 管理窗口、资源、打包与更新端点，`capabilities/default.json` 声明前端可用的原生命令。
 
 版本号在 package、Cargo 与 Tauri 配置中保持一致。发布说明位于 `docs/releases/<版本>.md`，跨平台产物及 `latest.json` 由 GitHub Actions 发布。协议与来源说明见[文档目录](../index.md)。
+
+## Android
+
+`src-tauri/gen/android/` 保存 Gradle 工程、Manifest、Android Keystore 与网页/文件桥接；`src-tauri/src/mobile.rs` 接入 Rust 命令。`src/MobileNavigation.tsx` 和 `src/mobile.css` 定义手机导航与布局，`src/platform.ts` 识别 Android 与紧凑窗口。Android 与桌面的权限分别位于 `capabilities/`；构建输出、生成的插件配置、签名属性与密钥不纳入 Git。

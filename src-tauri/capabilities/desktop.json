@@ -1,0 +1,17 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "desktop",
+  "description": "桌面更新与重启权限",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "macOS",
+    "linux",
+    "windows"
+  ],
+  "permissions": [
+    "updater:default",
+    "process:allow-restart"
+  ]
+}

@@ -337,6 +337,14 @@
         "lib/ease.ts",
         "lib/utils.ts"
       ]
+    },
+    {
+      "slug": "bottom-sheet",
+      "source": "https://beui.dev/components/motion/bottom-sheet",
+      "files": [
+        "components/motion/bottom-sheet.tsx",
+        "lib/hooks/use-focus-trap.ts"
+      ]
     }
   ],
   "retrievedAt": "2026-10-18"

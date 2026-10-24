@@ -8,11 +8,14 @@ mod learning;
 mod live_api;
 mod mailbox;
 mod media;
+#[cfg(target_os = "android")]
+mod mobile;
 mod parsers;
 mod quick_login;
 mod reminders;
 mod settings;
 mod sso;
+#[cfg(desktop)]
 mod tray;
 mod updates;
 use base64::{engine::general_purpose::STANDARD, Engine};
@@ -959,7 +962,7 @@ async fn sync_account(
     Ok(result)
 }
 #[tauri::command]
-fn saved_password(
+async fn saved_password(
     username: String,
     state: tauri::State<'_, CampusState>,
 ) -> Result<Option<String>, String> {
@@ -1000,32 +1003,40 @@ async fn remove_account(
 }
 #[tauri::command]
 fn supports_in_app_update() -> bool {
-    !cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some()
+    cfg!(desktop) && (!cfg!(target_os = "linux") || std::env::var_os("APPIMAGE").is_some())
 }
 
 fn handle_startup_notification(app: &tauri::AppHandle, args: &[String]) {
     if let Some(index) = args.iter().position(|arg| arg == "--test-notification") {
         let kind = args.get(index + 1).cloned();
-        match reminders::test_notification(app.clone(), kind) {
-            Ok(()) => eprintln!("notification test: submitted to system"),
-            Err(error) => eprintln!("notification test: {error}"),
-        }
+        let app = app.clone();
+        tauri::async_runtime::spawn(async move {
+            match reminders::test_notification(app, kind).await {
+                Ok(()) => eprintln!("notification test: submitted to system"),
+                Err(error) => eprintln!("notification test: {error}"),
+            }
+        });
     }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default();
+    #[cfg(desktop)]
+    let builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _| {
             tray::show_main(app);
             handle_startup_notification(app, &args);
         }))
         .on_window_event(tray::on_window_event)
+        .plugin(tauri_plugin_updater::Builder::new().build());
+    #[cfg(target_os = "android")]
+    let builder = builder.plugin(mobile::init());
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
         .manage(campus::Features::default())
         .manage(reminders::Reminders::default())
@@ -1062,6 +1073,7 @@ pub fn run() {
                 &app.state::<reminders::Reminders>(),
                 app.path().app_data_dir()?.join("reminders.json"),
             );
+            #[cfg(desktop)]
             if let Err(error) = tray::init(app) {
                 eprintln!("系统托盘不可用：{error}");
             }
@@ -1121,6 +1133,7 @@ pub fn run() {
             learning::inline_image,
             media::cancel_download,
             media::open_download,
+            media::export_download,
             media::download_history,
             media::clear_download_history,
             saved_password,

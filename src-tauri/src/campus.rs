@@ -259,41 +259,48 @@ pub async fn open_school_page(
     save_session(&state, &username, &session)?;
     // Cookies are installed before navigating to the school page.
     let cookies = school_webview_cookies(&*session.cookies.lock().map_err(|e| e.to_string())?);
-    let directory = state
-        .directory
-        .parent()
-        .unwrap()
-        .join("webviews")
-        .join(&username);
-    let window = if let Some(window) = app.get_webview_window("school-browser") {
+    #[cfg(target_os = "android")]
+    {
+        mobile::open_school(&app, &address, cookies)
+    }
+    #[cfg(desktop)]
+    {
+        let directory = state
+            .directory
+            .parent()
+            .unwrap()
+            .join("webviews")
+            .join(&username);
+        let window = if let Some(window) = app.get_webview_window("school-browser") {
+            window
+                .navigate(Url::parse("about:blank").unwrap())
+                .map_err(|e| e.to_string())?;
+            window
+        } else {
+            tauri::WebviewWindowBuilder::new(
+                &app,
+                "school-browser",
+                tauri::WebviewUrl::External(Url::parse("about:blank").unwrap()),
+            )
+            .title("交大网站 · 知行 Campus")
+            .inner_size(1180.0, 820.0)
+            .data_directory(directory)
+            .build()
+            .map_err(|e| e.to_string())?
+        };
+        for cookie in window.cookies().map_err(|e| e.to_string())? {
+            window.delete_cookie(cookie).map_err(|e| e.to_string())?;
+        }
+        for cookie in cookies {
+            window.set_cookie(cookie).map_err(|e| e.to_string())?;
+        }
         window
-            .navigate(Url::parse("about:blank").unwrap())
+            .navigate(Url::parse(&address).map_err(|e| e.to_string())?)
             .map_err(|e| e.to_string())?;
-        window
-    } else {
-        tauri::WebviewWindowBuilder::new(
-            &app,
-            "school-browser",
-            tauri::WebviewUrl::External(Url::parse("about:blank").unwrap()),
-        )
-        .title("交大网站 · 知行 Campus")
-        .inner_size(1180.0, 820.0)
-        .data_directory(directory)
-        .build()
-        .map_err(|e| e.to_string())?
-    };
-    for cookie in window.cookies().map_err(|e| e.to_string())? {
-        window.delete_cookie(cookie).map_err(|e| e.to_string())?;
+        window.show().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        Ok(())
     }
-    for cookie in cookies {
-        window.set_cookie(cookie).map_err(|e| e.to_string())?;
-    }
-    window
-        .navigate(Url::parse(&address).map_err(|e| e.to_string())?)
-        .map_err(|e| e.to_string())?;
-    window.show().map_err(|e| e.to_string())?;
-    window.set_focus().map_err(|e| e.to_string())?;
-    Ok(())
 }
 #[tauri::command]
 pub async fn network_credentials(account: String, password: String) -> Result<(), String> {

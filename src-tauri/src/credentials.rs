@@ -154,7 +154,7 @@ pub fn credential_info(username: String, state: tauri::State<'_, CampusState>) -
     json!({"mode":r.as_ref().map(|r|r.mode.as_str()).unwrap_or("keychain"),"loginMethod":r.as_ref().map(|r|r.login_method.as_str()).unwrap_or("cas"),"hasPassword":r.as_ref().map(|_|true),"file":state.credentials.path.to_string_lossy()})
 }
 #[tauri::command]
-pub fn change_credential_storage(
+pub async fn change_credential_storage(
     username: String,
     mode: String,
     state: tauri::State<'_, CampusState>,

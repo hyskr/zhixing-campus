@@ -1,3 +1,4 @@
+import { useCompactLayout } from "./platform";
 import { currentCourseSlot } from "./currentCourse";
 import { isInWeek } from "./courseWeeks";
 import HomeShortcuts from "./HomeShortcuts";
@@ -72,6 +73,8 @@ export function Schedule({
   query: string;
   onCourse: (name: string) => void;
 }) {
+  const compactLayout = useCompactLayout();
+  const [day, setDay] = useState(new Date().getDay() || 7);
   const now = useNow();
   const [selection, setSelection] = useState(false);
   const [week, setWeek] = useState(data.currentWeek);
@@ -142,7 +145,59 @@ export function Schedule({
           </Button>
         </div>
       </div>
-      <section className="surface timetable">
+      {compactLayout && (
+        <>
+          <div className="mobile-week-days" aria-label="选择星期">
+            {["一", "二", "三", "四", "五", "六", "日"].map((name, index) => (
+              <Button
+                key={name}
+                variant="ghost"
+                aria-pressed={day === index + 1}
+                onClick={() => setDay(index + 1)}
+              >
+                周{name}
+              </Button>
+            ))}
+          </div>
+          <section className="mobile-agenda" aria-label="当日课表">
+            {periodTimes.map((time, index) => {
+              const items = courses.filter(
+                (c) => c.day === day && c.period === index + 1,
+              );
+              return (
+                <div className="mobile-agenda-period" key={time}>
+                  <time>
+                    <strong>{time.split("–")[0]}</strong>
+                    <small>{time.split("–")[1]}</small>
+                  </time>
+                  <div>
+                    {items.length ? (
+                      items.map((course) => (
+                        <button
+                          key={course.id}
+                          className={`mobile-course ${course.color}`}
+                          onClick={() => onCourse(course.name)}
+                        >
+                          <strong>{course.name}</strong>
+                          <span>{course.place || "地点待定"}</span>
+                          <small>
+                            {course.teacher || "教师待定"} · 第 {index + 1} 节
+                          </small>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="mobile-course-empty">无课</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        </>
+      )}
+      <section
+        className={`surface timetable ${compactLayout ? "desktop-timetable" : ""}`}
+      >
         <div className="table-corner">
           <span>教学周</span>
           <strong>{String(week).padStart(2, "0")}</strong>
