@@ -27,6 +27,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: jdx/mise-action@v5
       - name: Android SDK and Rust target
         run: |

@@ -79,7 +79,7 @@ export default function PdfNavigation({
             const { done, value } = await reader.read();
             if (done) break;
             chunks.push(
-              ...value.items.map((item) => ("str" in item ? item.str : "")),
+              ...value.items.map((item: { str?: string }) => item.str ?? ""),
             );
           }
         } finally {
