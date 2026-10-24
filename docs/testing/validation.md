@@ -248,7 +248,7 @@
 
 - Android 14 arm64 模拟器安装并启动调试 APK；原生设置读取、安全存储空记录查询与公开 SSO 表单请求成功。
 - 360 / 412 CSS 像素宽度的手机布局无横向溢出；课表完整显示同一时段多门课程，邮箱列表返回与底部抽屉返回通过。
-- Android 原生测试 `AndroidSecretStoreTest` 通过：加密保存、重建实例读取、覆盖与删除；磁盘内容不含测试明文。
+- Android 原生测试 `AndroidSecretStoreTest` 通过：加密保存、重建实例读取、覆盖与删除；磁盘内容不含测试明文。Rust → Android Keystore 完整链路验证保存、进程重启后读取和账号移除后删除。
 - 新邮件、成绩、上课三个测试通知调用成功，Android 系统通知记录中均可查询到对应标题。
 - 测试文件通过 Rust 下载记录调用原生导出，系统目录 `Download/知行Campus/测试课程/第一章/` 中存在导出文件。
 - 安装包内的预览模块在 Android WebView 113 上使用本地样例验证：PDF 2 页渲染与文字流读取、DOCX 2 页、PPTX 2 张幻灯片。PDF 使用 legacy 构建；文字搜索使用 ReadableStream reader。
