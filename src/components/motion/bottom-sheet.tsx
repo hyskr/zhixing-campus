@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 const DRAWER = { duration: 0.5, ease: EASE_DRAWER } as const;
 
 export interface BottomSheetProps {
+  layer?: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Heights (0-1 = fraction of viewport, or "auto"). First entry is default. */
@@ -36,6 +37,7 @@ export interface BottomSheetProps {
 }
 
 export function BottomSheet({
+  layer = 50,
   open,
   onOpenChange,
   snapPoints = [0.5, 0.92],
@@ -164,6 +166,7 @@ export function BottomSheet({
               transition={DRAWER}
               {...gate}
               onClick={() => onOpenChange(false)}
+              style={{ zIndex: layer, ...gate.style }}
               // A dim scrim with a light blur. backdrop-blur is GPU-expensive and
               // re-rasterizes every frame the sheet drags over it; a small radius
               // plus more opacity keeps the glass look without the jank.
@@ -187,13 +190,15 @@ export function BottomSheet({
               initial={reduce ? { y: 0, opacity: 0 } : { y: "100%" }}
               animate={reduce ? { y: 0, opacity: 1 } : { y: 0 }}
               exit={reduce ? { y: 0, opacity: 0 } : { y: "100%" }}
-              transition={reduce ? { duration: 0.18, ease: EASE_DRAWER } : DRAWER}
+              transition={
+                reduce ? { duration: 0.18, ease: EASE_DRAWER } : DRAWER
+              }
               onAnimationComplete={() => {
                 if (sheetRef.current)
                   heightRef.current = sheetRef.current.offsetHeight;
               }}
               {...gate}
-              style={{ ...heightStyle, ...gate.style }}
+              style={{ ...heightStyle, ...gate.style, zIndex: layer }}
               className={cn(
                 "pointer-events-auto fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-w-2xl flex-col overflow-hidden rounded-t-3xl outline-none will-change-transform",
                 "border border-border bg-background shadow-xl",
@@ -241,7 +246,9 @@ export function BottomSheet({
                 ) : null}
               </div>
               {/* overscroll-contain stops boundary scrolls from chaining to the page. */}
-              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">{children}</div>
+              <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+                {children}
+              </div>
             </motion.div>
           )}
         </PresenceGate>

@@ -128,3 +128,5 @@ bun run tauri build --bundles app
 - `Mail.tsx` 使用 Swipeable List 展示已读／未读操作，滑动与选择模式分开；已有底部 Tabs、Button、Checkbox 与 Toast 继续使用。
 - `FileActionsSheet.tsx` 使用 BottomSheet 与 Button 组合文件操作；系统文件选择继续由 File Upload 调用。
 - 表单关闭确认继续使用 Modal 与 Button，桌面未启用手机编辑确认。
+
+文件操作 BottomSheet 使用高于编辑对话框的层级；Center Morph Modal 的键盘导航仅响应当前前景对话框，并尊重已处理的事件，保证菜单和文档预览可逐层关闭。

@@ -102,8 +102,7 @@ export function CenterMorphModalTrigger({
 
   const child = children as ReactElement<Record<string, unknown>>;
   const childOnClick = child.props.onClick as
-    | ((event: React.MouseEvent<HTMLElement>) => void)
-    | undefined;
+    ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
 
   return cloneElement(child, {
     id: context.triggerId,
@@ -130,8 +129,7 @@ export function CenterMorphModalClose({
 
   const child = children as ReactElement<Record<string, unknown>>;
   const childOnClick = child.props.onClick as
-    | ((event: React.MouseEvent<HTMLElement>) => void)
-    | undefined;
+    ((event: React.MouseEvent<HTMLElement>) => void) | undefined;
 
   return cloneElement(child, {
     onClick: (event: React.MouseEvent<HTMLElement>) => {
@@ -165,8 +163,7 @@ const FOCUSABLE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-const CENTER_FOLDED_CLIP =
-  "inset(48% 48% 48% 48% round 30px)";
+const CENTER_FOLDED_CLIP = "inset(48% 48% 48% 48% round 30px)";
 const CENTER_OPEN_CLIP = "inset(0% 0% 0% 0% round 30px)";
 
 // Complex clip-path strings can snap when a spring resolves its final distance.
@@ -214,6 +211,14 @@ export function CenterMorphModalContent({
     });
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      const dialogs = [
+        ...document.querySelectorAll<HTMLElement>('[role="dialog"]'),
+      ].filter(
+        (dialog) =>
+          !dialog.closest("[inert]") && dialog.getClientRects().length > 0,
+      );
+      if (dialogs.at(-1) !== panelRef.current) return;
       if (event.key === "Escape" && dismissible) {
         event.preventDefault();
         context.setOpen(false);
@@ -333,9 +338,7 @@ export function CenterMorphModalContent({
                         aria-label={closeButtonLabel}
                         onClick={() => context.setOpen(false)}
                         initial={
-                          reduce
-                            ? { opacity: 0 }
-                            : { opacity: 0, scale: 0.8 }
+                          reduce ? { opacity: 0 } : { opacity: 0, scale: 0.8 }
                         }
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{

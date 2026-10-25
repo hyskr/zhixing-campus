@@ -15,6 +15,7 @@ export default function FileActionsSheet({
   return (
     <BottomSheet
       open={open}
+      layer={140}
       onOpenChange={(value) => {
         if (!value) onClose();
       }}
