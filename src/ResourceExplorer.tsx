@@ -1,4 +1,4 @@
-import { BottomSheet } from "@/components/motion/bottom-sheet";
+import MobileDetailPage from "./MobileDetailPage";
 import { useCompactLayout } from "./platform";
 // BeUI 组件来源：https://beui.dev/r/file-tree.json
 import { ActionSwapBlurButton } from "@/components/motion/action-swap-blur";
@@ -584,19 +584,16 @@ export default function ResourceExplorer({
             <p className="quiet-empty">暂无课程资料。</p>
           )}
         </aside>
-        {phone ? (
-          <BottomSheet
-            open={detailsOpen}
-            onOpenChange={setDetailsOpen}
-            snapPoints={[0.8]}
-            title="文件与目录操作"
-            className="resource-mobile-sheet"
-          >
-            {detailView}
-          </BottomSheet>
-        ) : (
-          detailView
-        )}
+        {phone
+          ? detailsOpen && (
+              <MobileDetailPage
+                title="文件与目录"
+                onBack={() => setDetailsOpen(false)}
+              >
+                {detailView}
+              </MobileDetailPage>
+            )
+          : detailView}
       </div>
     </section>
   );

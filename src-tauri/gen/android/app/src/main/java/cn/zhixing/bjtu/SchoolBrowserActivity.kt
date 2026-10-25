@@ -1,5 +1,8 @@
 package cn.zhixing.bjtu
 
+import android.graphics.Color
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.SystemBarStyle
 import android.os.Bundle
 import android.content.Intent
 import android.webkit.WebView
@@ -19,7 +22,9 @@ class SchoolBrowserActivity:AppCompatActivity() {
     private lateinit var browser:WebView
     override fun onCreate(state:Bundle?) {
         super.onCreate(state)
-        val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL}
+        enableEdgeToEdge(statusBarStyle=SystemBarStyle.light(Color.TRANSPARENT,Color.TRANSPARENT),navigationBarStyle=SystemBarStyle.light(Color.TRANSPARENT,Color.TRANSPARENT))
+        window.isNavigationBarContrastEnforced=false
+        val layout=LinearLayout(this).apply{orientation=LinearLayout.VERTICAL;setBackgroundColor(Color.WHITE)}
         val toolbarHeight=(52*resources.displayMetrics.density).toInt()
         val bar=LinearLayout(this)
         bar.addView(Button(this).apply{text="关闭";setOnClickListener{finish()}},LinearLayout.LayoutParams(-2,toolbarHeight))

@@ -1,3 +1,5 @@
+import MobileDetailPage from "./MobileDetailPage";
+import { useCompactLayout } from "./platform";
 import {
   AnimatedToastStack,
   useAnimatedToastStack,
@@ -131,6 +133,7 @@ export function Modal({
   children,
   wide = false,
   side = false,
+  presentation = "page",
 }: {
   title: string;
   subtitle?: string;
@@ -138,7 +141,9 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
   side?: boolean;
+  presentation?: "page" | "dialog";
 }) {
+  const compact = useCompactLayout();
   const closeRef = useRef(onClose);
   useLayoutEffect(() => {
     closeRef.current = onClose;
@@ -146,6 +151,12 @@ export function Modal({
   const handleOpenChange = useCallback((open: boolean) => {
     if (!open) closeRef.current();
   }, []);
+  if (compact && presentation === "page")
+    return (
+      <MobileDetailPage title={title} subtitle={subtitle} onBack={onClose}>
+        {children}
+      </MobileDetailPage>
+    );
   const content = (
     <div className="modal-inner">
       <div className="modal-heading">
@@ -176,7 +187,7 @@ export function Modal({
       <CenterMorphModalContent
         ariaLabel={title}
         showCloseButton={false}
-        className={`campus-modal ${wide ? "wide" : ""}`}
+        className={`campus-modal ${wide ? "wide" : ""} ${presentation === "dialog" ? "campus-confirmation" : ""}`}
       >
         {content}
       </CenterMorphModalContent>
@@ -196,7 +207,7 @@ export function DiscardDraft({
   onDiscard: () => void;
 }) {
   return (
-    <Modal title={title} onClose={onKeep}>
+    <Modal title={title} onClose={onKeep} presentation="dialog">
       <p className="discard-draft-copy">{detail}</p>
       <div className="modal-actions">
         <Button variant="secondary" onClick={onKeep}>

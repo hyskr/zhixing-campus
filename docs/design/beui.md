@@ -130,3 +130,9 @@ bun run tauri build --bundles app
 - 表单关闭确认继续使用 Modal 与 Button，桌面未启用手机编辑确认。
 
 文件操作 BottomSheet 使用高于编辑对话框的层级；Center Morph Modal 的键盘导航仅响应当前前景对话框，并尊重已处理的事件，保证菜单和文档预览可逐层关闭。
+
+## Android 0.15.0
+
+- `MobileTopBar`、`Applications`、`MobileHome`：组合 BeUI Button 与 Card，统一手机标题、入口、课程卡片和邮件列表。
+- `MobileDetailPage` 承载文档、作业、课程、成绩和搜索等长内容；底部短操作继续使用 BottomSheet，放弃编辑与移除账号继续使用 Center Morph Modal。
+- `MobileWeekSchedule` 支持左右触屏滑动切周，Tabs 等分排列；数据和课程详情沿用既有接口。

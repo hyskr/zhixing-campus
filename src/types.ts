@@ -1,4 +1,5 @@
 export type Page =
+  | "applications"
   | "overview"
   | "schedule"
   | "grades"

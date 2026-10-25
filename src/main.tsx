@@ -1,5 +1,6 @@
 import "@fontsource-variable/geist/wght.css";
 import "@fontsource-variable/geist-mono/wght.css";
+import { syncAndroidInsets } from "./androidInsets";
 import { isAndroid } from "./platform";
 import React from "react";
 import ReactDOM from "react-dom/client";
@@ -14,7 +15,9 @@ import "./appearance.css";
 import "./homepage.css";
 import "./mobile.css";
 import "./grades.css";
+import "./mobile-surfaces.css";
 if (isAndroid) document.documentElement.dataset.platform = "android";
+syncAndroidInsets();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

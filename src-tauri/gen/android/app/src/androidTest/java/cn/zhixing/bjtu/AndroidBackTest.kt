@@ -51,6 +51,14 @@ class AndroidBackTest {
                 ready
             }
             awaitCondition("Application not ready") {javascript(scenario,"Boolean(window.__campusBack && document.body)")=="true"}
+            awaitCondition("Safe area not initialized") {javascript(scenario,"parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-top'))>0")=="true"}
+            scenario.onActivity { activity ->
+                assertEquals(android.graphics.Color.TRANSPARENT,activity.window.statusBarColor)
+                assertEquals(android.graphics.Color.TRANSPARENT,activity.window.navigationBarColor)
+                assertEquals(true,androidx.core.view.WindowInsetsControllerCompat(activity.window,activity.window.decorView).isAppearanceLightStatusBars)
+            }
+            assertEquals("true",javascript(scenario,"JSON.parse(CampusWindow.systemInsets()).top>0"))
+            assertEquals("0",javascript(scenario,"Math.round(document.documentElement.getBoundingClientRect().top)"))
             javascript(scenario,"""
                 (()=>{
                     const input=document.createElement('input');input.id='android-back-test';

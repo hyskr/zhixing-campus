@@ -155,6 +155,9 @@ export function Schedule({
           week={week}
           current={slot}
           onCourse={onCourse}
+          onWeekChange={(direction) =>
+            setWeek((value) => Math.max(1, Math.min(30, value + direction)))
+          }
         />
       )}
       <section

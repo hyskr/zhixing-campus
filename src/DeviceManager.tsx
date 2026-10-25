@@ -359,7 +359,7 @@ export default function DeviceManager({
           <progress max={progress.total} value={progress.completed} />
         </div>
       )}
-      
+
       <div className="device-logs">
         <h3>操作日志</h3>
         {logs.length ? (
@@ -376,6 +376,7 @@ export default function DeviceManager({
       {confirmation && (
         <Modal
           title="确认下线设备"
+          presentation="dialog"
           subtitle="仅处理当前账号列表中选中的设备"
           onClose={() => setConfirmation(null)}
         >

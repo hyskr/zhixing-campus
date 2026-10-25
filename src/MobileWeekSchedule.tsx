@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BookOpen, MapPin, UserRound, ArrowUpRight } from "lucide-react";
-import { BottomSheet } from "@/components/motion/bottom-sheet";
+import MobileDetailPage from "./MobileDetailPage";
 import { Button } from "@/components/motion/button";
 import type { Course } from "./types";
 import { periodTimes } from "./ui";
@@ -12,13 +12,16 @@ export default function MobileWeekSchedule({
   week,
   current,
   onCourse,
+  onWeekChange,
 }: {
   courses: Course[];
   monday: Date;
   week: number;
   current: { day: number; period: number } | null;
   onCourse: (name: string) => void;
+  onWeekChange: (direction: number) => void;
 }) {
+  const touch = useRef<{ x: number; y: number } | null>(null);
   const [cell, setCell] = useState<{ day: number; period: number } | null>(
     null,
   );
@@ -29,6 +32,25 @@ export default function MobileWeekSchedule({
     <>
       <section
         className="mobile-week-grid"
+        onTouchStart={(event) => {
+          const p = event.touches[0];
+          touch.current = { x: p.clientX, y: p.clientY };
+        }}
+        onTouchCancel={() => {
+          touch.current = null;
+        }}
+        onTouchEnd={(event) => {
+          const start = touch.current;
+          touch.current = null;
+          if (!start) return;
+          const p = event.changedTouches[0],
+            dx = p.clientX - start.x,
+            dy = p.clientY - start.y;
+          if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+            event.preventDefault();
+            onWeekChange(dx < 0 ? 1 : -1);
+          }
+        }}
         aria-label={`第 ${week} 周完整课表`}
       >
         <div className="mobile-week-corner">
@@ -70,17 +92,22 @@ export default function MobileWeekSchedule({
                   {!!items.length && (
                     <button
                       type="button"
-                      className={`mobile-week-course ${items[0].color} ${active ? "is-ongoing" : ""}`}
+                      className={`mobile-week-course ${items[0].color} ${items.length > 1 ? "has-multiple" : ""} ${active ? "is-ongoing" : ""}`}
                       onClick={() => setCell({ day: d + 1, period: index + 1 })}
                       aria-label={`周${name}第 ${index + 1} 节，${items.map((c) => `${c.name}，${c.place || "地点待定"}，${c.teacher || "教师待定"}`).join("；")}`}
                     >
                       {items.slice(0, 2).map((c) => (
-                        <span className="mobile-week-course-line" key={c.id}>
+                        <span
+                          className={`mobile-week-course-line ${c.color}`}
+                          key={c.id}
+                        >
                           <strong>{c.name.replace(/\s*\[研\]/g, "")}</strong>
                           <small>{c.place || "地点待定"}</small>
                         </span>
                       ))}
-                      {items.length > 2 && <em>另 {items.length - 2} 门</em>}
+                      {items.length > 2 && (
+                        <em>共 {items.length} 门 · 点开查看</em>
+                      )}
                     </button>
                   )}
                 </div>
@@ -92,58 +119,53 @@ export default function MobileWeekSchedule({
       <div className="mobile-week-caption">
         <span>
           <i />
-          本周课程 · 点按查看详情
+          左右滑动切周 · 点按课程详情
         </span>
-        <span>{courses.length} 个时段</span>
+        <span>
+          {new Set(courses.map((c) => `${c.day}:${c.period}`)).size} 个时段
+        </span>
       </div>
-      <BottomSheet
-        open={!!cell}
-        onOpenChange={(open) => {
-          if (!open) setCell(null);
-        }}
-        snapPoints={[0.7]}
-        title={
-          cell
-            ? `周${days[cell.day - 1]} · ${periodTimes[cell.period - 1]}`
-            : "课程详情"
-        }
-        description={
-          selected.length > 1
-            ? `${selected.length} 门课程安排在同一时段`
-            : `第 ${week} 教学周`
-        }
-        className="mobile-course-sheet"
-      >
-        {selected.map((c) => (
-          <article className="mobile-slot-detail" key={c.id}>
-            <span className={`mobile-slot-icon ${c.color}`}>
-              <BookOpen size={21} />
-            </span>
-            <div>
-              <h3>{c.name}</h3>
-              <p>
-                <MapPin size={14} />
-                {c.place || "地点待定"}
-              </p>
-              <p>
-                <UserRound size={14} />
-                {c.teacher || "教师待定"}
-              </p>
-              <small>{c.weeks}</small>
-            </div>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setCell(null);
-                onCourse(c.name);
-              }}
-            >
-              课程空间
-              <ArrowUpRight size={14} />
-            </Button>
-          </article>
-        ))}
-      </BottomSheet>
+      {cell && (
+        <MobileDetailPage
+          onBack={() => setCell(null)}
+          title={`周${days[cell.day - 1]} · ${periodTimes[cell.period - 1]}`}
+          subtitle={
+            selected.length > 1
+              ? `${selected.length} 门课程安排在同一时段`
+              : `第 ${week} 教学周`
+          }
+        >
+          {selected.map((c) => (
+            <article className="mobile-slot-detail" key={c.id}>
+              <span className={`mobile-slot-icon ${c.color}`}>
+                <BookOpen size={21} />
+              </span>
+              <div>
+                <h3>{c.name}</h3>
+                <p>
+                  <MapPin size={14} />
+                  {c.place || "地点待定"}
+                </p>
+                <p>
+                  <UserRound size={14} />
+                  {c.teacher || "教师待定"}
+                </p>
+                <small>{c.weeks}</small>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setCell(null);
+                  onCourse(c.name);
+                }}
+              >
+                课程空间
+                <ArrowUpRight size={14} />
+              </Button>
+            </article>
+          ))}
+        </MobileDetailPage>
+      )}
     </>
   );
 }

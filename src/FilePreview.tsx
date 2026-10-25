@@ -1,4 +1,5 @@
 import "core-js/actual/promise/with-resolvers";
+import { useCompactLayout } from "./platform";
 import PdfNavigation from "./PdfNavigation";
 import { useErrorState } from "./ui";
 import { Dock, DockItem, DockSeparator } from "@/components/motion/dock";
@@ -56,6 +57,8 @@ export function FilePreviewProvider({ children }: { children: ReactNode }) {
   );
 }
 function Pdf({ bytes }: { bytes: Uint8Array }) {
+  const compact = useCompactLayout();
+  const viewportRef = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null),
     [doc, setDoc] = useState<import("pdfjs-dist").PDFDocumentProxy | null>(
       null,
@@ -63,6 +66,30 @@ function Pdf({ bytes }: { bytes: Uint8Array }) {
     [page, setPage] = useState(1),
     [scale, setScale] = useState(1.15),
     [error, setError] = useErrorState();
+  useEffect(() => {
+    if (!compact || !doc || !viewportRef.current) return;
+    const viewport = viewportRef.current;
+    let active = true;
+    const fit = () => {
+      void doc.getPage(1).then((page) => {
+        if (active)
+          setScale(
+            Math.min(
+              1.15,
+              (viewport.clientWidth - 24) /
+                page.getViewport({ scale: 1 }).width,
+            ),
+          );
+      });
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(viewport);
+    fit();
+    return () => {
+      active = false;
+      observer.disconnect();
+    };
+  }, [compact, doc]);
   useEffect(() => {
     let active = true;
     let loading: import("pdfjs-dist").PDFDocumentLoadingTask | undefined;
@@ -165,7 +192,7 @@ function Pdf({ bytes }: { bytes: Uint8Array }) {
         </Button>
       </div>
       <PdfNavigation doc={doc} onNavigate={setPage} />
-      <div className="pdf-canvas-area">
+      <div className="pdf-canvas-area" ref={viewportRef}>
         <canvas ref={canvas} />
       </div>
     </>

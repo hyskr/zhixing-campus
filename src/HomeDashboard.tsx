@@ -1,3 +1,4 @@
+import MobileHome from "./MobileHome";
 import { useCompactLayout } from "./platform";
 import { useState } from "react";
 import { Card } from "@/components/motion/card";
@@ -100,6 +101,33 @@ export default function HomeDashboard({
       ...data.resources.map((item) => item.name),
     ]),
   ];
+  if (compact)
+    return (
+      <>
+        <MobileHome
+          data={data}
+          now={now}
+          today={today}
+          pending={pending}
+          mail={importantMail}
+          changes={changes}
+          navigate={navigate}
+          onCourse={onCourse}
+          onHomework={setSelected}
+          onMail={showMail}
+          onChange={onChange}
+          showChanges={showChanges}
+        />
+        {selected && (
+          <HomeworkDetail
+            account={account}
+            item={selected}
+            onClose={() => setSelected(null)}
+            onUpdated={onHomeworkUpdate}
+          />
+        )}
+      </>
+    );
   return (
     <div className="workspace-home dashboard-home">
       <header className="home-heading">

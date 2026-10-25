@@ -1,3 +1,6 @@
+import MobileTopBar from "./MobileTopBar";
+import MobileSearch from "./MobileSearch";
+import Applications from "./Applications";
 import MobileRefreshSurface, {
   pageRefreshHandler,
 } from "./MobileRefreshSurface";
@@ -579,70 +582,21 @@ export default function App() {
       )}
       <div className="main-shell">
         {compactLayout ? (
-          <header className="mobile-topbar">
-            {!["overview", "schedule", "homework", "mail"].includes(page) && (
-              <Button
-                variant="ghost"
-                className="mobile-up-button"
-                aria-label="返回上一页"
-                onClick={() => {
-                  (
-                    window as Window & { __campusBack?: () => boolean }
-                  ).__campusBack?.();
-                }}
-              >
-                <ChevronLeft size={22} />
-              </Button>
-            )}
-            <strong role="heading" aria-level={1}>
-              {page === "overview"
-                ? "知行 Campus"
-                : page === "settings"
-                  ? "设置"
-                  : page === "accounts"
-                    ? "账号与数据"
-                    : navItems.find((item) => item.id === page)?.label}
-            </strong>
-            <div>
-              {[
-                "overview",
-                "schedule",
-                "homework",
-                "resources",
-                "grades",
-              ].includes(page) && (
-                <Button
-                  variant="ghost"
-                  aria-label="搜索课程与作业"
-                  onClick={() => setSearchOpen(true)}
-                >
-                  <Search size={21} />
-                </Button>
-              )}
-              {page === "overview" && (
-                <Button
-                  variant="ghost"
-                  aria-label="查看校园动态"
-                  onClick={() => setDialog("changes")}
-                >
-                  <Bell size={21} />
-                </Button>
-              )}
-              {(pageScope || page === "classrooms") && account ? (
-                <Button
-                  variant="ghost"
-                  aria-label={pageScope === "all" ? "全部同步" : "刷新本页"}
-                  disabled={syncing || mobileRefreshing}
-                  onClick={() => void refreshMobilePage()}
-                >
-                  <RefreshCw
-                    size={21}
-                    className={syncing || mobileRefreshing ? "spin" : ""}
-                  />
-                </Button>
-              ) : null}
-            </div>
-          </header>
+          <MobileTopBar
+            page={page}
+            account={account}
+            week={data.currentWeek}
+            now={now}
+            busy={syncing || mobileRefreshing}
+            onBack={() => {
+              (
+                window as Window & { __campusBack?: () => boolean }
+              ).__campusBack?.();
+            }}
+            onSearch={() => setSearchOpen(true)}
+            onAccount={() => (account ? navigate("accounts") : setLogin({}))}
+            onRefresh={() => void refreshMobilePage()}
+          />
         ) : (
           <header className="topbar">
             <div className="breadcrumb">
@@ -825,6 +779,13 @@ export default function App() {
                   onCourse={setCourseName}
                 />
               )}
+              {page === "applications" && (
+                <Applications
+                  account={account}
+                  navigate={navigate}
+                  onLogin={() => setLogin({})}
+                />
+              )}
               {page === "schedule" && (
                 <Schedule data={data} query={query} onCourse={setCourseName} />
               )}
@@ -980,6 +941,7 @@ export default function App() {
       {removeId && (
         <Modal
           title="移除这个账号？"
+          presentation="dialog"
           subtitle="此账号在本机的登录状态与缓存也会一并清除。"
           onClose={() => setRemoveId(null)}
         >
@@ -1075,14 +1037,18 @@ export default function App() {
           </div>
         </Modal>
       )}
+      {compactLayout && searchOpen && (
+        <MobileSearch
+          items={searchItems}
+          onClose={() => setSearchOpen(false)}
+        />
+      )}
       <FeedbackAlerts />
       {compactLayout && (
         <MobileNavigation
           page={page}
           navigate={navigate}
-          account={account}
           unread={data.mailCount}
-          onLogin={() => setLogin({})}
         />
       )}
     </AnimatedSidebarProvider>

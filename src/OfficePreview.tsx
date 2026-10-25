@@ -1,3 +1,4 @@
+import { useCompactLayout } from "./platform";
 import { useEffect, useRef, useState } from "react";
 import type { Presentation } from "@web-ppt/core";
 import { ChevronLeft, ChevronRight, Minus, Plus } from "lucide-react";
@@ -25,6 +26,9 @@ export default function OfficePreview({
 }
 
 function WordPreview({ bytes }: { bytes: Uint8Array }) {
+  const compact = useCompactLayout(),
+    viewport = useRef<HTMLDivElement>(null);
+  const [fitScale, setFitScale] = useState(1);
   const content = useRef<HTMLDivElement>(null);
   const styles = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -60,6 +64,21 @@ function WordPreview({ bytes }: { bytes: Uint8Array }) {
       active = false;
     };
   }, [bytes]);
+  useEffect(() => {
+    const target = viewport.current;
+    if (!compact || loading || !target) return;
+    const fit = () => {
+      const page = content.current?.querySelector<HTMLElement>(
+        "section.campus-docx-page",
+      );
+      if (page)
+        setFitScale(Math.min(1, (target.clientWidth - 24) / page.offsetWidth));
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(target);
+    fit();
+    return () => observer.disconnect();
+  }, [compact, loading]);
   return (
     <div className="office-preview office-word">
       <div className="office-preview-controls">
@@ -94,8 +113,16 @@ function WordPreview({ bytes }: { bytes: Uint8Array }) {
       )}
       {error && <p className="quiet-empty">文档未能预览，请下载原文件查看。</p>}
       <div ref={styles} />
-      <div className="office-document-scroll" hidden={loading || !!error}>
-        <div ref={content} className="office-docx-content" style={{ zoom }} />
+      <div
+        ref={viewport}
+        className="office-document-scroll"
+        hidden={loading || !!error}
+      >
+        <div
+          ref={content}
+          className="office-docx-content"
+          style={{ zoom: zoom * fitScale }}
+        />
       </div>
     </div>
   );
