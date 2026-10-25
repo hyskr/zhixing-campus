@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { useCompactLayout } from "./platform";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   Bell,
   Download,
@@ -7,6 +14,8 @@ import {
   Stethoscope,
   Wifi,
   ArrowUpCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/motion/button";
 const sections = [
@@ -67,28 +76,65 @@ const category: Record<string, string> = {
 const SettingsGroupContext = createContext("appearance");
 export function SettingsGroups({ children }: { children: ReactNode }) {
   const [active, setActive] = useState("appearance");
+  const compact = useCompactLayout();
+  const [detail, setDetail] = useState(false);
+  useEffect(() => {
+    if (!compact || !detail) return;
+    const back = (event: Event) => {
+      if (document.querySelector('[role="dialog"]')) return;
+      event.preventDefault();
+      setDetail(false);
+    };
+    window.addEventListener("campus:before-back", back);
+    return () => window.removeEventListener("campus:before-back", back);
+  }, [compact, detail]);
   const current = sections.find((s) => s.id === active)!;
   return (
     <SettingsGroupContext.Provider value={active}>
-      <div className="settings-workspace">
+      <div
+        className={`settings-workspace ${compact ? "mobile-settings-workspace" : ""} ${detail ? "is-detail" : ""}`}
+      >
         <nav className="settings-navigation" aria-label="设置分类">
-          {sections.map(({ id, title, icon: Icon }) => (
+          {sections.map(({ id, title, description, icon: Icon }) => (
             <Button
               key={id}
               variant="ghost"
               className="settings-category"
-              aria-current={id === active ? "page" : undefined}
-              onClick={() => setActive(id)}
+              aria-current={!compact && id === active ? "page" : undefined}
+              onClick={() => {
+                setActive(id);
+                setDetail(true);
+              }}
             >
-              <Icon size={16} />
-              {title}
+              <span className="settings-category-icon">
+                <Icon size={19} />
+              </span>
+              <span className="settings-category-copy">
+                <strong>{title}</strong>
+                {compact && <small>{description}</small>}
+              </span>
+              {compact && (
+                <ChevronRight size={16} className="settings-category-chevron" />
+              )}
             </Button>
           ))}
         </nav>
         <div className="settings-pane" key={active}>
           <header className="settings-pane-heading">
-            <h2>{current.title}</h2>
-            <p>{current.description}</p>
+            {compact && (
+              <Button
+                variant="ghost"
+                className="settings-back"
+                onClick={() => setDetail(false)}
+              >
+                <ChevronLeft size={18} />
+                全部设置
+              </Button>
+            )}
+            <div>
+              <h2>{current.title}</h2>
+              <p>{current.description}</p>
+            </div>
           </header>
           <div className="settings-groups">{children}</div>
         </div>

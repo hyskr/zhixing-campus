@@ -1,3 +1,4 @@
+import MobileWeekSchedule from "./MobileWeekSchedule";
 import { useCompactLayout } from "./platform";
 import { currentCourseSlot } from "./currentCourse";
 import { isInWeek } from "./courseWeeks";
@@ -74,7 +75,6 @@ export function Schedule({
   onCourse: (name: string) => void;
 }) {
   const compactLayout = useCompactLayout();
-  const [day, setDay] = useState(new Date().getDay() || 7);
   const now = useNow();
   const [selection, setSelection] = useState(false);
   const [week, setWeek] = useState(data.currentWeek);
@@ -109,11 +109,16 @@ export function Schedule({
         <Tabs
           value={selection ? "selection" : "current"}
           onValueChange={(v) => setSelection(v === "selection")}
-          variant="underline"
+          variant={compactLayout ? "segment" : "underline"}
+          className="schedule-type-tabs"
         >
           <TabsList aria-label="课表类型">
-            <TabsTrigger value="current">本学期课表</TabsTrigger>
-            <TabsTrigger value="selection">选课任务课表</TabsTrigger>
+            <TabsTrigger value="current">
+              {compactLayout ? "学期课表" : "本学期课表"}
+            </TabsTrigger>
+            <TabsTrigger value="selection">
+              {compactLayout ? "选课课表" : "选课任务课表"}
+            </TabsTrigger>
           </TabsList>
         </Tabs>
         <div className="week-controls">
@@ -146,54 +151,13 @@ export function Schedule({
         </div>
       </div>
       {compactLayout && (
-        <>
-          <div className="mobile-week-days" aria-label="选择星期">
-            {["一", "二", "三", "四", "五", "六", "日"].map((name, index) => (
-              <Button
-                key={name}
-                variant="ghost"
-                aria-pressed={day === index + 1}
-                onClick={() => setDay(index + 1)}
-              >
-                周{name}
-              </Button>
-            ))}
-          </div>
-          <section className="mobile-agenda" aria-label="当日课表">
-            {periodTimes.map((time, index) => {
-              const items = courses.filter(
-                (c) => c.day === day && c.period === index + 1,
-              );
-              return (
-                <div className="mobile-agenda-period" key={time}>
-                  <time>
-                    <strong>{time.split("–")[0]}</strong>
-                    <small>{time.split("–")[1]}</small>
-                  </time>
-                  <div>
-                    {items.length ? (
-                      items.map((course) => (
-                        <button
-                          key={course.id}
-                          className={`mobile-course ${course.color}`}
-                          onClick={() => onCourse(course.name)}
-                        >
-                          <strong>{course.name}</strong>
-                          <span>{course.place || "地点待定"}</span>
-                          <small>
-                            {course.teacher || "教师待定"} · 第 {index + 1} 节
-                          </small>
-                        </button>
-                      ))
-                    ) : (
-                      <div className="mobile-course-empty">无课</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-        </>
+        <MobileWeekSchedule
+          courses={courses}
+          monday={monday}
+          week={week}
+          current={slot}
+          onCourse={onCourse}
+        />
       )}
       <section
         className={`surface timetable ${compactLayout ? "desktop-timetable" : ""}`}
@@ -278,6 +242,7 @@ export function Grades({
   query: string;
   onCourse: (name: string) => void;
 }) {
+  const compactLayout = useCompactLayout();
   const [selected, setSelected] = useState<Grade | null>(null);
   const rows = data.grades.filter((g) =>
     `${g.name}${g.teacher}${g.term}`.includes(query),
@@ -300,61 +265,99 @@ export function Grades({
           <span className="subtle-label">点击课程查看详情</span>
         </div>
         {rows.length ? (
-          <Table<Grade>
-            className="grades-table"
-            data={rows}
-            getRowId={(g) => g.id}
-            rowHeight={68}
-            height={Math.min(600, Math.max(220, rows.length * 68 + 49))}
-            columns={[
-              {
-                key: "name",
-                header: "课程名称",
-                sortable: true,
-                width: "32%",
-                cell: (g) => (
-                  <button
-                    className="table-course-link"
-                    onClick={() => onCourse(g.name)}
-                  >
-                    <span className="course-letter">{g.name.slice(0, 1)}</span>
-                    {g.name}
-                  </button>
-                ),
-              },
-              { key: "term", header: "学年学期", sortable: true, width: "23%" },
-              { key: "teacher", header: "任课教师", width: "18%" },
-              { key: "credits", header: "学分", sortable: true, width: "9%" },
-              {
-                key: "score",
-                header: "成绩",
-                sortable: true,
-                width: "10%",
-                cell: (g) => (
+          compactLayout ? (
+            <div className="mobile-grade-list" aria-label="成绩列表">
+              {rows.map((g) => (
+                <button
+                  className="mobile-grade-row"
+                  key={g.id}
+                  onClick={() => setSelected(g)}
+                  aria-label={`查看${g.name}成绩详情`}
+                >
+                  <span className="mobile-grade-icon">
+                    <GraduationCap size={20} />
+                  </span>
+                  <span className="mobile-grade-copy">
+                    <strong>{g.name}</strong>
+                    <small>
+                      {g.credits} 学分 · {g.teacher || "教师未提供"}
+                    </small>
+                    <small>{g.term}</small>
+                  </span>
                   <span
-                    className={`score ${Number(g.score.split(",").at(-1)) >= 90 ? "excellent" : ""}`}
+                    className={`mobile-grade-score ${Number(g.score) >= 90 ? "excellent" : ""}`}
                   >
                     {g.score}
+                    <small>成绩</small>
                   </span>
-                ),
-              },
-              {
-                key: "detail",
-                header: "",
-                width: "8%",
-                cell: (g) => (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    aria-label={`查看${g.name}成绩详情`}
-                    onClick={() => setSelected(g)}
-                  >
-                    <ChevronRight size={16} />
-                  </Button>
-                ),
-              },
-            ]}
-          />
+                  <ChevronRight size={16} />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Table<Grade>
+              className="grades-table"
+              data={rows}
+              getRowId={(g) => g.id}
+              rowHeight={68}
+              height={Math.min(600, Math.max(220, rows.length * 68 + 49))}
+              columns={[
+                {
+                  key: "name",
+                  header: "课程名称",
+                  sortable: true,
+                  width: "32%",
+                  cell: (g) => (
+                    <button
+                      className="table-course-link"
+                      onClick={() => onCourse(g.name)}
+                    >
+                      <span className="course-letter">
+                        {g.name.slice(0, 1)}
+                      </span>
+                      {g.name}
+                    </button>
+                  ),
+                },
+                {
+                  key: "term",
+                  header: "学年学期",
+                  sortable: true,
+                  width: "23%",
+                },
+                { key: "teacher", header: "任课教师", width: "18%" },
+                { key: "credits", header: "学分", sortable: true, width: "9%" },
+                {
+                  key: "score",
+                  header: "成绩",
+                  sortable: true,
+                  width: "10%",
+                  cell: (g) => (
+                    <span
+                      className={`score ${Number(g.score.split(",").at(-1)) >= 90 ? "excellent" : ""}`}
+                    >
+                      {g.score}
+                    </span>
+                  ),
+                },
+                {
+                  key: "detail",
+                  header: "",
+                  width: "8%",
+                  cell: (g) => (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      aria-label={`查看${g.name}成绩详情`}
+                      onClick={() => setSelected(g)}
+                    >
+                      <ChevronRight size={16} />
+                    </Button>
+                  ),
+                },
+              ]}
+            />
+          )
         ) : (
           <Empty />
         )}
@@ -474,7 +477,7 @@ export function Accounts({
           <ArrowDownLeft size={21} />
         </span>
         <div>
-          <h3>数据留在这台电脑</h3>
+          <h3>数据保存在本机</h3>
           <p>
             已同步的数据可离线查看。移除账号会同时清除它在本机的登录状态与缓存。
           </p>

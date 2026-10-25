@@ -7,6 +7,7 @@ import {
   Grid2X2,
   Settings2,
   UserRound,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/motion/button";
 import { BottomSheet } from "@/components/motion/bottom-sheet";
@@ -83,7 +84,7 @@ export default function MobileNavigation({
       <BottomSheet
         open={more}
         onOpenChange={setMore}
-        snapPoints={[0.82]}
+        snapPoints={[0.9]}
         title="更多功能"
         description="学习资料、校园服务和个人设置"
         className="mobile-more-sheet"
@@ -103,30 +104,53 @@ export default function MobileNavigation({
             <small>{account?.studentId ?? "登录后同步校园数据"}</small>
           </span>
         </Button>
-        <div className="mobile-more-grid">
-          {navItems
-            .filter((item) => !primary.some((p) => p.id === item.id))
-            .map((item) => {
-              const Icon = icons[item.icon as keyof typeof icons];
-              return (
-                <Button
-                  key={item.id}
-                  variant="secondary"
-                  onClick={() => go(item.id)}
-                >
-                  <Icon size={22} />
-                  {item.label}
-                </Button>
-              );
-            })}
-          <Button variant="secondary" onClick={() => go("settings")}>
-            <Settings2 size={22} />
-            设置
-          </Button>
-          <Button variant="secondary" onClick={() => go("accounts")}>
-            <UserRound size={22} />
-            账号与数据
-          </Button>
+        <div className="mobile-more-groups">
+          {[
+            { label: "学习", pages: ["resources", "grades", "classrooms"] },
+            { label: "工具", pages: ["downloads", "files", "services"] },
+          ].map((group) => (
+            <section key={group.label}>
+              <h3>{group.label}</h3>
+              <div className="mobile-more-list">
+                {group.pages.map((id) => {
+                  const item = navItems.find((item) => item.id === id)!;
+                  const Icon = icons[item.icon as keyof typeof icons];
+                  return (
+                    <Button
+                      key={id}
+                      variant="ghost"
+                      onClick={() => go(item.id)}
+                    >
+                      <span className="mobile-more-icon">
+                        <Icon size={20} />
+                      </span>
+                      <span>{item.label}</span>
+                      <ChevronRight size={16} />
+                    </Button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+          <section>
+            <h3>个人</h3>
+            <div className="mobile-more-list">
+              <Button variant="ghost" onClick={() => go("settings")}>
+                <span className="mobile-more-icon">
+                  <Settings2 size={20} />
+                </span>
+                <span>设置</span>
+                <ChevronRight size={16} />
+              </Button>
+              <Button variant="ghost" onClick={() => go("accounts")}>
+                <span className="mobile-more-icon">
+                  <UserRound size={20} />
+                </span>
+                <span>账号与数据</span>
+                <ChevronRight size={16} />
+              </Button>
+            </div>
+          </section>
         </div>
       </BottomSheet>
     </>

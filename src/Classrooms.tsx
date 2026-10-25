@@ -1,6 +1,7 @@
+import { useCompactLayout } from "./platform";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw, Search, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "@/components/motion/button";
 import { Input } from "@/components/motion/input";
 import { Checkbox } from "@/components/motion/checkbox";
@@ -94,6 +95,7 @@ export default function Classrooms({
   currentWeek: number;
   onLoginRequired: () => void;
 }) {
+  const compactLayout = useCompactLayout();
   const [week, setWeek] = useState(String(currentWeek)),
     [building, setBuilding] = useState("1"),
     [semester, setSemester] = useState("current"),
@@ -257,42 +259,89 @@ export default function Classrooms({
         </div>
       </div>
       <div className="surface rooms-results">
-        <table className="rooms-table">
-          <thead>
-            <tr>
-              <th>教室 / 座位</th>
-              {periodTimes.map((time, i) => (
-                <th key={time}>
-                  第 {i + 1} 节<small>{time}</small>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rooms.map((room) => (
-              <tr key={room.id}>
-                <th>
-                  <button onClick={() => setSelected(room)}>{room.name}</button>
-                  <small>
-                    {room.capacity ? `${room.capacity} 座` : "座位未提供"}
-                  </small>
-                </th>
-                {periodTimes.map((_, i) => {
-                  const state = room.cells[(Number(day) - 1) * 7 + i];
-                  return (
-                    <td
-                      key={i}
-                      className={`room-cell ${state}`}
-                      title={`${room.name} · 周${days[Number(day) - 1]}第 ${i + 1} 节 · ${names[state]}`}
-                    >
-                      {names[state]}
-                    </td>
-                  );
-                })}
+        {compactLayout ? (
+          <div className="mobile-room-list" aria-label="教室列表">
+            {rooms.map((room) => {
+              const states = room.cells.slice(
+                (Number(day) - 1) * 7,
+                Number(day) * 7,
+              );
+              const freeCount = states.filter(
+                (state) => state === "free",
+              ).length;
+              return (
+                <button
+                  className="mobile-room-row"
+                  key={room.id}
+                  onClick={() => setSelected(room)}
+                >
+                  <span className="mobile-room-top">
+                    <span>
+                      <MapPin size={17} />
+                      <strong>{room.name}</strong>
+                      <small>{room.capacity || "—"} 座</small>
+                    </span>
+                    <span>
+                      {freeCount === 7 ? "全天空闲" : `${freeCount} 个空闲时段`}
+                      <ChevronRight size={15} />
+                    </span>
+                  </span>
+                  <span className="mobile-room-slots">
+                    {states.map((state, i) => (
+                      <span
+                        key={i}
+                        className={`room-cell ${state}`}
+                        aria-label={`第 ${i + 1} 节 ${names[state]}`}
+                      >
+                        <strong>{i + 1}</strong>
+                        <small>{names[state]}</small>
+                      </span>
+                    ))}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <table className="rooms-table">
+            <thead>
+              <tr>
+                <th>教室 / 座位</th>
+                {periodTimes.map((time, i) => (
+                  <th key={time}>
+                    第 {i + 1} 节<small>{time}</small>
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rooms.map((room) => (
+                <tr key={room.id}>
+                  <th>
+                    <button onClick={() => setSelected(room)}>
+                      {room.name}
+                    </button>
+                    <small>
+                      {room.capacity ? `${room.capacity} 座` : "座位未提供"}
+                    </small>
+                  </th>
+                  {periodTimes.map((_, i) => {
+                    const state = room.cells[(Number(day) - 1) * 7 + i];
+                    return (
+                      <td
+                        key={i}
+                        className={`room-cell ${state}`}
+                        title={`${room.name} · 周${days[Number(day) - 1]}第 ${i + 1} 节 · ${names[state]}`}
+                      >
+                        {names[state]}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
         {!rooms.length && !busy && (
           <div className="quiet-empty">
             {page

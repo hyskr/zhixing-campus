@@ -13,6 +13,7 @@ import {
   type Variants,
 } from "motion/react";
 import {
+  Children,
   createContext,
   type ReactNode,
   useCallback,
@@ -129,7 +130,12 @@ export function Select({
 
   const setOpen = useCallback(
     (next: boolean) => {
-      if (!next && rootRef.current?.querySelector('[role="listbox"]')?.contains(document.activeElement)) {
+      if (
+        !next &&
+        rootRef.current
+          ?.querySelector('[role="listbox"]')
+          ?.contains(document.activeElement)
+      ) {
         document.getElementById(`${baseId}-trigger`)?.focus();
       }
       if (!openControlled) setInternalOpen(next);
@@ -290,7 +296,10 @@ export function SelectValue({ placeholder, className }: SelectValueProps) {
   const label = ctx.labelFor(ctx.value);
   return (
     <span
-      className={cn(label ? "text-foreground" : "text-muted-foreground", className)}
+      className={cn(
+        label ? "text-foreground" : "text-muted-foreground",
+        className,
+      )}
     >
       {label ?? placeholder ?? "Select"}
     </span>
@@ -362,19 +371,22 @@ export function SelectContent({ className, children }: SelectContentProps) {
       ? `${RADIUS}px ${RADIUS}px ${near}px ${near}px`
       : `${near}px ${near}px ${RADIUS}px ${RADIUS}px`,
   );
-  const clipPath = useTransform([progress, nearRadius], ([p, near]: number[]) => {
-    if (!ready) return "none";
-    // Clamp overshoot so the clip never extends into the trigger or exposes
-    // overflowing children. At rest remove it so the native shadow is whole.
-    const reveal = Math.min(1, Math.max(0, p));
-    if (reveal === 1) return "none";
-    const hidden = Math.max(0, (height - LIP) * (1 - reveal));
-    const inset = isTop ? `${hidden}px 0 0 0` : `0 0 ${hidden}px 0`;
-    const corners = isTop
-      ? `${RADIUS}px ${RADIUS}px ${near}px ${near}px`
-      : `${near}px ${near}px ${RADIUS}px ${RADIUS}px`;
-    return `inset(${inset} round ${corners})`;
-  });
+  const clipPath = useTransform(
+    [progress, nearRadius],
+    ([p, near]: number[]) => {
+      if (!ready) return "none";
+      // Clamp overshoot so the clip never extends into the trigger or exposes
+      // overflowing children. At rest remove it so the native shadow is whole.
+      const reveal = Math.min(1, Math.max(0, p));
+      if (reveal === 1) return "none";
+      const hidden = Math.max(0, (height - LIP) * (1 - reveal));
+      const inset = isTop ? `${hidden}px 0 0 0` : `0 0 ${hidden}px 0`;
+      const corners = isTop
+        ? `${RADIUS}px ${RADIUS}px ${near}px ${near}px`
+        : `${near}px ${near}px ${RADIUS}px ${RADIUS}px`;
+      return `inset(${inset} round ${corners})`;
+    },
+  );
   // The surface materialises over its first frames rather than popping in as
   // a lip; with reduced motion the fade is the whole entrance.
   const opacity = useTransform(progress, reduce ? [0, 1] : [0, 0.12], [0, 1]);
@@ -433,7 +445,14 @@ export function SelectItem({
 }: SelectItemProps) {
   const ctx = useSelectContext("SelectItem");
   const selected = ctx.value === value;
-  const label = typeof children === "string" ? children : value;
+  const text = Children.toArray(children)
+    .map((child) =>
+      typeof child === "string" || typeof child === "number"
+        ? String(child)
+        : "",
+    )
+    .join("");
+  const label = text || value;
 
   useLayoutEffect(() => {
     ctx.register(value, label);

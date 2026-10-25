@@ -543,7 +543,7 @@ export default function App() {
       <div className="main-shell">
         {compactLayout ? (
           <header className="mobile-topbar">
-            <strong>
+            <strong role="heading" aria-level={1}>
               {page === "overview"
                 ? "知行 Campus"
                 : page === "settings"

@@ -24,6 +24,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import {
   ArrowUpRight,
+  ChevronLeft,
   Inbox,
   Mail as MailIcon,
   Paperclip,
@@ -100,20 +101,25 @@ export default function Mail({
     setSelectedId(null);
     setMobileReading(false);
     setChecked([]);
+    setSelecting(false);
     setQuery("");
   }
   const compactLayout = useCompactLayout();
   const [mobileReading, setMobileReading] = useState(!!target);
+  const [selecting, setSelecting] = useState(false);
   useEffect(() => {
-    if (!compactLayout || !mobileReading) return;
+    if (!compactLayout || (!mobileReading && !selecting)) return;
     const back = (event: Event) => {
       if (document.querySelector('[role="dialog"]')) return;
       event.preventDefault();
-      setMobileReading(false);
+      if (selecting) {
+        setSelecting(false);
+        setChecked([]);
+      } else setMobileReading(false);
     };
     window.addEventListener("campus:before-back", back);
     return () => window.removeEventListener("campus:before-back", back);
-  }, [compactLayout, mobileReading]);
+  }, [compactLayout, mobileReading, selecting]);
 
   const [selectedId, setSelectedId] = useState<string | null>(
     target?.id ?? null,
@@ -295,7 +301,7 @@ export default function Mail({
         description="完整阅读、写信与已读状态同步"
       />
       <section
-        className={`mail-workspace ${mobileReading ? "mobile-reading" : ""}`}
+        className={`mail-workspace ${mobileReading ? "mobile-reading" : ""} ${selecting ? "is-selecting" : ""}`}
         aria-label="校园邮箱工作区"
       >
         <aside className="mail-folder-rail" aria-label="邮箱导航">
@@ -356,6 +362,60 @@ export default function Mail({
           </div>
         </aside>
         <section className="mail-index" aria-label="邮件列表">
+          {compactLayout && (
+            <div className="mobile-mail-controls">
+              <Tabs
+                value={isSent ? "sent" : filter === "unread" ? "unread" : "all"}
+                onValueChange={(next) =>
+                  chooseFolder(
+                    next === "sent" ? "sent" : "inbox",
+                    next === "unread" ? "unread" : "all",
+                  )
+                }
+                variant="segment"
+                className="mobile-mail-folders"
+              >
+                <TabsList aria-label="邮件文件夹">
+                  <TabsTrigger value="all">收件箱</TabsTrigger>
+                  <TabsTrigger value="unread">未读 {unread || ""}</TabsTrigger>
+                  <TabsTrigger value="sent">已发送</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <div className="mobile-mail-actions">
+                <span>
+                  {isSent
+                    ? (sentTotal ?? sentRows.length)
+                    : filter === "unread"
+                      ? unread
+                      : total || rows.length}{" "}
+                  封邮件
+                </span>
+                <div>
+                  {!isSent && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelecting(!selecting);
+                        setChecked([]);
+                      }}
+                    >
+                      {selecting ? "取消选择" : "选择"}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={composing}
+                    onClick={() => void compose()}
+                  >
+                    <PenLine size={15} />
+                    {composing ? "准备中" : "写信"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
           <div className="mail-index-heading">
             <div>
               <span className="home-section-kicker">
@@ -387,7 +447,7 @@ export default function Mail({
               leftIcon={<Search size={15} />}
             />
           </div>
-          {!isSent && (
+          {!isSent && !compactLayout && (
             <Tabs
               value={filter}
               onValueChange={setFilter}
@@ -402,7 +462,7 @@ export default function Mail({
               </TabsList>
             </Tabs>
           )}
-          {!isSent && (
+          {!isSent && (!compactLayout || selecting) && (
             <div className="mail-batch-toolbar">
               <Checkbox
                 aria-label="选择当前列表邮件"
@@ -452,7 +512,7 @@ export default function Mail({
             ) : items.length ? (
               items.map((message) => (
                 <div className="mail-selectable-row" key={message.id}>
-                  {!isSent && (
+                  {!isSent && (!compactLayout || selecting) && (
                     <Checkbox
                       aria-label={`选择邮件 ${message.subject}`}
                       checked={checked.includes(message.id)}
@@ -466,7 +526,7 @@ export default function Mail({
                     />
                   )}
                   <button
-                    className={`mail-list-item ${selected?.id === message.id ? "selected" : ""} ${message.read ? "read" : "unread"}`}
+                    className={`mail-list-item ${selected?.id === message.id && !compactLayout ? "selected" : ""} ${message.read ? "read" : "unread"}`}
                     key={message.id}
                     onClick={() => {
                       setSelectedId(message.id);
@@ -476,11 +536,22 @@ export default function Mail({
                       selected?.id === message.id ? "true" : undefined
                     }
                   >
+                    {compactLayout && (
+                      <span className="mobile-mail-avatar" aria-hidden="true">
+                        {(isSent ? message.to : message.from)
+                          ?.replace(/["'<\s-]/g, "")
+                          .slice(0, 1) || "邮"}
+                      </span>
+                    )}
                     <span className="mail-list-top">
                       <span className="mail-sender-name">
                         {isSent
                           ? `收件人：${message.to || "未提供"}`
-                          : message.from || "未知发件人"}
+                          : compactLayout
+                            ? message.from
+                                ?.replace(/\s*<[^>]*>/g, "")
+                                .replace(/^"|"$/g, "") || "未知发件人"
+                            : message.from || "未知发件人"}
                       </span>
                       <time>{listDate(message.date)}</time>
                     </span>
@@ -534,9 +605,11 @@ export default function Mail({
                 <Button
                   variant="ghost"
                   className="mobile-mail-back"
+                  aria-label="返回邮件列表"
                   onClick={() => setMobileReading(false)}
                 >
-                  返回列表
+                  <ChevronLeft size={18} />
+                  邮箱
                 </Button>
                 <span className="home-section-kicker">MESSAGE</span>
                 <AnimatedBadge

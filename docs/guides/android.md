@@ -8,7 +8,7 @@
 
 底部导航为首页、课表、作业、邮箱和更多。更多包含课程资料、成绩、教室、下载、文件空间、校园服务、账号和设置。
 
-- 手机课表按天展示，同一时段的课程逐项显示教师和地点。
+- 手机课表一屏展示全周与全部时段，同一时段课程分行显示；点击格子查看完整教师和地点。
 - 邮件列表与正文分别展示，阅读页可返回列表。
 - 资料树支持勾选批量操作，文件操作在底部抽屉中展示。
 - 下载先保存在应用私有目录；完成后可打开，或导出到系统 `Download/知行Campus/`。批量下载导出保留课程目录结构。
@@ -80,3 +80,5 @@ cd src-tauri/gen/android
 官方依据：[Tauri Android 环境](https://v2.tauri.app/start/prerequisites/#android)、[移动插件](https://v2.tauri.app/develop/plugins/develop-mobile/)、[Android Keystore](https://developer.android.com/privacy-and-security/keystore)、[16 KB 页面支持](https://developer.android.com/guide/practices/page-sizes)。NDK 27 构建显式使用 16 KB 链接对齐。
 
 PDF 使用 PDF.js legacy 构建并为主线程与 Worker 补齐 `Promise.withResolvers`；旧版 Android WebView 也可打开 PDF。建议保持 Android System WebView 更新。
+
+手机页面的信息结构与样式说明见 [Android 界面设计](../design/android-ui.md)。

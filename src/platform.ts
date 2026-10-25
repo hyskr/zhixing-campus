@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 export const isAndroid =
   typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
-const query = "(max-width: 760px)";
+const query = "(max-width: 760px), (max-width: 960px) and (max-height: 500px)";
 export function useCompactLayout() {
   return useSyncExternalStore(
     (callback) => {

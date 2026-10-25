@@ -1,3 +1,4 @@
+import { useCompactLayout } from "./platform";
 import { useState } from "react";
 import { Card } from "@/components/motion/card";
 import { Button } from "@/components/motion/button";
@@ -61,6 +62,7 @@ export default function HomeDashboard({
   onCourse: (name: string) => void;
   onChange: (change: Change) => void;
 }) {
+  const compact = useCompactLayout();
   const now = useNow(),
     day = new Date(now).getDay() || 7;
   const [selected, setSelected] = useState<Homework | null>(null);
@@ -81,7 +83,7 @@ export default function HomeDashboard({
       (a, b) =>
         Number(a.read) - Number(b.read) || mailTime(b.date) - mailTime(a.date),
     )
-    .slice(0, 3);
+    .slice(0, compact ? 2 : 3);
   const changes = [...data.changes]
     .filter((change) =>
       ["邮箱", "课表", "作业", "成绩"].includes(change.category),
@@ -102,9 +104,9 @@ export default function HomeDashboard({
     <div className="workspace-home dashboard-home">
       <header className="home-heading">
         <div className="home-heading-copy">
-          <h1>校园概览</h1>
+          <h1>{compact ? `${account.name}，你好` : "校园概览"}</h1>
           <p>
-            {account.name} ·{" "}
+            {!compact && `${account.name} · `}
             {new Intl.DateTimeFormat("zh-CN", {
               month: "long",
               day: "numeric",
@@ -253,7 +255,7 @@ export default function HomeDashboard({
             </Button>
           </header>
           <div className="dashboard-rows">
-            {pending.slice(0, 3).map((item) => (
+            {pending.slice(0, compact ? 2 : 3).map((item) => (
               <button key={item.id} onClick={() => setSelected(item)}>
                 <span className="dashboard-row-copy">
                   <strong>{item.title}</strong>
@@ -326,7 +328,7 @@ export default function HomeDashboard({
             </Button>
           </header>
           <div className="dashboard-rows">
-            {today.slice(0, 3).map((item) => (
+            {today.slice(0, compact ? 2 : 3).map((item) => (
               <button key={item.id} onClick={() => onCourse(item.name)}>
                 <time className="dashboard-course-time">
                   {periodTimes[item.period - 1]?.split("–")[0]}
