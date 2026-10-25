@@ -1,5 +1,7 @@
 # Android 0.14.2
 
+[下载 Android APK](https://github.com/hyskr/zhixing-campus/releases/download/android-v0.14.2-preview.2/zhixing-campus_0.14.2_android-arm64.apk)
+
 - 首页、作业、成绩、资料、邮箱和教室加入 BeUI 下拉刷新，按当前业务范围更新。
 - 邮箱左滑显示已读／未读操作，增加右下角写信按钮；刷新已发送时更新对应文件夹。
 - 手机写信全屏展示，抄送／密送按需展开，输入使用邮箱键盘；关闭已编辑邮件和作业时可继续编辑。

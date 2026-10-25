@@ -279,3 +279,5 @@ Android 云端构建 [40162930882](https://github.com/hyskr/zhixing-campus/actio
 - 上述交互使用隔离数据和接口模拟响应，未发送真实邮件或提交真实作业。
 - 63 项前端测试与 3 项 Android 原生测试通过。新增 `AndroidBackTest` 在 Android 14 中打开真实输入法：第一次返回隐藏输入法且未调用网页返回，第二次返回调用网页导航；原有凭据与 FileProvider 测试继续通过。
 - 作业编辑页内打开上传文件菜单后，第一次返回只关闭文件菜单，正文保持不变；随后返回才进入放弃编辑确认。
+
+Android 云端构建 [40198357458](https://github.com/hyskr/zhixing-campus/actions/runs/40198357458) 成功并发布 `android-v0.14.2-preview.2`。最终 APK 为 29,541,699 字节，签名与 16 KB ZIP 对齐检查通过；匿名下载返回 HTTP 206。Android 14 模拟器从已签名 0.14.1 覆盖安装至 0.14.2，启动正常，未发现启动崩溃或未捕获错误。桌面稳定版仍为 `v0.13.1`。
