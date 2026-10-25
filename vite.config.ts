@@ -11,7 +11,9 @@ export default defineConfig({
   server: {
     host: mobileHost || "127.0.0.1",
     strictPort: true,
-    watch: { ignored: ["**/src-tauri/**"] },
+    watch: {
+      ignored: ["**/src-tauri/**", "**/output/**", "**/.playwright-cli/**"],
+    },
   },
   optimizeDeps: { exclude: ["onnxruntime-web"] },
 });

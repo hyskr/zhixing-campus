@@ -117,3 +117,5 @@ bun run tauri build --bundles app
 手机布局参考 [BeUI Native](https://beui.dev/react-native) 的 Card、Tabs、Button 设计语言，在现有 Tauri WebView 中组合对应 React 组件。`MobileWeekSchedule.tsx` 使用 BottomSheet 展示课程格子的完整信息；`Mail.tsx` 使用 segment Tabs 切换收件箱、未读与已发送，选择后才出现 Checkbox 批量操作；`SettingsGroups.tsx` 使用列表进入分类详情。布局与字号说明见 [Android 界面设计](android-ui.md)。
 
 `SelectItem` 的文字标签支持数值与字符串混排，保证 `{value} 分钟` 等选项在关闭状态仍显示单位。
+
+`Grades.tsx` 的手机成绩使用 Collapsible 按学期分组，Input 搜索课程，Select 切换学期；保留原始成绩文字，详情展示评分明细。桌面沿用独立列成绩表格。

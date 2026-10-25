@@ -106,13 +106,22 @@ export function SettingsGroups({ children }: { children: ReactNode }) {
                 setDetail(true);
               }}
             >
-              <span className="settings-category-icon">
-                <Icon size={19} />
-              </span>
-              <span className="settings-category-copy">
-                <strong>{title}</strong>
-                {compact && <small>{description}</small>}
-              </span>
+              {compact ? (
+                <>
+                  <span className="settings-category-icon">
+                    <Icon size={19} />
+                  </span>
+                  <span className="settings-category-copy">
+                    <strong>{title}</strong>
+                    {compact && <small>{description}</small>}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Icon size={16} />
+                  {title}
+                </>
+              )}
               {compact && (
                 <ChevronRight size={16} className="settings-category-chevron" />
               )}
@@ -131,10 +140,17 @@ export function SettingsGroups({ children }: { children: ReactNode }) {
                 全部设置
               </Button>
             )}
-            <div>
-              <h2>{current.title}</h2>
-              <p>{current.description}</p>
-            </div>
+            {compact ? (
+              <div>
+                <h2>{current.title}</h2>
+                <p>{current.description}</p>
+              </div>
+            ) : (
+              <>
+                <h2>{current.title}</h2>
+                <p>{current.description}</p>
+              </>
+            )}
           </header>
           <div className="settings-groups">{children}</div>
         </div>

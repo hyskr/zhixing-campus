@@ -10,7 +10,6 @@ import {
   TabsContent,
 } from "@/components/motion/tabs";
 import { Card, CardContent } from "@/components/motion/card";
-import { Table, type TableColumn } from "@/components/motion/table";
 import { Tooltip } from "@/components/motion/tooltip";
 import { useState } from "react";
 import HomeworkDetail from "./HomeworkDetail";
@@ -45,7 +44,6 @@ import type {
   Account,
   CampusData,
   Course,
-  Grade,
   Homework,
   Page,
   Resource,
@@ -233,158 +231,7 @@ export function Schedule({
   );
 }
 
-export function Grades({
-  data,
-  query,
-  onCourse,
-}: {
-  data: CampusData;
-  query: string;
-  onCourse: (name: string) => void;
-}) {
-  const compactLayout = useCompactLayout();
-  const [selected, setSelected] = useState<Grade | null>(null);
-  const rows = data.grades.filter((g) =>
-    `${g.name}${g.teacher}${g.term}`.includes(query),
-  );
-  return (
-    <>
-      <PageHeading
-        eyebrow="GRADES"
-        title="学业成绩"
-        description="课程成绩、学分与评分详情。"
-      />
-      <section className="surface grade-panel">
-        <div className="list-top">
-          <div>
-            <h2>
-              全部成绩 <span className="count-pill">{rows.length}</span>
-            </h2>
-            <p>课程成绩与学分，以教务系统公布为准</p>
-          </div>
-          <span className="subtle-label">点击课程查看详情</span>
-        </div>
-        {rows.length ? (
-          compactLayout ? (
-            <div className="mobile-grade-list" aria-label="成绩列表">
-              {rows.map((g) => (
-                <button
-                  className="mobile-grade-row"
-                  key={g.id}
-                  onClick={() => setSelected(g)}
-                  aria-label={`查看${g.name}成绩详情`}
-                >
-                  <span className="mobile-grade-icon">
-                    <GraduationCap size={20} />
-                  </span>
-                  <span className="mobile-grade-copy">
-                    <strong>{g.name}</strong>
-                    <small>
-                      {g.credits} 学分 · {g.teacher || "教师未提供"}
-                    </small>
-                    <small>{g.term}</small>
-                  </span>
-                  <span
-                    className={`mobile-grade-score ${Number(g.score) >= 90 ? "excellent" : ""}`}
-                  >
-                    {g.score}
-                    <small>成绩</small>
-                  </span>
-                  <ChevronRight size={16} />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <Table<Grade>
-              className="grades-table"
-              data={rows}
-              getRowId={(g) => g.id}
-              rowHeight={68}
-              height={Math.min(600, Math.max(220, rows.length * 68 + 49))}
-              columns={[
-                {
-                  key: "name",
-                  header: "课程名称",
-                  sortable: true,
-                  width: "32%",
-                  cell: (g) => (
-                    <button
-                      className="table-course-link"
-                      onClick={() => onCourse(g.name)}
-                    >
-                      <span className="course-letter">
-                        {g.name.slice(0, 1)}
-                      </span>
-                      {g.name}
-                    </button>
-                  ),
-                },
-                {
-                  key: "term",
-                  header: "学年学期",
-                  sortable: true,
-                  width: "23%",
-                },
-                { key: "teacher", header: "任课教师", width: "18%" },
-                { key: "credits", header: "学分", sortable: true, width: "9%" },
-                {
-                  key: "score",
-                  header: "成绩",
-                  sortable: true,
-                  width: "10%",
-                  cell: (g) => (
-                    <span
-                      className={`score ${Number(g.score.split(",").at(-1)) >= 90 ? "excellent" : ""}`}
-                    >
-                      {g.score}
-                    </span>
-                  ),
-                },
-                {
-                  key: "detail",
-                  header: "",
-                  width: "8%",
-                  cell: (g) => (
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      aria-label={`查看${g.name}成绩详情`}
-                      onClick={() => setSelected(g)}
-                    >
-                      <ChevronRight size={16} />
-                    </Button>
-                  ),
-                },
-              ]}
-            />
-          )
-        ) : (
-          <Empty />
-        )}
-      </section>
-      {selected && (
-        <Modal
-          title={selected.name}
-          subtitle="成绩详情"
-          onClose={() => setSelected(null)}
-        >
-          <div className="large-score">
-            {selected.score.includes(",")
-              ? selected.score.split(",").join(" / ")
-              : selected.score}
-            <small>课程成绩</small>
-          </div>
-          <DetailRow label="任课教师">{selected.teacher}</DetailRow>
-          <DetailRow label="学年学期">{selected.term}</DetailRow>
-          <DetailRow label="课程学分">{selected.credits}</DetailRow>
-          {selected.detail && (
-            <div className="detail-note">{selected.detail}</div>
-          )}
-        </Modal>
-      )}
-    </>
-  );
-}
+export { default as Grades } from "./Grades";
 
 export function Accounts({
   accounts,

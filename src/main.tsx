@@ -13,6 +13,7 @@ import "./interface.css";
 import "./appearance.css";
 import "./homepage.css";
 import "./mobile.css";
+import "./grades.css";
 if (isAndroid) document.documentElement.dataset.platform = "android";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
