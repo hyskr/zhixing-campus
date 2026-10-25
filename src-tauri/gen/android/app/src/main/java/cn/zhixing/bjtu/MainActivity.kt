@@ -6,6 +6,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : TauriActivity() {
   private var campusView:WebView?=null
@@ -15,6 +16,9 @@ class MainActivity : TauriActivity() {
       override fun handleOnBackPressed(){
         val view=campusView
         if(view==null){moveTaskToBack(true);return}
+        if(ViewCompat.getRootWindowInsets(view)?.isVisible(WindowInsetsCompat.Type.ime())==true){
+          WindowInsetsControllerCompat(window,view).hide(WindowInsetsCompat.Type.ime());return
+        }
         view.evaluateJavascript("Boolean(window.__campusBack && window.__campusBack())"){handled->
           if(handled!="true")moveTaskToBack(true)
         }

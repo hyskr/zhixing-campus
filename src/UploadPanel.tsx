@@ -1,3 +1,5 @@
+import FileActionsSheet from "./FileActionsSheet";
+import { useCompactLayout } from "./platform";
 import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import {
@@ -15,6 +17,7 @@ import {
   Copy,
   Download,
   FileText,
+  MoreVertical,
   LoaderCircle,
   Trash2,
   Upload,
@@ -36,6 +39,8 @@ export default function UploadPanel({
   selection?: UploadedFile[];
   onSelection?: (files: UploadedFile[]) => void;
 }) {
+  const compactLayout = useCompactLayout();
+  const [moreFile, setMoreFile] = useState<UploadedFile | null>(null);
   const setMessage = useFeedback("success");
   const preview = useFilePreview();
   const { preferences } = usePreferences();
@@ -148,13 +153,22 @@ export default function UploadPanel({
       setError(String(e));
     }
   }
+  function removeRecord(file: UploadedFile) {
+    update(
+      files.filter((f) => f.id !== file.id),
+      preferences.saveUploads,
+    );
+    onSelection?.((selection ?? []).filter((f) => f.id !== file.id));
+  }
   return (
     <div className="upload-area">
       <div
         className="upload-drop"
         tabIndex={0}
         role="group"
-        aria-label="文件上传，支持拖放与粘贴"
+        aria-label={
+          compactLayout ? "选择手机文件上传" : "文件上传，支持拖放与粘贴"
+        }
         onPaste={(event) => {
           event.preventDefault();
           paste(event.clipboardData);
@@ -169,15 +183,18 @@ export default function UploadPanel({
           }}
           disabled={busy}
           multiple
-          title="拖放文件，或选择文件"
-          description="也可在此按 ⌘V / Ctrl+V 粘贴文件；粘贴文字会转为 TXT 上传。"
+          title={compactLayout ? "添加文件" : "拖放文件，或选择文件"}
+          description={
+            compactLayout
+              ? "使用系统文件选择器，可一次选择多个文件。"
+              : "也可在此按 ⌘V / Ctrl+V 粘贴文件；粘贴文字会转为 TXT 上传。"
+          }
           browseLabel="选择文件"
           className="campus-upload"
         />
       </div>
       {busy && <progress className="upload-wait" aria-label="正在上传文件" />}
-      
-      
+
       <div className="upload-record-heading">
         <h3>
           已上传文件 <span className="count-pill">{files.length}</span>
@@ -189,7 +206,16 @@ export default function UploadPanel({
       )}
       <div className="upload-records">
         {files.map((file) => (
-          <div className="uploaded-row" key={file.id}>
+          <div
+            className="uploaded-row"
+            key={file.id}
+            onContextMenu={(event) => {
+              if (compactLayout) {
+                event.preventDefault();
+                setMoreFile(file);
+              }
+            }}
+          >
             {onSelection && (
               <Checkbox
                 aria-label={`选择附件 ${file.name}`}
@@ -211,45 +237,99 @@ export default function UploadPanel({
             >
               查看
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={`复制 ${file.name} 链接`}
-              onClick={() =>
-                action(() => copyLinks(account, [file]), "链接已复制")
-              }
-            >
-              <Copy size={14} />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={`下载 ${file.name}`}
-              onClick={() =>
-                action(() => downloadFiles(account, [file]), "已加入下载")
-              }
-            >
-              <Download size={14} />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={`移除 ${file.name} 的本地记录`}
-              onClick={() => {
-                update(
-                  files.filter((f) => f.id !== file.id),
-                  preferences.saveUploads,
-                );
-                onSelection?.(
-                  (selection ?? []).filter((f) => f.id !== file.id),
-                );
-              }}
-            >
-              <Trash2 size={14} />
-            </Button>
+            {compactLayout ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="mobile-file-more"
+                aria-label={`文件操作 ${file.name}`}
+                onClick={() => setMoreFile(file)}
+              >
+                <MoreVertical size={19} />
+              </Button>
+            ) : (
+              <>
+                {" "}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`复制 ${file.name} 链接`}
+                  onClick={() =>
+                    action(() => copyLinks(account, [file]), "链接已复制")
+                  }
+                >
+                  <Copy size={14} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`下载 ${file.name}`}
+                  onClick={() =>
+                    action(() => downloadFiles(account, [file]), "已加入下载")
+                  }
+                >
+                  <Download size={14} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  aria-label={`移除 ${file.name} 的本地记录`}
+                  onClick={() => {
+                    update(
+                      files.filter((f) => f.id !== file.id),
+                      preferences.saveUploads,
+                    );
+                    onSelection?.(
+                      (selection ?? []).filter((f) => f.id !== file.id),
+                    );
+                  }}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              </>
+            )}
           </div>
         ))}
       </div>
+      {compactLayout && (
+        <FileActionsSheet
+          open={!!moreFile}
+          title={moreFile?.name || "文件"}
+          onClose={() => setMoreFile(null)}
+          actions={
+            moreFile
+              ? [
+                  {
+                    id: "copy",
+                    label: "复制链接",
+                    icon: <Copy size={19} />,
+                    run: () =>
+                      action(
+                        () => copyLinks(account, [moreFile]),
+                        "链接已复制",
+                      ),
+                  },
+                  {
+                    id: "download",
+                    label: "下载文件",
+                    icon: <Download size={19} />,
+                    run: () =>
+                      action(
+                        () => downloadFiles(account, [moreFile]),
+                        "已加入下载",
+                      ),
+                  },
+                  {
+                    id: "remove",
+                    label: "移除本机上传记录",
+                    icon: <Trash2 size={19} />,
+                    run: () => removeRecord(moreFile),
+                  },
+                ]
+              : []
+          }
+        />
+      )}
     </div>
   );
 }

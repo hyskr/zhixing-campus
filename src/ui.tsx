@@ -184,6 +184,30 @@ export function Modal({
   );
 }
 
+export function DiscardDraft({
+  title,
+  detail,
+  onKeep,
+  onDiscard,
+}: {
+  title: string;
+  detail: string;
+  onKeep: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <Modal title={title} onClose={onKeep}>
+      <p className="discard-draft-copy">{detail}</p>
+      <div className="modal-actions">
+        <Button variant="secondary" onClick={onKeep}>
+          继续编辑
+        </Button>
+        <Button onClick={onDiscard}>放弃编辑</Button>
+      </div>
+    </Modal>
+  );
+}
+
 type FeedbackDetail = {
   message: string;
   variant: ToastStatus;

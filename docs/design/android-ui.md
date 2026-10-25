@@ -31,3 +31,22 @@
 画布、卡片、边框与文字采用项目语义颜色，适配现有两种界面风格。课表保留课程色块作为定位线索，其余区域减少装饰色。
 
 桌面成绩页保留原有独立列：课程名称、学年学期、任课教师、学分和成绩。移动端的合并信息行只用于手机布局。
+
+## Android 0.14.2 操作方式
+
+| 页面 | 操作与选用组件 |
+| --- | --- |
+| 首页 | Pull to Refresh 同步全部数据；底部导航为主入口，顶部保留搜索、动态与同步 |
+| 课表 | 完整周视图，顶部手动刷新；课程格子打开 BottomSheet，不添加影响一屏布局的下拉位移 |
+| 作业 | 下拉只刷新作业；编辑状态返回先回到编辑或提示放弃，保留已输入正文和附件选择 |
+| 邮箱 | Pull to Refresh 刷新当前文件夹；Swipeable List 左滑标记已读／未读；写信 Button 固定在右下方；再次点击邮箱标签回到列表 |
+| 写信 | 全屏编辑；收件地址使用邮箱键盘，抄送与密送按需展开；确认发送前可返回编辑，关闭已编辑内容时提供继续编辑 |
+| 成绩 | 下拉只刷新成绩；学期分组与筛选、详情沿用 BeUI Collapsible、Select、Input |
+| 资料与回放 | 下拉刷新资料；File Tree 勾选批量操作，目录和文件动作在 BottomSheet 中展示 |
+| 文件空间 | 系统文件选择，多文件上传；查看为主操作，复制、下载与本地记录管理放入文件操作 BottomSheet，可点更多或长按进入 |
+| 下载 | 本机历史及进行中任务，不添加网络下拉刷新；打开和导出操作保持明确文字 |
+| 教室 | 下拉和顶部刷新查询当前楼宇、周次；保留当前筛选 |
+| 校园服务 | 余额页按业务刷新；设备页保持自己的查询、进度和刷新，刷新不会重置当前分类 |
+| 设置与账号 | 分类和表单使用原有 BeUI 控件；顶部返回逐级回到上一个页面，页面主滚动位置在返回时保留 |
+
+原生返回优先关闭输入法，再由网页处理弹层、编辑确认和页面返回。交互参考 [Android App Bars](https://developer.android.com/develop/ui/compose/components/app-bars)、[Swipe to Refresh](https://developer.android.com/develop/ui/views/touch-and-input/swipe) 与 [BeUI Native Swipeable List](https://beui.dev/react-native/swipeable-list)。实现继续使用 Tauri WebView 和 BeUI React 源码。

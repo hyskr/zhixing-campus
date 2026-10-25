@@ -12,6 +12,7 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.net.toUri
 
 class SchoolBrowserActivity:AppCompatActivity() {
@@ -40,7 +41,10 @@ class SchoolBrowserActivity:AppCompatActivity() {
             view.setPadding(bars.left,bars.top,bars.right,bars.bottom);insets
         }
         onBackPressedDispatcher.addCallback(this,object:OnBackPressedCallback(true){
-            override fun handleOnBackPressed(){if(browser.canGoBack())browser.goBack() else finish()}
+            override fun handleOnBackPressed(){
+                if(ViewCompat.getRootWindowInsets(browser)?.isVisible(WindowInsetsCompat.Type.ime())==true){WindowInsetsControllerCompat(window,browser).hide(WindowInsetsCompat.Type.ime());return}
+                if(browser.canGoBack())browser.goBack() else finish()
+            }
         })
         browser.loadUrl(intent.getStringExtra("url")?:"https://mis.bjtu.edu.cn")
     }

@@ -1,3 +1,5 @@
+import { useCompactLayout } from "./platform";
+import FileActionsSheet from "./FileActionsSheet";
 import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
@@ -9,6 +11,7 @@ import {
   Copy,
   Download,
   FileText,
+  MoreVertical,
   LoaderCircle,
   RefreshCw,
   Search,
@@ -20,6 +23,8 @@ import { useFilePreview } from "./FilePreview";
 import UploadPanel from "./UploadPanel";
 import { Empty } from "./ui";
 export default function FileSpace({ account }: { account: Account }) {
+  const compactLayout = useCompactLayout();
+  const [moreFile, setMoreFile] = useState<SpaceFile | null>(null);
   const setMessage = useFeedback("success");
   const preview = useFilePreview();
   const [tab, setTab] = useState("个人资源空间"),
@@ -104,6 +109,8 @@ export default function FileSpace({ account }: { account: Account }) {
             >
               <Search size={15} />
               <Input
+                type="search"
+                enterKeyHint="search"
                 aria-label="搜索个人资源"
                 placeholder="搜索个人资源"
                 value={String(query)}
@@ -167,7 +174,16 @@ export default function FileSpace({ account }: { account: Account }) {
           ) : files.length ? (
             <div className="space-file-list">
               {files.map((f) => (
-                <div key={f.id} className="space-file-row">
+                <div
+                  key={f.id}
+                  className="space-file-row"
+                  onContextMenu={(event) => {
+                    if (compactLayout) {
+                      event.preventDefault();
+                      setMoreFile(f);
+                    }
+                  }}
+                >
                   <Checkbox
                     aria-label={`选择资源 ${f.name}`}
                     checked={selected.includes(f.id)}
@@ -191,26 +207,44 @@ export default function FileSpace({ account }: { account: Account }) {
                   >
                     查看
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    aria-label={`复制资源 ${f.name} 链接`}
-                    onClick={() =>
-                      action(() => copyLinks(account, [f]), "链接已复制")
-                    }
-                  >
-                    <Copy size={14} />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      action(() => downloadFiles(account, [f]), "已加入下载")
-                    }
-                  >
-                    <Download size={14} />
-                    下载
-                  </Button>
+                  {compactLayout ? (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="mobile-file-more"
+                      aria-label={`文件操作 ${f.name}`}
+                      onClick={() => setMoreFile(f)}
+                    >
+                      <MoreVertical size={19} />
+                    </Button>
+                  ) : (
+                    <>
+                      {" "}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        aria-label={`复制资源 ${f.name} 链接`}
+                        onClick={() =>
+                          action(() => copyLinks(account, [f]), "链接已复制")
+                        }
+                      >
+                        <Copy size={14} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          action(
+                            () => downloadFiles(account, [f]),
+                            "已加入下载",
+                          )
+                        }
+                      >
+                        <Download size={14} />
+                        下载
+                      </Button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -224,8 +258,39 @@ export default function FileSpace({ account }: { account: Account }) {
           )}
         </section>
       )}
-      
-      
+      {compactLayout && (
+        <FileActionsSheet
+          open={!!moreFile}
+          title={moreFile?.name || "文件"}
+          onClose={() => setMoreFile(null)}
+          actions={
+            moreFile
+              ? [
+                  {
+                    id: "copy",
+                    label: "复制链接",
+                    icon: <Copy size={19} />,
+                    run: () =>
+                      action(
+                        () => copyLinks(account, [moreFile]),
+                        "链接已复制",
+                      ),
+                  },
+                  {
+                    id: "download",
+                    label: "下载文件",
+                    icon: <Download size={19} />,
+                    run: () =>
+                      action(
+                        () => downloadFiles(account, [moreFile]),
+                        "已加入下载",
+                      ),
+                  },
+                ]
+              : []
+          }
+        />
+      )}
     </>
   );
 }

@@ -1,3 +1,4 @@
+import { usePageRefresh } from "./MobileRefreshSurface";
 import { useCompactLayout } from "./platform";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -143,6 +144,27 @@ export default function Classrooms({
       active = false;
     };
   }, [account.id, week, building, semester, revision]);
+  usePageRefresh(async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = account.demo
+        ? demo(Number(week), building)
+        : await withCampusSession(account.id, () =>
+            invoke<ClassroomPage>("classroom_occupancy", {
+              username: account.id,
+              week: Number(week),
+              building,
+              semester: semester === "current" ? null : semester,
+            }),
+          );
+      setPage(result);
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setBusy(false);
+    }
+  });
   const periods =
     period === "all" ? [0, 1, 2, 3, 4, 5, 6] : [Number(period) - 1];
   const rooms = (page?.rooms ?? []).filter(

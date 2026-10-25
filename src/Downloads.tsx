@@ -177,6 +177,8 @@ export default function Downloads({ account }: { account?: Account }) {
               aria-label="搜索下载记录"
               value={String(query)}
               onChange={(e) => setQuery(e)}
+              type="search"
+              enterKeyHint="search"
               placeholder="搜索文件名"
             />
           </label>

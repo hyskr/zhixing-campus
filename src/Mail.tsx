@@ -1,3 +1,8 @@
+import MobileRefreshSurface, { usePageRefresh } from "./MobileRefreshSurface";
+import {
+  SwipeableList,
+  type SwipeableListValue,
+} from "@/components/motion/swipeable-list";
 import { useCompactLayout } from "./platform";
 import MailCompose from "./MailCompose";
 import {
@@ -102,24 +107,39 @@ export default function Mail({
     setMobileReading(false);
     setChecked([]);
     setSelecting(false);
+    setSwipeOpen(null);
     setQuery("");
   }
   const compactLayout = useCompactLayout();
   const [mobileReading, setMobileReading] = useState(!!target);
   const [selecting, setSelecting] = useState(false);
+  const [swipeOpen, setSwipeOpen] = useState<SwipeableListValue | null>(null);
   useEffect(() => {
-    if (!compactLayout || (!mobileReading && !selecting)) return;
+    const reset = (event: Event) => {
+      if ((event as CustomEvent).detail !== "mail") return;
+      setMobileReading(false);
+      setSelecting(false);
+      setChecked([]);
+      setSwipeOpen(null);
+    };
+    window.addEventListener("campus:tab-reselect", reset);
+    return () => window.removeEventListener("campus:tab-reselect", reset);
+  }, []);
+
+  useEffect(() => {
+    if (!compactLayout || (!mobileReading && !selecting && !swipeOpen)) return;
     const back = (event: Event) => {
       if (document.querySelector('[role="dialog"]')) return;
       event.preventDefault();
-      if (selecting) {
+      if (swipeOpen) setSwipeOpen(null);
+      else if (selecting) {
         setSelecting(false);
         setChecked([]);
       } else setMobileReading(false);
     };
     window.addEventListener("campus:before-back", back);
     return () => window.removeEventListener("campus:before-back", back);
-  }, [compactLayout, mobileReading, selecting]);
+  }, [compactLayout, mobileReading, selecting, swipeOpen]);
 
   const [selectedId, setSelectedId] = useState<string | null>(
     target?.id ?? null,
@@ -281,10 +301,12 @@ export default function Mail({
   }
 
   async function refresh() {
+    if (busy) return;
+    setSwipeOpen(null);
     setBusy(true);
     setError("");
     try {
-      if (isSent) setSentRevision((value) => value + 1);
+      if (isSent) onSentLoaded(await loadSent(account));
       else await onRefresh();
     } catch (reason) {
       setError(String(reason));
@@ -293,8 +315,79 @@ export default function Mail({
     }
   }
 
+  usePageRefresh(refresh);
+  function messageRow(message: MailMessage) {
+    return (
+      <div className="mail-selectable-row" key={message.id}>
+        {!isSent && (!compactLayout || selecting) && (
+          <Checkbox
+            aria-label={`选择邮件 ${message.subject}`}
+            checked={checked.includes(message.id)}
+            onCheckedChange={(value) =>
+              setChecked((ids) =>
+                value
+                  ? [...ids, message.id]
+                  : ids.filter((id) => id !== message.id),
+              )
+            }
+          />
+        )}
+        <button
+          className={`mail-list-item ${selected?.id === message.id && !compactLayout ? "selected" : ""} ${message.read ? "read" : "unread"}`}
+          key={message.id}
+          onClick={() => {
+            setSelectedId(message.id);
+            setMobileReading(true);
+          }}
+          aria-current={selected?.id === message.id ? "true" : undefined}
+        >
+          {compactLayout && (
+            <span className="mobile-mail-avatar" aria-hidden="true">
+              {(isSent ? message.to : message.from)
+                ?.replace(/["'<\s-]/g, "")
+                .slice(0, 1) || "邮"}
+            </span>
+          )}
+          <span className="mail-list-top">
+            <span className="mail-sender-name">
+              {isSent
+                ? `收件人：${message.to || "未提供"}`
+                : compactLayout
+                  ? message.from
+                      ?.replace(/\s*<[^>]*>/g, "")
+                      .replace(/^"|"$/g, "") || "未知发件人"
+                  : message.from || "未知发件人"}
+            </span>
+            <time>{listDate(message.date)}</time>
+          </span>
+          <span className="mail-list-subject">
+            {!message.read && (
+              <span className="mail-unread-indicator" aria-label="未读" />
+            )}
+            <strong>{message.subject || "无主题"}</strong>
+            {message.attached && <Paperclip size={13} aria-label="有附件" />}
+          </span>
+          <span className="mail-list-excerpt">
+            {message.summary || "该邮件没有摘要"}
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="mail-page">
+      {compactLayout && !mobileReading && (
+        <Button
+          className="mobile-compose-fab"
+          aria-label="写邮件"
+          disabled={composing}
+          onClick={() => void compose()}
+        >
+          <PenLine size={20} />
+          {composing ? "准备中…" : "写信"}
+        </Button>
+      )}
       <PageHeading
         eyebrow="MAIL"
         title="校园邮箱"
@@ -403,15 +496,6 @@ export default function Mail({
                       {selecting ? "取消选择" : "选择"}
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    disabled={composing}
-                    onClick={() => void compose()}
-                  >
-                    <PenLine size={15} />
-                    {composing ? "准备中" : "写信"}
-                  </Button>
                 </div>
               </div>
             </div>
@@ -438,6 +522,7 @@ export default function Mail({
           <div className="mail-index-search">
             <Input
               type="search"
+              enterKeyHint="search"
               aria-label="搜索邮件"
               placeholder={
                 isSent ? "搜索主题、收件人或摘要" : "搜索主题、发件人或摘要"
@@ -504,75 +589,48 @@ export default function Mail({
               已加载 {sentRows.length} / {sentTotal ?? "…"} 封
             </div>
           )}
-          <div className="mail-message-list">
+          <MobileRefreshSurface
+            className="mail-message-list"
+            refresh={compactLayout ? refresh : undefined}
+            refreshing={busy}
+          >
             {busy && !sourceRows.length ? (
               <p className="quiet-empty">
                 {isSent ? "正在读取已发送…" : "正在读取收件箱…"}
               </p>
             ) : items.length ? (
-              items.map((message) => (
-                <div className="mail-selectable-row" key={message.id}>
-                  {!isSent && (!compactLayout || selecting) && (
-                    <Checkbox
-                      aria-label={`选择邮件 ${message.subject}`}
-                      checked={checked.includes(message.id)}
-                      onCheckedChange={(value) =>
-                        setChecked((ids) =>
-                          value
-                            ? [...ids, message.id]
-                            : ids.filter((id) => id !== message.id),
-                        )
-                      }
-                    />
-                  )}
-                  <button
-                    className={`mail-list-item ${selected?.id === message.id && !compactLayout ? "selected" : ""} ${message.read ? "read" : "unread"}`}
-                    key={message.id}
-                    onClick={() => {
-                      setSelectedId(message.id);
-                      setMobileReading(true);
-                    }}
-                    aria-current={
-                      selected?.id === message.id ? "true" : undefined
-                    }
-                  >
-                    {compactLayout && (
-                      <span className="mobile-mail-avatar" aria-hidden="true">
-                        {(isSent ? message.to : message.from)
-                          ?.replace(/["'<\s-]/g, "")
-                          .slice(0, 1) || "邮"}
-                      </span>
-                    )}
-                    <span className="mail-list-top">
-                      <span className="mail-sender-name">
-                        {isSent
-                          ? `收件人：${message.to || "未提供"}`
-                          : compactLayout
-                            ? message.from
-                                ?.replace(/\s*<[^>]*>/g, "")
-                                .replace(/^"|"$/g, "") || "未知发件人"
-                            : message.from || "未知发件人"}
-                      </span>
-                      <time>{listDate(message.date)}</time>
-                    </span>
-                    <span className="mail-list-subject">
-                      {!message.read && (
-                        <span
-                          className="mail-unread-indicator"
-                          aria-label="未读"
-                        />
-                      )}
-                      <strong>{message.subject || "无主题"}</strong>
-                      {message.attached && (
-                        <Paperclip size={13} aria-label="有附件" />
-                      )}
-                    </span>
-                    <span className="mail-list-excerpt">
-                      {message.summary || "该邮件没有摘要"}
-                    </span>
-                  </button>
-                </div>
-              ))
+              compactLayout && !selecting && !isSent ? (
+                <SwipeableList
+                  value={swipeOpen}
+                  onValueChange={setSwipeOpen}
+                  className="mobile-mail-swipe"
+                  classNames={{
+                    item: "rounded-none",
+                    rail: "rounded-none",
+                    surface: "p-0 rounded-none shadow-none border-0",
+                    root: "gap-0",
+                  }}
+                  items={items.map((message) => ({
+                    id: message.id,
+                    title: message.subject,
+                    disabled: marking,
+                    content: messageRow(message),
+                    rightActions: [
+                      {
+                        id: message.read ? "unread" : "read",
+                        label: message.read ? "标为未读" : "标为已读",
+                        icon: <MailCheck size={20} />,
+                        tone: "neutral",
+                      },
+                    ],
+                  }))}
+                  onAction={({ item, action }) =>
+                    void mark([item.id], action.id === "read")
+                  }
+                />
+              ) : (
+                items.map(messageRow)
+              )
             ) : (
               <Empty
                 title={query ? "没有匹配的邮件" : "暂无邮件"}
@@ -596,7 +654,7 @@ export default function Mail({
                 {moreBusy ? "正在加载…" : "加载更多发送记录"}
               </Button>
             )}
-          </div>
+          </MobileRefreshSurface>
         </section>
         <article className="mail-reader" aria-label="邮件正文">
           {selected ? (

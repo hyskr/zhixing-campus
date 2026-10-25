@@ -28,7 +28,7 @@ export default function MobileNavigation({
   onLogin,
 }: {
   page: Page;
-  navigate: (page: Page) => void;
+  navigate: (page: Page, root?: boolean) => void;
   account?: Account;
   unread: number;
   onLogin: () => void;
@@ -43,9 +43,13 @@ export default function MobileNavigation({
     window.addEventListener("campus:before-back", back);
     return () => window.removeEventListener("campus:before-back", back);
   }, [more]);
-  function go(next: Page) {
+  function go(next: Page, root = false) {
+    if (root && next === page)
+      window.dispatchEvent(
+        new CustomEvent("campus:tab-reselect", { detail: next }),
+      );
     setMore(false);
-    navigate(next);
+    navigate(next, root);
   }
   return (
     <>
@@ -57,7 +61,7 @@ export default function MobileNavigation({
             className="mobile-nav-item"
             aria-label={label}
             aria-current={page === id ? "page" : undefined}
-            onClick={() => go(id)}
+            onClick={() => go(id, true)}
           >
             <span>
               <Icon size={22} />

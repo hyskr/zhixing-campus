@@ -345,6 +345,20 @@
         "components/motion/bottom-sheet.tsx",
         "lib/hooks/use-focus-trap.ts"
       ]
+    },
+    {
+      "slug": "pull-to-refresh",
+      "source": "https://beui.dev/components/motion/pull-to-refresh",
+      "files": [
+        "components/motion/pull-to-refresh.tsx"
+      ]
+    },
+    {
+      "slug": "swipeable-list",
+      "source": "https://beui.dev/components/motion/swipeable-list",
+      "files": [
+        "components/motion/swipeable-list.tsx"
+      ]
     }
   ],
   "retrievedAt": "2026-10-18"

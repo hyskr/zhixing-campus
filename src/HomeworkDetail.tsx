@@ -1,3 +1,5 @@
+import { useCompactLayout } from "./platform";
+import { DiscardDraft } from "./ui";
 import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
 import { Loader } from "@/components/motion/loader";
@@ -36,6 +38,8 @@ export default function HomeworkDetail({
   onClose: () => void;
   onUpdated?: (courseId: string) => Promise<void>;
 }) {
+  const compactLayout = useCompactLayout();
+  const [discard, setDiscard] = useState(false);
   const setMessage = useFeedback("success");
   const preview = useFilePreview();
   const [detail, setDetail] = useState<HomeworkDetailData | null>(null),
@@ -82,6 +86,10 @@ export default function HomeworkDetail({
     try {
       await submitHomework(account, item, content, files);
       setMessage("作业提交成功");
+      if (compactLayout) {
+        setContent("");
+        setFiles([]);
+      }
       setConfirm(false);
       setTab("提交记录");
       setVersion((v) => v + 1);
@@ -139,11 +147,32 @@ export default function HomeworkDetail({
       </div>
     );
   }
+  function requestClose() {
+    if (submitting) return;
+    if (compactLayout && confirm) {
+      setConfirm(false);
+      return;
+    }
+    if (compactLayout && (content.trim() || files.length)) {
+      setDiscard(true);
+      return;
+    }
+    onClose();
+  }
+  if (discard)
+    return (
+      <DiscardDraft
+        title="放弃本次作业编辑？"
+        detail="已填写的正文和附件选择将被清空；已上传的文件记录仍会保留。"
+        onKeep={() => setDiscard(false)}
+        onDiscard={onClose}
+      />
+    );
   return (
     <Modal
       title={item.title}
       subtitle={item.course}
-      onClose={submitting ? () => {} : onClose}
+      onClose={requestClose}
       wide
     >
       <div className="detail-tags">
@@ -323,8 +352,7 @@ export default function HomeworkDetail({
             ))}
         </>
       )}
-      
-      
+
       <div className="modal-actions">
         <Button
           size="sm"

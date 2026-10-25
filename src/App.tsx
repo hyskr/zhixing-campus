@@ -1,3 +1,6 @@
+import MobileRefreshSurface, {
+  pageRefreshHandler,
+} from "./MobileRefreshSurface";
 import MobileNavigation from "./MobileNavigation";
 import { useCompactLayout } from "./platform";
 import ReminderBridge from "./ReminderBridge";
@@ -24,7 +27,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/motion/breadcrumb";
 import { Input } from "@/components/motion/input";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/motion/button";
 import {
   Bell,
@@ -32,6 +35,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   CircleHelp,
   GraduationCap,
   LoaderCircle,
@@ -85,6 +89,18 @@ export default function App() {
   const { tasks: downloadTasks } = useDownloads();
   const now = useNow();
   const [page, setPage] = useState<Page>("overview");
+  const previousPages = useRef<Page[]>([]);
+  const scrollPositions = useRef<Partial<Record<Page, number>>>({});
+  useLayoutEffect(() => {
+    if (!compactLayout) return;
+    const main = document.querySelector<HTMLElement>(".main-content");
+    if (!main) return;
+    main.scrollTop = scrollPositions.current[page] ?? 0;
+    return () => {
+      scrollPositions.current[page] = main.scrollTop;
+    };
+  }, [page, compactLayout]);
+
   const [mailTarget, setMailTarget] = useState<{
     id: string;
     folder: "inbox" | "sent";
@@ -93,6 +109,7 @@ export default function App() {
   const [courseName, setCourseName] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [mobileRefreshing, setMobileRefreshing] = useState(false);
   const [syncLabel, setSyncLabel] = useState("");
   const [accountMenu, setAccountMenu] = useState(false);
   const [login, setLogin] = useState<{ studentId?: string } | null>(null);
@@ -156,7 +173,7 @@ export default function App() {
         return true;
       }
       if (page !== "overview") {
-        setPage("overview");
+        setPage(previousPages.current.pop() ?? "overview");
         setQuery("");
         return true;
       }
@@ -167,13 +184,18 @@ export default function App() {
       delete (window as Window & { __campusBack?: () => boolean }).__campusBack;
     };
   }, [page, searchOpen, notificationsOpen, courseName]);
-  const navigate = (next: Page) => {
+  const navigate = (next: Page, root = false) => {
+    if (compactLayout && next !== page) {
+      if (root) previousPages.current = [];
+      else previousPages.current.push(page);
+    }
     setMailTarget(null);
     setPage(next);
     setQuery("");
     window.scrollTo(0, 0);
   };
   function openMail(id?: string, folder: "inbox" | "sent" = "inbox") {
+    if (compactLayout && page !== "mail") previousPages.current.push(page);
     setMailTarget(id ? { id, folder } : null);
     setPage("mail");
     setQuery("");
@@ -195,6 +217,8 @@ export default function App() {
     else setDialog("changes");
   }
   const switchAccount = (id: string) => {
+    previousPages.current = [];
+    scrollPositions.current = {};
     setMailTarget(null);
     setCourseName(null);
     setStore((s) => ({ ...s, activeId: id }));
@@ -217,6 +241,19 @@ export default function App() {
             services: "services",
           } as Record<string, string>
         )[page];
+  async function refreshMobilePage() {
+    if (mobileRefreshing || syncing) return;
+    setMobileRefreshing(true);
+    try {
+      const refresh = pageRefreshHandler();
+      if (refresh) await refresh();
+      else if (pageScope) await sync();
+    } catch (error) {
+      setToast(String(error), "error");
+    } finally {
+      setMobileRefreshing(false);
+    }
+  }
   useEffect(() => {
     if (!isTauri()) return;
     let active = true;
@@ -543,6 +580,20 @@ export default function App() {
       <div className="main-shell">
         {compactLayout ? (
           <header className="mobile-topbar">
+            {!["overview", "schedule", "homework", "mail"].includes(page) && (
+              <Button
+                variant="ghost"
+                className="mobile-up-button"
+                aria-label="返回上一页"
+                onClick={() => {
+                  (
+                    window as Window & { __campusBack?: () => boolean }
+                  ).__campusBack?.();
+                }}
+              >
+                <ChevronLeft size={22} />
+              </Button>
+            )}
             <strong role="heading" aria-level={1}>
               {page === "overview"
                 ? "知行 Campus"
@@ -553,40 +604,43 @@ export default function App() {
                     : navItems.find((item) => item.id === page)?.label}
             </strong>
             <div>
-              <Button
-                variant="ghost"
-                aria-label="搜索课程与作业"
-                onClick={() => setSearchOpen(true)}
-              >
-                <Search size={21} />
-              </Button>
-              <Button
-                variant="ghost"
-                aria-label="查看校园动态"
-                onClick={() => setDialog("changes")}
-              >
-                <Bell size={21} />
-              </Button>
-              {pageScope && account ? (
+              {[
+                "overview",
+                "schedule",
+                "homework",
+                "resources",
+                "grades",
+              ].includes(page) && (
+                <Button
+                  variant="ghost"
+                  aria-label="搜索课程与作业"
+                  onClick={() => setSearchOpen(true)}
+                >
+                  <Search size={21} />
+                </Button>
+              )}
+              {page === "overview" && (
+                <Button
+                  variant="ghost"
+                  aria-label="查看校园动态"
+                  onClick={() => setDialog("changes")}
+                >
+                  <Bell size={21} />
+                </Button>
+              )}
+              {(pageScope || page === "classrooms") && account ? (
                 <Button
                   variant="ghost"
                   aria-label={pageScope === "all" ? "全部同步" : "刷新本页"}
-                  disabled={syncing}
-                  onClick={() => void sync()}
+                  disabled={syncing || mobileRefreshing}
+                  onClick={() => void refreshMobilePage()}
                 >
-                  <RefreshCw size={21} className={syncing ? "spin" : ""} />
+                  <RefreshCw
+                    size={21}
+                    className={syncing || mobileRefreshing ? "spin" : ""}
+                  />
                 </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  aria-label="校园账号"
-                  onClick={() =>
-                    account ? navigate("accounts") : setLogin({})
-                  }
-                >
-                  <UserRound size={21} />
-                </Button>
-              )}
+              ) : null}
             </div>
           </header>
         ) : (
@@ -710,7 +764,27 @@ export default function App() {
             </div>
           </header>
         )}
-        <main className="main-content">
+        <MobileRefreshSurface
+          main
+          className="main-content"
+          refresh={
+            compactLayout &&
+            account &&
+            [
+              "overview",
+              "homework",
+              "grades",
+              "resources",
+              "services",
+              "classrooms",
+            ].includes(page)
+              ? refreshMobilePage
+              : undefined
+          }
+          refreshing={mobileRefreshing || syncing}
+
+          disabled={!pageScope && page !== "classrooms"}
+        >
           {page === "settings" ? (
             <div className="page-content">
               <Settings account={account} />
@@ -881,7 +955,7 @@ export default function App() {
               )}
             </div>
           )}
-        </main>
+        </MobileRefreshSurface>
       </div>
       {courseName && account && (
         <CourseDrawer

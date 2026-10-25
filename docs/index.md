@@ -12,4 +12,4 @@
 | 来源与许可 | [功能参考来源](references/sources.md)、[第三方许可](references/third-party.md) |
 | 验证 | [测试与实测记录](testing/validation.md) |
 | 研究与维护 | [选课研究](research/course-selection.md)、[SSO 对照](research/auth-20261020.md)、[连接维护](research/maintenance-20261022.md)、[上游更新](research/upstream-20261022.md) |
-| 版本发布 | [Android 0.14.1](releases/android-0.14.1.md)、[Android 0.14.0](releases/android-0.14.0.md)、 [0.13.1](releases/0.13.1.md)、[0.13.0](releases/0.13.0.md)、[0.12.3](releases/0.12.3.md) |
+| 版本发布 | [Android 0.14.2](releases/android-0.14.2.md)、[Android 0.14.1](releases/android-0.14.1.md)、[Android 0.14.0](releases/android-0.14.0.md)、 [0.13.1](releases/0.13.1.md)、[0.13.0](releases/0.13.0.md)、[0.12.3](releases/0.12.3.md) |

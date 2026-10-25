@@ -119,3 +119,12 @@ bun run tauri build --bundles app
 `SelectItem` 的文字标签支持数值与字符串混排，保证 `{value} 分钟` 等选项在关闭状态仍显示单位。
 
 `Grades.tsx` 的手机成绩使用 Collapsible 按学期分组，Input 搜索课程，Select 切换学期；保留原始成绩文字，详情展示评分明细。桌面沿用独立列成绩表格。
+
+## Android 0.14.2
+
+新增公开 registry 源码 `pull-to-refresh` 与 `swipeable-list`，依赖现有 Motion、clsx 和 tailwind-merge。组件清单记录在 `beui.components.json`，共享 `ease`、`touch` 和 `utils` 保留本项目版本。
+
+- `MobileRefreshSurface.tsx` 将 Pull to Refresh 用作主滚动区或邮箱列表，复用业务刷新回调。支持 main 语义；仅在识别到拖动后捕获鼠标／触笔指针，保留内容控件的点按和输入。
+- `Mail.tsx` 使用 Swipeable List 展示已读／未读操作，滑动与选择模式分开；已有底部 Tabs、Button、Checkbox 与 Toast 继续使用。
+- `FileActionsSheet.tsx` 使用 BottomSheet 与 Button 组合文件操作；系统文件选择继续由 File Upload 调用。
+- 表单关闭确认继续使用 Modal 与 Button，桌面未启用手机编辑确认。

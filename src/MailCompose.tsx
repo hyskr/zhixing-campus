@@ -1,3 +1,4 @@
+import { useCompactLayout } from "./platform";
 import {
   FileUpload,
   type FileUploadItem,
@@ -6,7 +7,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/motion/button";
 import { Input } from "@/components/motion/input";
 import { Send } from "lucide-react";
-import { Modal, useErrorState, useFeedback } from "./ui";
+import { Modal, DiscardDraft, useErrorState, useFeedback } from "./ui";
 import {
   cancelMail,
   recipients,
@@ -26,6 +27,11 @@ export default function MailCompose({
   onClose: () => void;
   onSent: () => void;
 }) {
+  const compactLayout = useCompactLayout();
+  const [discard, setDiscard] = useState(false);
+  const [extraRecipients, setExtraRecipients] = useState(
+    initial.cc.length > 0 || initial.bcc.length > 0,
+  );
   const [draft, setDraft] = useState(initial),
     [busy, setBusy] = useState(false),
     [uploading, setUploading] = useState(false),
@@ -106,7 +112,7 @@ export default function MailCompose({
       setBusy(false);
     }
   }
-  async function close() {
+  async function abandon() {
     if (busy || uploading) return;
     onClose();
     try {
@@ -118,6 +124,30 @@ export default function MailCompose({
       );
     }
   }
+  const dirty =
+    to !== initial.to.join("; ") ||
+    cc !== initial.cc.join("; ") ||
+    bcc !== initial.bcc.join("; ") ||
+    draft.subject !== initial.subject ||
+    draft.text !== initial.text ||
+    draft.attachments.length !== initial.attachments.length ||
+    draft.attachments.some(
+      (file, index) => file.id !== initial.attachments[index]?.id,
+    );
+  function close() {
+    if (busy || uploading) return;
+    if (compactLayout && dirty) setDiscard(true);
+    else void abandon();
+  }
+  if (discard)
+    return (
+      <DiscardDraft
+        title="放弃这封邮件？"
+        detail="已填写的收件人、正文和本次附件将被放弃。"
+        onKeep={() => setDiscard(false)}
+        onDiscard={() => void abandon()}
+      />
+    );
   return (
     <Modal
       title={confirm ? "确认发送邮件" : draft.replyTo ? "回复邮件" : "新建邮件"}
@@ -158,19 +188,51 @@ export default function MailCompose({
             收件人
             <Input
               aria-label="收件人"
+              inputMode="email"
+              autoCapitalize="none"
+              spellCheck={false}
+              enterKeyHint="next"
               value={to}
               onChange={setTo}
               placeholder="多个地址用分号分隔"
             />
           </label>
-          <label>
-            抄送
-            <Input aria-label="抄送" value={cc} onChange={setCc} />
-          </label>
-          <label>
-            密送
-            <Input aria-label="密送" value={bcc} onChange={setBcc} />
-          </label>
+          {compactLayout && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="compose-extra-recipients"
+              onClick={() => setExtraRecipients(!extraRecipients)}
+            >
+              {extraRecipients ? "收起抄送与密送" : "添加抄送／密送"}
+            </Button>
+          )}
+          {(!compactLayout || extraRecipients) && (
+            <>
+              <label>
+                抄送
+                <Input
+                  aria-label="抄送"
+                  value={cc}
+                  onChange={setCc}
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </label>
+              <label>
+                密送
+                <Input
+                  aria-label="密送"
+                  value={bcc}
+                  onChange={setBcc}
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </label>
+            </>
+          )}
           <label>
             主题
             <Input
@@ -204,7 +266,11 @@ export default function MailCompose({
             disabled={busy || uploading}
             multiple
             title="邮件附件"
-            description="选择或拖入文件，上传到学校邮箱。"
+            description={
+              compactLayout
+                ? "从手机选择一个或多个文件作为附件。"
+                : "选择或拖入文件，上传到学校邮箱。"
+            }
             browseLabel="添加附件"
             className="campus-upload mail-upload"
           />
