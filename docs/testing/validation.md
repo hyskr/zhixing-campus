@@ -293,3 +293,5 @@ Android 云端构建 [40198357458](https://github.com/hyskr/zhixing-campus/actio
 - 桌面成绩表保留原有独立列。界面验证使用测试数据，未执行真实邮件发送或作业提交。
 
 0.15.0 本机 Release APK 为 29,548,483 字节，签名与 16 KB ZIP 对齐通过；Android 14 模拟器从已签名 0.14.2 覆盖安装至 0.15.0，启动正常，未发现启动崩溃或未捕获错误。
+
+GitHub Actions [40212033005](https://github.com/hyskr/zhixing-campus/actions/runs/40212033005) 发布 `android-v0.15.0-preview.1`，云端 APK 为 29,546,035 字节。本机签名 0.15.0 APK 已经 ADB 安装到用户连接的 Android 真机，系统包信息确认 versionCode 15000、versionName 0.15.0，应用启动且进程运行。

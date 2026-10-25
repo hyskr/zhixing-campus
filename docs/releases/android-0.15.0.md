@@ -1,5 +1,7 @@
 # Android 0.15.0
 
+[下载 APK](https://github.com/hyskr/zhixing-campus/releases/download/android-v0.15.0-preview.1/zhixing-campus_0.15.0_android-arm64.apk)
+
 - 重做手机端顶栏：首页使用日期与账号入口，其他页面只显示标题和对应操作。
 - 首页集中展示今日课程、重要邮件、最近待办和校园动态，统一字号、卡片和间距。
 - 底部中央新增“应用”页，集中提供成绩、资料、教室、校园服务、文件、下载和设置入口。
