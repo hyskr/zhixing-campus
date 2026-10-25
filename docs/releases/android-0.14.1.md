@@ -8,3 +8,5 @@
 - 参考 BeUI Native 的卡片、分段控件和触控反馈，沿用现有 Tauri Android 与校园接口。
 
 支持 Android 10+ arm64，安装同签名 APK 可覆盖之前的 Android 预览版。后台提醒依赖应用进程运行。
+
+[下载 Android APK](https://github.com/hyskr/zhixing-campus/releases/download/android-v0.14.1-preview.2/zhixing-campus_0.14.1_android-arm64.apk) · [手机界面设计](../design/android-ui.md)

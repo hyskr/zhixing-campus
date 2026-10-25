@@ -2,7 +2,7 @@
 
 北京交通大学校园工作台，使用 Tauri 2、React、TypeScript 和 BeUI 构建，支持 Windows、macOS、Linux 和 Android。
 
-[桌面安装包](https://github.com/hyskr/zhixing-campus/releases/latest) · [Android APK](https://github.com/hyskr/zhixing-campus/releases/download/android-v0.14.0-preview.3/zhixing-campus_0.14.0_android-arm64.apk) · [Android 使用与构建](docs/guides/android.md) · [文档目录](docs/index.md) · [构建与发布](docs/guides/building.md)
+[桌面安装包](https://github.com/hyskr/zhixing-campus/releases/latest) · [Android APK](https://github.com/hyskr/zhixing-campus/releases/download/android-v0.14.1-preview.2/zhixing-campus_0.14.1_android-arm64.apk) · [Android 使用与构建](docs/guides/android.md) · [文档目录](docs/index.md) · [构建与发布](docs/guides/building.md)
 
 ## 功能
 
