@@ -220,10 +220,32 @@ export function DiscardDraft({
 }
 
 type FeedbackDetail = {
+  id?: string;
+  description?: string;
+  duration?: number;
   message: string;
   variant: ToastStatus;
   action?: AnimatedToastAction;
 };
+export function showFeedback(
+  message: string,
+  variant: ToastStatus = "success",
+  action?: AnimatedToastAction,
+  id?: string,
+  options?: { description?: string; duration?: number },
+) {
+  if (message)
+    window.dispatchEvent(
+      new CustomEvent<FeedbackDetail>("campus:feedback", {
+        detail: { message, variant, action, id, ...options },
+      }),
+    );
+}
+export function dismissFeedback(id: string) {
+  window.dispatchEvent(
+    new CustomEvent("campus:feedback-dismiss", { detail: id }),
+  );
+}
 export function useFeedback(variant: ToastStatus = "success") {
   return useCallback(
     (
@@ -231,12 +253,7 @@ export function useFeedback(variant: ToastStatus = "success") {
       kind: ToastStatus = variant,
       action?: AnimatedToastAction,
     ) => {
-      if (message)
-        window.dispatchEvent(
-          new CustomEvent<FeedbackDetail>("campus:feedback", {
-            detail: { message, variant: kind, action },
-          }),
-        );
+      showFeedback(message, kind, action);
     },
     [variant],
   );
@@ -270,19 +287,28 @@ export function FeedbackAlerts() {
   });
   useEffect(() => {
     const receive = (event: Event) => {
-      const { message, variant, action } = (
+      const { message, variant, action, id, description, duration } = (
         event as CustomEvent<FeedbackDetail>
       ).detail;
       showToast({
+        id,
         title: message,
+        description,
         status: variant,
         action,
-        duration: variant === "error" ? 6500 : 4500,
+        duration:
+          duration ?? (variant === "error" ? 10000 : action ? 8000 : 4500),
       });
     };
+    const dismiss = (event: Event) =>
+      dismissToast((event as CustomEvent<string>).detail);
     window.addEventListener("campus:feedback", receive);
-    return () => window.removeEventListener("campus:feedback", receive);
-  }, [showToast]);
+    window.addEventListener("campus:feedback-dismiss", dismiss);
+    return () => {
+      window.removeEventListener("campus:feedback", receive);
+      window.removeEventListener("campus:feedback-dismiss", dismiss);
+    };
+  }, [showToast, dismissToast]);
   return (
     <AnimatedToastStack
       toasts={toasts}
@@ -295,6 +321,8 @@ export function FeedbackAlerts() {
       classNames={{
         surface: "campus-feedback-surface",
         title: "campus-feedback-title",
+        description: "campus-feedback-description",
+        action: "campus-feedback-action",
         close: "campus-feedback-close",
       }}
     />

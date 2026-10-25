@@ -1,3 +1,10 @@
+import {
+  downloadAction,
+  registerDownloadActions,
+  requestDownload,
+  showDownloads,
+} from "./downloadFeedback";
+import { showFeedback, dismissFeedback } from "./ui";
 import { isAndroid } from "./platform";
 import { useFeedback } from "./ui";
 import { useErrorState } from "./ui";
@@ -46,7 +53,6 @@ const Context = createContext<{
   clear: (accountId: string) => Promise<void>;
 }>({ tasks: [], error: "", clear: async () => {} });
 export function DownloadsProvider({ children }: { children: ReactNode }) {
-  const notify = useFeedback("error");
   const [tasks, setTasks] = useState<Record<string, DownloadTask>>({}),
     [error, setError] = useErrorState();
   useEffect(() => {
@@ -57,8 +63,6 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
       ({ payload }) => {
         if (active) {
           setTasks((prev) => ({ ...prev, [payload.id]: payload }));
-          if (payload.state === "failed")
-            notify(`${payload.name}：${payload.error || "下载失败"}`);
         }
       },
     );
@@ -77,6 +81,99 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false;
       void off.then((stop) => stop());
+    };
+  }, []);
+  useEffect(() => {
+    if (!isTauri()) return;
+    let active = true;
+    const off = listen<{
+      phase: string;
+      id: string;
+      accountId: string;
+      name: string;
+      count: number;
+      completed?: number;
+      failed?: number;
+      cancelled?: number;
+    }>("campus-download-batch", ({ payload: b }) => {
+      if (!active) return;
+      if (b.phase === "queued") {
+        showFeedback(
+          b.count === 1
+            ? `已加入下载队列：${b.name}`
+            : `${b.count} 个文件已加入下载队列`,
+          "info",
+          downloadAction(b.accountId),
+          "download-request",
+          {
+            description: "正在准备地址与保存位置，可随时查看进度。",
+            duration: 7000,
+          },
+        );
+      } else {
+        dismissFeedback("download-request");
+        const completed = b.completed ?? 0,
+          failed = b.failed ?? 0,
+          cancelled = b.cancelled ?? 0;
+        const message =
+          b.count === 1
+            ? completed
+              ? `下载完成：${b.name}`
+              : failed
+                ? `下载失败：${b.name}`
+                : `已取消下载：${b.name}`
+            : `下载结束：完成 ${completed} 个${failed ? `，失败 ${failed} 个` : ""}${cancelled ? `，取消 ${cancelled} 个` : ""}`;
+        const action =
+          b.count === 1 && completed === 1
+            ? {
+                label: isAndroid ? "打开文件" : "显示文件",
+                onClick: () => {
+                  void invoke("open_download", { id: b.id }).catch((reason) =>
+                    showFeedback(
+                      `无法打开文件：${String(reason)}`,
+                      "error",
+                      downloadAction(b.accountId),
+                    ),
+                  );
+                },
+              }
+            : downloadAction(b.accountId);
+        showFeedback(
+          message,
+          failed ? "error" : completed ? "success" : "info",
+          action,
+          `download-result-${b.id}`,
+          {
+            duration: 0,
+            description: failed
+              ? "打开下载管理查看失败原因并重试。"
+              : completed
+                ? isAndroid
+                  ? "文件已保存在应用内，可打开或导出到系统下载目录。"
+                  : "文件已保存到选定目录。"
+                : "此批下载已取消。",
+          },
+        );
+      }
+    });
+    const tap = import("@tauri-apps/plugin-notification").then(async (api) => {
+      await registerDownloadActions();
+      return api.onAction((event) => {
+        const extra = event.notification?.extra;
+        if (active && extra?.destination === "downloads")
+          showDownloads(
+            typeof extra.accountId === "string" ? extra.accountId : undefined,
+          );
+      });
+    });
+    void off.catch((reason) => {
+      if (active) setError(String(reason));
+    });
+    void tap.catch(() => {});
+    return () => {
+      active = false;
+      void off.then((stop) => stop()).catch(() => {});
+      void tap.then((listener) => listener?.unregister()).catch(() => {});
     };
   }, []);
   async function clear(accountId: string) {
@@ -105,7 +202,11 @@ export default function Downloads({ account }: { account?: Account }) {
     [error, setError] = useErrorState();
   const all = tasks
     .filter((t) => !account || t.accountId === account.id)
-    .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+    .sort(
+      (a, b) =>
+        Number(activeTask(b)) - Number(activeTask(a)) ||
+        (b.createdAt ?? 0) - (a.createdAt ?? 0),
+    );
   const active = all.filter(activeTask),
     completed = all.filter((t) => t.state === "completed"),
     failed = all.filter((t) => t.state === "failed");
@@ -358,10 +459,15 @@ export default function Downloads({ account }: { account?: Account }) {
                     variant="secondary"
                     onClick={() =>
                       action(() =>
-                        invoke("retry_download", {
-                          username: t.accountId,
-                          id: t.id,
-                        }),
+                        requestDownload(
+                          () =>
+                            invoke("retry_download", {
+                              username: t.accountId,
+                              id: t.id,
+                            }),
+                          t.accountId,
+                          `正在重试：${t.name}`,
+                        ),
                       )
                     }
                   >

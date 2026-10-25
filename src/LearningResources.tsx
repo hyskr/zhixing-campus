@@ -1,3 +1,10 @@
+import { queueDownloads, requestDownload } from "./downloadFeedback";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  CollapsibleIndicator,
+} from "@/components/motion/collapsible";
 import ReplayViewer from "./ReplayViewer";
 import { useErrorState } from "./ui";
 import { resourceDirectory } from "./resourcePaths";
@@ -123,7 +130,7 @@ export default function LearningResources({
           kind: "resource",
         };
       });
-      await invoke("download_items", { username: account.id, items });
+      await queueDownloads(account.id, items);
     } catch (reason) {
       setError(String(reason));
     } finally {
@@ -144,17 +151,21 @@ export default function LearningResources({
             setCollectingLabel(payload.label);
         },
       );
-      await withCampusSession(account.id, () =>
-        invoke("download_resource_tree", {
-          username: account.id,
-          courseId: node.courseId,
-          parentId: node.sourceId ?? "0",
-          docType: node.docType ?? null,
-          folderName: node.name,
-          relativePath: resourceDirectory(data.resources, node.id),
-        }),
+      await requestDownload(
+        () =>
+          withCampusSession(account.id, () =>
+            invoke("download_resource_tree", {
+              username: account.id,
+              courseId: node.courseId,
+              parentId: node.sourceId ?? "0",
+              docType: node.docType ?? null,
+              folderName: node.name,
+              relativePath: resourceDirectory(data.resources, node.id),
+            }),
+          ),
+        account.id,
+        "正在读取目录并准备下载…",
       );
-      setNotice("目录已读取，文件已加入下载管理");
     } catch (e) {
       setError(String(e));
     } finally {
@@ -405,6 +416,32 @@ function demoReplays(root: Resource): Replay[] {
     },
   ];
 }
+function replayDisplayTitle(replay: Replay) {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(replay.name)) return replay.name;
+  const date = new Date(replay.startTime);
+  return Number.isNaN(date.getTime())
+    ? replay.name
+    : new Intl.DateTimeFormat("zh-CN", {
+        month: "long",
+        day: "numeric",
+        weekday: "short",
+      }).format(date);
+}
+function replayTimeRange(replay: Replay) {
+  const time = (value: string) => {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? ""
+      : new Intl.DateTimeFormat("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(date);
+  };
+  return [time(replay.startTime), time(replay.endTime)]
+    .filter(Boolean)
+    .join("–");
+}
 function ReplayPanel({
   account,
   roots,
@@ -475,14 +512,14 @@ function ReplayPanel({
   }
   return (
     <section className="surface replay-panel">
-      <div className="resource-header">
+      <div className="resource-header replay-filter-bar">
         <label>
-          课程
+          <span>课程</span>
           <Select
             value={String(root?.id ?? "")}
             onValueChange={(e) => setCourseId(e)}
           >
-            <SelectTrigger>
+            <SelectTrigger className="replay-course-trigger">
               <span className="sr-only">{"选择回放课程"}：</span>
               <SelectValue />
             </SelectTrigger>
@@ -496,13 +533,15 @@ function ReplayPanel({
           </Select>
         </label>
         <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setRefresh((v) => v + 1)}
+          className="replay-refresh-button"
+          variant="ghost"
+          size="icon"
+          aria-label="刷新回放"
+          title="刷新回放"
+          onClick={() => setRefresh((value) => value + 1)}
           disabled={loading}
         >
-          <RefreshCw size={13} className={loading ? "spin" : ""} />
-          {loading ? "正在读取" : "刷新回放"}
+          <RefreshCw size={19} className={loading ? "spin" : ""} />
         </Button>
       </div>
 
@@ -520,32 +559,31 @@ function ReplayPanel({
       )}
       <div className="replay-list">
         {rootList.map((replay) => (
-          <article className="replay-card" key={replay.id}>
-            <span className="replay-icon">
-              <Video size={24} />
+          <Button
+            className="replay-session-row"
+            variant="ghost"
+            key={replay.id}
+            disabled={!replay.videoId || !!fetching}
+            onClick={() => void play(replay)}
+            aria-label={`播放 ${replayDisplayTitle(replay)} ${replayTimeRange(replay)}`}
+          >
+            <span className="replay-session-copy">
+              <strong>{replayDisplayTitle(replay)}</strong>
+              <span>{replayTimeRange(replay)}</span>
+              <small>
+                {[replay.room, replay.teacher].filter(Boolean).join(" · ") ||
+                  "课程回放"}
+              </small>
             </span>
-            <div className="replay-card-info">
-              <h3>{replay.name}</h3>
-              <p>
-                {fullDate(replay.startTime)} · {replay.room || "未提供教室"} ·{" "}
-                {replay.teacher || "任课教师"}
-              </p>
-              {replay.content && <p>{replay.content}</p>}
-            </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!replay.videoId || !!fetching}
-              onClick={() => play(replay)}
-            >
+            <span className="replay-session-play">
               {fetching === replay.id ? (
-                <Loader variant="spinner" size={14} label="正在加载" />
+                <Loader variant="spinner" size={18} label="正在加载" />
               ) : (
-                <Play size={14} />
-              )}{" "}
-              {replay.videoId ? "查看回放" : "尚未发布"}
-            </Button>
-          </article>
+                <Play size={19} />
+              )}
+            </span>
+            {!replay.videoId && <small>未发布</small>}
+          </Button>
         ))}
       </div>
       {player && (
@@ -561,7 +599,7 @@ function ReplayPanel({
 function ReplayPlayer({
   account,
   replay,
-  links,
+  links: initialLinks,
   onClose,
 }: {
   account: Account;
@@ -569,29 +607,56 @@ function ReplayPlayer({
   links: ReplayLink[];
   onClose: () => void;
 }) {
+  const [links, setLinks] = useState(initialLinks);
   const [view, setView] = useState(
-    links.find((link) => link.view === "teacher")?.view ?? links[0]?.view,
+    initialLinks.find((link) => link.view === "teacher")?.view ??
+      initialLinks[0]?.view ??
+      "teacher",
   );
-  const [error, setError] = useErrorState();
+  const [, setError] = useErrorState();
+  const feedback = useFeedback();
   const [picking, setPicking] = useState(false);
-  const link = links.find((l) => l.view === view);
+  const [refreshing, setRefreshing] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const link = links.find((item) => item.view === view);
+  async function refreshLinks() {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const next = await loadReplayLinks(account.id, replay);
+      if (!next.length) throw Error("这节课暂未提供可播放的回放链接");
+      setLinks(next);
+      if (!next.some((item) => item.view === view)) setView(next[0].view);
+      setRevision((value) => value + 1);
+    } catch (reason) {
+      setError(String(reason));
+    } finally {
+      setRefreshing(false);
+    }
+  }
+  async function copy(url: string) {
+    try {
+      await copyText(url);
+      feedback("回放链接已复制");
+    } catch (reason) {
+      setError(String(reason));
+    }
+  }
   async function download() {
+    if (!link) return;
     setPicking(true);
     try {
-      await invoke("download_items", {
-        username: account.id,
-        items: [
-          {
-            id: crypto.randomUUID(),
-            name: `${replay.name}-${link?.label}.mp4`,
-            courseId: replay.courseId,
-            rpId: replay.videoId,
-            kind: "replay",
-            view,
-            teacherId: replay.teacherId,
-          },
-        ],
-      });
+      await queueDownloads(account.id, [
+        {
+          id: crypto.randomUUID(),
+          name: `${replay.name}-${link.label}.mp4`,
+          courseId: replay.courseId,
+          rpId: replay.videoId,
+          kind: "replay",
+          view,
+          teacherId: replay.teacherId,
+        },
+      ]);
     } catch (reason) {
       setError(String(reason));
     } finally {
@@ -600,93 +665,96 @@ function ReplayPlayer({
   }
   return (
     <Modal
-      title={replay.name}
-      subtitle={fullDate(replay.startTime)}
+      title={replayDisplayTitle(replay)}
+      subtitle={[replayTimeRange(replay), replay.room, replay.teacher]
+        .filter(Boolean)
+        .join(" · ")}
       onClose={onClose}
       wide
     >
-      <Tabs
-        value={view}
-        onValueChange={(next) => {
-          setView(next);
-          setError("");
-        }}
-        variant="underline"
-        className=""
-      >
-        <TabsList>
-          {links.map((l) => (
-            <TabsTrigger key={l.view} value={l.view}>
-              {l.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-      {replay.content && <p className="detail-note">{replay.content}</p>}
-      <div className="replay-link-list">
-        {links.map((l) => (
-          <label key={l.view}>
-            <span>{l.label}</span>
-            <Input
-              aria-label={`${l.label}原始链接`}
-              readOnly
-              value={String(l.url)}
-            />
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={async () => {
-                try {
-                  await copyText(l.url);
-                  setError("");
-                } catch (e) {
-                  setError(String(e));
+      <div className="replay-player-page">
+        {link ? (
+          <ReplayViewer
+            key={revision}
+            links={links}
+            view={view}
+            onViewChange={setView}
+            onRefresh={refreshLinks}
+            refreshing={refreshing}
+          />
+        ) : (
+          <p className="quiet-empty">此课程尚未提供可播放的回放。</p>
+        )}
+        <div className="replay-primary-actions">
+          <Button
+            variant="secondary"
+            disabled={refreshing}
+            onClick={() => void refreshLinks()}
+          >
+            <RefreshCw size={16} className={refreshing ? "spin" : ""} />
+            {refreshing ? "正在获取" : "刷新播放地址"}
+          </Button>
+          <Button disabled={picking || !link} onClick={() => void download()}>
+            <Download size={16} />
+            {picking ? "正在加入" : "下载此视角"}
+          </Button>
+        </div>
+        {replay.content && (
+          <p className="replay-description">{replay.content}</p>
+        )}
+        <Collapsible className="replay-more">
+          <CollapsibleTrigger className="replay-more-trigger">
+            链接与外部播放
+            <CollapsibleIndicator />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="replay-link-list">
+              {links.map((item) => (
+                <label key={item.view}>
+                  <span>{item.label}</span>
+                  <textarea
+                    aria-label={`${item.label}原始链接`}
+                    readOnly
+                    rows={3}
+                    value={item.url}
+                  />
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => void copy(item.url)}
+                  >
+                    <Copy size={14} />
+                    复制链接
+                  </Button>
+                </label>
+              ))}
+            </div>
+            <div className="replay-secondary-actions">
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  void copy(links.map((item) => item.url).join("\n"))
                 }
-              }}
-            >
-              <Copy size={14} />
-              复制
-            </Button>
-          </label>
-        ))}
-      </div>
-      <Button
-        size="sm"
-        variant="secondary"
-        onClick={async () => {
-          try {
-            await copyText(links.map((l) => l.url).join("\n"));
-            setError("");
-          } catch (e) {
-            setError(String(e));
-          }
-        }}
-      >
-        <Copy size={14} />
-        复制全部视角链接
-      </Button>
-      {link && <ReplayViewer links={links} view={view} />}
-      <div className="modal-actions">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={async () => {
-            if (link) {
-              try {
-                await openUrl(link.url);
-              } catch (reason) {
-                setError(String(reason));
-              }
-            }
-          }}
-        >
-          <ExternalLink size={14} />
-          浏览器打开
-        </Button>
-        <Button size="sm" disabled={picking} onClick={download}>
-          <Download size={14} />
-          下载所选视角
-        </Button>
+              >
+                <Copy size={15} />
+                复制全部链接
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={!link}
+                onClick={() => {
+                  if (link)
+                    void openUrl(link.url).catch((reason) =>
+                      setError(String(reason)),
+                    );
+                }}
+              >
+                <ExternalLink size={15} />
+                外部打开
+              </Button>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </Modal>
   );

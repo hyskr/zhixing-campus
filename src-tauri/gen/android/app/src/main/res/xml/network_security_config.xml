@@ -4,6 +4,8 @@
   <domain-config cleartextTrafficPermitted="true">
     <domain includeSubdomains="true">bjtu.edu.cn</domain>
     <domain includeSubdomains="false">123.121.147.7</domain>
+    <!-- Course replay links returned by rpinfoDownloadUrl use this HTTP media host. -->
+    <domain includeSubdomains="false">123.121.147.18</domain>
     <domain includeSubdomains="true">tauri.localhost</domain>
     <domain includeSubdomains="false">localhost</domain>
     <domain includeSubdomains="false">10.0.0.55</domain>

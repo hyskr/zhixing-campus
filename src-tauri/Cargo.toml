@@ -1,6 +1,6 @@
 [package]
 name = "zhixing-campus"
-version = "0.15.0"
+version = "0.16.0"
 description = "北京交通大学校园信息客户端"
 edition = "2021"
 

@@ -1,5 +1,6 @@
 use super::*;
 use serde::{Deserialize, Serialize};
+use tauri_plugin_notification::NotificationExt;
 use std::path::{Path, PathBuf};
 #[cfg(desktop)]
 use tauri_plugin_dialog::DialogExt;
@@ -539,7 +540,15 @@ async fn run_downloads(
             })
             .clone()
     };
+    let count = items.len();
+    let batch_id = items.first().map(|item| item.id.clone()).unwrap_or_default();
+    let batch_name = items.first().map(|item| item.name.clone()).unwrap_or_default();
+    let totals = Arc::new(Mutex::new((count, 0usize, 0usize, 0usize)));
+    let _ = app.emit("campus-download-batch", json!({"phase":"queued","id":batch_id,"accountId":username,"name":batch_name,"count":count}));
     for (item, mut cancelled) in items.into_iter().zip(receivers) {
+        let totals = totals.clone();
+        let batch_id = batch_id.clone();
+        let batch_name = batch_name.clone();
         let app = app.clone();
         let username = username.clone();
         let session = session.clone();
@@ -554,6 +563,7 @@ async fn run_downloads(
                     result = download_one(&session, &app, &username, &slots, &folder, &item) => result,
                 }
             };
+            let result_kind = match &outcome { Ok(_) => 0, Err(error) if error == "已取消" => 2, Err(_) => 1 };
             let downloads = app.state::<DownloadState>();
             match outcome {
                 Ok((final_path, display)) => {
@@ -592,6 +602,22 @@ async fn run_downloads(
             if let Ok(mut active) = downloads.active.lock() {
                 active.remove(&item.id);
             };
+            let finished = {
+                let mut totals = totals.lock().unwrap();
+                totals.0 -= 1;
+                match result_kind { 0 => totals.1 += 1, 1 => totals.2 += 1, _ => totals.3 += 1 }
+                if totals.0 == 0 { Some((totals.1, totals.2, totals.3)) } else { None }
+            };
+            if let Some((completed, failed, cancelled)) = finished {
+                let _ = app.emit("campus-download-batch", json!({"phase":"finished","id":batch_id,"accountId":username,"name":batch_name,"count":count,"completed":completed,"failed":failed,"cancelled":cancelled}));
+                if completed > 0 || failed > 0 {
+                    let title = if failed == 0 { "下载完成" } else { "下载已结束，部分文件失败" };
+                    let body = if count == 1 && completed == 1 { format!("{} 已保存，点击查看下载", batch_name) } else { format!("完成 {} 个，失败 {} 个，取消 {} 个。点击查看下载", completed, failed, cancelled) };
+                    if let Err(error) = app.notification().builder().title(title).body(body).action_type_id("campus-downloads").extra("destination", "downloads").extra("accountId", &username).show() {
+                        eprintln!("下载结果通知未能投递：{error}");
+                    }
+                }
+            }
         });
     }
     Ok(true)

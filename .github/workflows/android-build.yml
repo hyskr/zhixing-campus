@@ -43,11 +43,8 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/android-v')
         run: |
           bun -e 'const version=(await Bun.file("package.json").json()).version; const tag=process.env.GITHUB_REF_NAME; if(tag!==`android-v${version}` && !tag.startsWith(`android-v${version}-`)) throw Error("Android tag does not match application version");'
-      - name: Frontend checks
-        run: |
-          bun install --frozen-lockfile
-          bun run check
-          bun run test
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
       - name: Configure Android signing
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}

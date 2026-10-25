@@ -12,18 +12,20 @@ import {
 } from "@/components/motion/select";
 import { SettingsGroup } from "./SettingsGroups";
 import { usePreferences } from "./preferences";
-import { useFeedback } from "./ui";
+import { useFeedback, showFeedback } from "./ui";
 import { withCampusSession } from "./service";
 import type { Account, Preferences } from "./types";
 
 async function permission() {
-  if (!isTauri()) throw Error("请在桌面应用中设置系统通知");
+  if (!isTauri()) throw Error("请在应用中设置通知");
   const api = await import("@tauri-apps/plugin-notification");
   if (
     !(await api.isPermissionGranted()) &&
     (await api.requestPermission()) !== "granted"
   )
-    throw Error("请在系统设置中允许知行发送通知");
+    showFeedback("应用内提醒已开启", "info", undefined, undefined, {
+      description: "系统通知尚未授权，可稍后在系统设置中允许知行通知。",
+    });
 }
 export default function NotificationSettings({
   account,
@@ -64,7 +66,7 @@ export default function NotificationSettings({
     <SettingsGroup
       id="notifications"
       title="通知与提醒"
-      description="在应用运行期间检查更新；退出应用后停止。首次同步只建立记录，不提醒历史邮件或成绩。"
+      description="新邮件、成绩与上课提醒优先在应用内弹出，允许系统通知后也会发送到通知中心。首次同步不提醒历史数据。"
     >
       <div className="setting-row">
         <span>
@@ -201,6 +203,15 @@ export default function NotificationSettings({
             ))}
           </SelectContent>
         </Select>
+      </div>
+      <div className="setting-row">
+        <span>
+          <strong>应用内操作通知</strong>
+          <small>
+            下载准备、排队、完成、失败和复制结果都会浮动显示。下载完成提示保留到手动关闭，点击可打开文件或查看下载记录。
+          </small>
+        </span>
+        <span className="notification-enabled-label">始终开启</span>
       </div>
       <section className="notification-test-section">
         <strong>

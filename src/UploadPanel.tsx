@@ -265,7 +265,7 @@ export default function UploadPanel({
                   variant="ghost"
                   aria-label={`下载 ${file.name}`}
                   onClick={() =>
-                    action(() => downloadFiles(account, [file]), "已加入下载")
+                    action(() => downloadFiles(account, [file]), "")
                   }
                 >
                   <Download size={14} />
@@ -314,10 +314,7 @@ export default function UploadPanel({
                     label: "下载文件",
                     icon: <Download size={19} />,
                     run: () =>
-                      action(
-                        () => downloadFiles(account, [moreFile]),
-                        "已加入下载",
-                      ),
+                      action(() => downloadFiles(account, [moreFile]), ""),
                   },
                   {
                     id: "remove",

@@ -132,7 +132,10 @@ const POSITION_CLASS: Record<ToastPosition, string> = {
 
 let idSeed = 0;
 
-function createToast(input: ToastInput, defaultDuration: number): AnimatedToast {
+function createToast(
+  input: ToastInput,
+  defaultDuration: number,
+): AnimatedToast {
   return {
     duration: defaultDuration,
     dismissible: true,
@@ -147,7 +150,9 @@ export function useAnimatedToastStack({
   defaultDuration = 4200,
   limit,
 }: UseAnimatedToastStackOptions = {}) {
-  const toastTimers = useRef<Map<string, { timer: number; signature: string }>>(new Map());
+  const toastTimers = useRef<Map<string, { timer: number; signature: string }>>(
+    new Map(),
+  );
   const [toasts, setToasts] = useState<AnimatedToast[]>(() =>
     initialToasts.map((toast) => createToast(toast, defaultDuration)),
   );
@@ -164,7 +169,7 @@ export function useAnimatedToastStack({
     (input: ToastInput) => {
       const toast = createToast(input, defaultDuration);
       setToasts((current) => {
-        const next = [...current, toast];
+        const next = [...current.filter((item) => item.id !== toast.id), toast];
         return typeof limit === "number" ? next.slice(-limit) : next;
       });
       return toast.id;
@@ -180,7 +185,8 @@ export function useAnimatedToastStack({
               ...toast,
               ...patch,
               id,
-              createdAt: patch.duration === undefined ? toast.createdAt : Date.now(),
+              createdAt:
+                patch.duration === undefined ? toast.createdAt : Date.now(),
             }
           : toast,
       ),
@@ -338,7 +344,9 @@ const ToastItem = memo(function ToastItem({
   const reduce = useReducedMotion();
   const status = toast.status ?? "neutral";
   const Icon = STATUS_ICON[status];
-  const iconNode = icons?.[status] ?? toast.icon ?? <Icon className="h-3.5 w-3.5" />;
+  const iconNode = icons?.[status] ?? toast.icon ?? (
+    <Icon className="h-3.5 w-3.5" />
+  );
   const canDismiss = toast.dismissible !== false && Boolean(onDismiss);
   const hasDetails = Boolean(toast.description || toast.action);
 
@@ -376,7 +384,11 @@ const ToastItem = memo(function ToastItem({
           onDismiss(toast.id);
         }
       }}
-      className={cn("pointer-events-auto relative will-change-transform", classNames?.item)}
+      className={cn(
+        "pointer-events-auto relative will-change-transform",
+        classNames?.item,
+      )}
+      data-status={status}
       style={{ zIndex: 20 - index }}
     >
       <div
@@ -388,7 +400,12 @@ const ToastItem = memo(function ToastItem({
         {renderToast ? (
           renderToast(toast)
         ) : (
-          <div className={cn("flex gap-3", hasDetails ? "items-start" : "items-center")}>
+          <div
+            className={cn(
+              "flex gap-3",
+              hasDetails ? "items-start" : "items-center",
+            )}
+          >
             <motion.span
               layout
               className={cn(
@@ -499,7 +516,6 @@ const ToastItem = memo(function ToastItem({
             ) : null}
           </div>
         )}
-
       </div>
     </motion.li>
   );

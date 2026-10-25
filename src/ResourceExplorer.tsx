@@ -30,7 +30,6 @@ import {
   FileTreeFile,
   FileTreeFolder,
 } from "@/components/motion/file-tree";
-import { OverflowActions } from "@/components/motion/overflow-actions";
 import type { Resource } from "./types";
 import { useFeedback } from "./ui";
 
@@ -107,8 +106,9 @@ export default function ResourceExplorer({
   const nodes = allEntries(tree);
   const byKey = new Map(nodes.map((entry) => [entry.key, entry]));
   const [currentKey, setCurrentKey] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<string[]>(
-    tree[0] ? [tree[0].key] : [],
+  const [expanded, setExpanded] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(
+    () => Object.keys(selected).length > 0,
   );
   const requests = useRef(new Map<string, Promise<Resource[] | undefined>>());
   const [selectingKey, setSelectingKey] = useState("");
@@ -147,8 +147,7 @@ export default function ResourceExplorer({
 
   const phone = useCompactLayout();
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const effectiveKey =
-    currentKey && byKey.has(currentKey) ? currentKey : (tree[0]?.key ?? null);
+  const effectiveKey = currentKey && byKey.has(currentKey) ? currentKey : null;
   const current = effectiveKey ? byKey.get(effectiveKey)?.node : undefined;
   const files = nodes
     .filter((entry) => entry.node.kind === "file")
@@ -196,27 +195,6 @@ export default function ResourceExplorer({
     }
     if (entry.node.loaded === false) void load(entry);
   }
-  const currentEntry = effectiveKey ? byKey.get(effectiveKey) : undefined;
-  const firstCategory =
-    currentEntry?.node.kind === "course"
-      ? currentEntry.children.find((child) => child.node.docType === "1")
-      : undefined;
-  useEffect(() => {
-    if (!currentEntry || currentEntry.node.kind !== "course") return;
-    if (currentEntry.node.loaded === false || !currentEntry.children.length) {
-      void load(currentEntry);
-    } else if (firstCategory) {
-      setExpanded((current) => [
-        ...new Set([...current, currentEntry.key, firstCategory.key]),
-      ]);
-      if (firstCategory.node.loaded === false) void load(firstCategory);
-    }
-  }, [
-    effectiveKey,
-    currentEntry?.node.loaded,
-    firstCategory?.key,
-    firstCategory?.node.loaded,
-  ]);
   function descendantFiles(node: Resource): Resource[] {
     return node.kind === "file"
       ? [node]
@@ -456,7 +434,10 @@ export default function ResourceExplorer({
         </>
       ) : (
         <div className="resource-detail-empty">
-          选择左侧课程或文件查看操作。
+          <FolderOpen size={32} strokeWidth={1.5} aria-hidden="true" />
+          <strong>选择课程，浏览资料</strong>
+          <p>展开左侧目录后，点击文件查看预览、下载与详情。</p>
+          <small>需要批量下载时，点击上方“选择文件”。</small>
         </div>
       )}
     </article>
@@ -464,56 +445,90 @@ export default function ResourceExplorer({
 
   return (
     <section
-      className={`surface resource-explorer ${compact ? "compact" : ""}`}
+      className={`surface resource-explorer ${compact ? "compact" : ""} ${selectionMode ? "is-selecting" : ""}`}
     >
       <div className="resource-explorer-toolbar">
         <div>
           <h2>课程文件</h2>
           <p>
-            {roots.length} 门课程 · 已加载 {files.length} 个文件
+            {roots.length} 门课程
+            {files.length > 0 ? ` · ${files.length} 个文件已加载` : ""}
           </p>
         </div>
         <div className="resource-explorer-toolbar-actions">
-          <Checkbox
-            aria-label="全选课程文件，读取全部目录"
-            checked={
-              !!files.length && files.every((node) => !!selected[node.id])
-            }
-            indeterminate={
-              picked.length > 0 && !files.every((node) => !!selected[node.id])
-            }
-            disabled={!roots.length || !!selectingKey || busy}
-            onCheckedChange={(checked) => void toggleSelection(null, checked)}
-          />
-          <span role="status">
-            {selectingKey
-              ? selectionProgress || "正在读取目录…"
-              : `${picked.length} 个已选`}
-          </span>
-          <OverflowActions
+          {!phone && (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={!expanded.length || !!query}
+              onClick={() => {
+                setExpanded([]);
+                setCurrentKey(null);
+              }}
+            >
+              <Folder size={14} />
+              全部收起
+            </Button>
+          )}
+          <Button
+            variant="secondary"
             size="sm"
-            openLabel="更多文件操作"
-            primaryActions={[
-              {
-                id: "download",
-                label: "下载选中",
-                icon: <Download size={14} />,
-                disabled: !picked.length || busy || !!selectingKey,
-                onClick: () => onDownload(picked),
-              },
-            ]}
-            overflowActions={[
-              {
-                id: "copy",
-                label: "复制选中链接",
-                icon: <Copy size={14} />,
-                disabled: !picked.length || busy || !!selectingKey,
-                onClick: () => onCopy(picked),
-              },
-            ]}
-          />
+            disabled={!!selectingKey}
+            onClick={() => {
+              if (selectionMode) onSelectionChange({});
+              setSelectionMode((value) => !value);
+            }}
+          >
+            {selectionMode ? "完成选择" : "选择文件"}
+          </Button>
         </div>
       </div>
+      {selectionMode && (
+        <div className="resource-selection-bar">
+          <div className="resource-selection-summary">
+            <Checkbox
+              label="全选"
+              aria-label="全选课程文件，读取全部目录"
+              checked={
+                !!files.length && files.every((node) => !!selected[node.id])
+              }
+              indeterminate={
+                picked.length > 0 && !files.every((node) => !!selected[node.id])
+              }
+              disabled={!roots.length || !!selectingKey || busy}
+              onCheckedChange={(checked) => void toggleSelection(null, checked)}
+            />
+            <span role="status">
+              {selectingKey
+                ? selectionProgress || "正在读取目录…"
+                : picked.length
+                  ? `已选 ${picked.length} 个文件`
+                  : "勾选文件或目录"}
+            </span>
+          </div>
+          {picked.length > 0 && (
+            <div className="resource-selection-buttons">
+              <Button
+                size="sm"
+                disabled={busy || !!selectingKey}
+                onClick={() => onDownload(picked)}
+              >
+                <Download size={14} />
+                下载 {picked.length} 个
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy || !!selectingKey}
+                onClick={() => void onCopy(picked)}
+              >
+                <Copy size={14} />
+                复制链接
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
       <div className="resource-explorer-body">
         <aside ref={scrollHost} className="resource-explorer-tree">
           {scrollable && (
@@ -525,7 +540,9 @@ export default function ResourceExplorer({
             />
           )}
           <div className="resource-explorer-caption">
-            勾选文件直接选择；勾选目录先读取全部子目录
+            {selectionMode
+              ? "选择目录会读取其中的全部文件"
+              : "点击课程展开资料目录"}
           </div>
           {tree.length ? (
             <FileTree
@@ -537,7 +554,7 @@ export default function ResourceExplorer({
               onExpandedChange={changeExpanded}
               renderAccessory={(key) => {
                 const entry = byKey.get(key);
-                if (!entry) return null;
+                if (!entry || (!phone && !selectionMode)) return null;
                 const descendants = descendantFiles(entry.node);
                 const count = descendants.filter(
                   (file) => !!selected[file.id],
@@ -558,21 +575,23 @@ export default function ResourceExplorer({
                         •••
                       </button>
                     )}
-                    <Checkbox
-                      aria-label={
-                        entry.node.kind === "file"
-                          ? `选择文件 ${entry.node.name}`
-                          : `选择 ${entry.node.name}，刷新并读取全部子目录`
-                      }
-                      checked={
-                        !!descendants.length && count === descendants.length
-                      }
-                      indeterminate={count > 0 && count < descendants.length}
-                      disabled={!!selectingKey || busy}
-                      onCheckedChange={(checked) =>
-                        void toggleSelection(entry, checked)
-                      }
-                    />
+                    {selectionMode && (
+                      <Checkbox
+                        aria-label={
+                          entry.node.kind === "file"
+                            ? `选择文件 ${entry.node.name}`
+                            : `选择 ${entry.node.name}，刷新并读取全部子目录`
+                        }
+                        checked={
+                          !!descendants.length && count === descendants.length
+                        }
+                        indeterminate={count > 0 && count < descendants.length}
+                        disabled={!!selectingKey || busy}
+                        onCheckedChange={(checked) =>
+                          void toggleSelection(entry, checked)
+                        }
+                      />
+                    )}
                   </span>
                 );
               }}

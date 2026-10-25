@@ -1,4 +1,10 @@
-import { ChevronLeft, RefreshCw, Search, UserRound } from "lucide-react";
+import {
+  ChevronLeft,
+  Download,
+  RefreshCw,
+  Search,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/motion/button";
 import type { Account, Page } from "./types";
 import { navItems } from "./types";
@@ -28,6 +34,8 @@ export default function MobileTopBar({
   onSearch,
   onAccount,
   onRefresh,
+  downloadCount = 0,
+  onDownloads,
 }: {
   page: Page;
   account?: Account;
@@ -38,6 +46,8 @@ export default function MobileTopBar({
   onSearch: () => void;
   onAccount: () => void;
   onRefresh: () => void;
+  downloadCount?: number;
+  onDownloads: () => void;
 }) {
   const home = page === "overview";
   const subtitle = home
@@ -66,6 +76,17 @@ export default function MobileTopBar({
         {subtitle && <p>{subtitle}</p>}
       </div>
       <div className="mobile-topbar-actions">
+        {downloadCount > 0 && (
+          <Button
+            variant="ghost"
+            className="mobile-download-status"
+            aria-label={`查看下载，${downloadCount} 个任务进行中`}
+            onClick={onDownloads}
+          >
+            <Download size={21} />
+            <small>{downloadCount}</small>
+          </Button>
+        )}
         {home ? (
           <Button
             variant="ghost"

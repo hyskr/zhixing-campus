@@ -775,9 +775,9 @@ export default function Mail({
                         size="sm"
                         variant="ghost"
                         onClick={() =>
-                          void downloadFiles(account, [file])
-                            .then(() => feedback("已加入下载管理"))
-                            .catch((error) => setError(String(error)))
+                          void downloadFiles(account, [file]).catch((error) =>
+                            setError(String(error)),
+                          )
                         }
                       >
                         <Download size={13} />

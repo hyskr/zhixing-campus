@@ -70,8 +70,7 @@ export default function Assignments({
   const courses = [...new Set(data.homework.map((h) => h.course))];
   const rows = data.homework.filter(
     (h) =>
-      (!courseName ||
-        sameCourseName(h.course, courseName)) &&
+      (!courseName || sameCourseName(h.course, courseName)) &&
       (type === "全部任务" || h.type === type) &&
       (!chosenCourses.length || chosenCourses.includes(h.course)) &&
       `${h.course}${h.title}`.includes(query),
@@ -123,11 +122,14 @@ export default function Assignments({
               onValueChange={setChosenCourses}
               className="assignment-course-multiselect"
             >
-              <MultiSelectTrigger>
-                <MultiSelectValue placeholder="全部课程" />
+              <MultiSelectTrigger className="assignment-course-trigger">
+                <MultiSelectValue
+                  placeholder={null}
+                  chipClassName="assignment-course-chip"
+                />
                 <MultiSelectInput
                   aria-label="按课程筛选作业"
-                  placeholder="搜索课程"
+                  placeholder="全部课程 · 搜索"
                 />
               </MultiSelectTrigger>
               <MultiSelectContent>
@@ -142,7 +144,11 @@ export default function Assignments({
               </MultiSelectContent>
             </MultiSelect>
           )}
-          <Select value={String(filter)} onValueChange={(e) => setFilter(e)}>
+          <Select
+            className="assignment-status-select"
+            value={String(filter)}
+            onValueChange={(e) => setFilter(e)}
+          >
             <SelectTrigger>
               <span className="sr-only">{"按状态筛选作业"}：</span>
               <SelectValue />
@@ -194,7 +200,7 @@ export default function Assignments({
           })}
         </div>
       )}
-      
+
       {groups
         .filter((group) => filter === "全部状态" || filter === group.label)
         .map((group) => {

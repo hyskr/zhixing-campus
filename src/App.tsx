@@ -10,7 +10,7 @@ import ReminderBridge from "./ReminderBridge";
 import { makeDemoMail } from "./demo";
 import Classrooms from "./Classrooms";
 import UpdatesPopover from "./UpdatesPopover";
-import { FeedbackAlerts, useFeedback } from "./ui";
+import { FeedbackAlerts, useFeedback, showFeedback } from "./ui";
 import { TextReveal } from "@/components/motion/text-reveal";
 import {
   MorphingSearch,
@@ -34,6 +34,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/motion/button";
 import {
   Bell,
+  Download,
   BookOpen,
   Check,
   ChevronDown,
@@ -92,6 +93,17 @@ export default function App() {
   const { tasks: downloadTasks } = useDownloads();
   const now = useNow();
   const [page, setPage] = useState<Page>("overview");
+  const [downloadPanel, setDownloadPanel] = useState<{
+    accountId?: string;
+  } | null>(null);
+  useEffect(() => {
+    const open = (event: Event) =>
+      setDownloadPanel(
+        (event as CustomEvent<{ accountId?: string }>).detail ?? {},
+      );
+    window.addEventListener("campus:open-downloads", open);
+    return () => window.removeEventListener("campus:open-downloads", open);
+  }, []);
   const previousPages = useRef<Page[]>([]);
   const scrollPositions = useRef<Partial<Record<Page, number>>>({});
   useLayoutEffect(() => {
@@ -257,6 +269,39 @@ export default function App() {
       setMobileRefreshing(false);
     }
   }
+  useEffect(() => {
+    if (!isTauri()) return;
+    let active = true;
+    const off = listen<{
+      title: string;
+      body: string;
+      page: "mail" | "grades" | "schedule";
+      accountId: string;
+    }>("campus-inapp-notice", ({ payload }) => {
+      if (!active) return;
+      showFeedback(
+        payload.title,
+        "info",
+        {
+          label: "查看详情",
+          onClick: () => {
+            setStore((store) =>
+              store.accounts.some((item) => item.id === payload.accountId)
+                ? { ...store, activeId: payload.accountId }
+                : store,
+            );
+            navigate(payload.page);
+          },
+        },
+        undefined,
+        { description: payload.body, duration: 12000 },
+      );
+    });
+    return () => {
+      active = false;
+      void off.then((stop) => stop());
+    };
+  }, []);
   useEffect(() => {
     if (!isTauri()) return;
     let active = true;
@@ -583,6 +628,13 @@ export default function App() {
       <div className="main-shell">
         {compactLayout ? (
           <MobileTopBar
+            downloadCount={
+              downloadTasks.filter(
+                (task) =>
+                  task.state === "queued" || task.state === "downloading",
+              ).length
+            }
+            onDownloads={() => setDownloadPanel({})}
             page={page}
             account={account}
             week={data.currentWeek}
@@ -647,6 +699,17 @@ export default function App() {
                   清除筛选
                 </Button>
               )}
+              <button
+                className="topbar-icon desktop-download-status"
+                aria-label="查看下载管理"
+                onClick={() => setDownloadPanel({})}
+              >
+                <Download size={19} />
+                {downloadTasks.some(
+                  (task) =>
+                    task.state === "queued" || task.state === "downloading",
+                ) && <span className="notification-dot" />}
+              </button>
               <button
                 className="topbar-icon"
                 aria-label="打开校园邮箱"
@@ -1042,6 +1105,15 @@ export default function App() {
           items={searchItems}
           onClose={() => setSearchOpen(false)}
         />
+      )}
+      {downloadPanel && (
+        <Modal title="下载管理" onClose={() => setDownloadPanel(null)} wide>
+          <Downloads
+            account={store.accounts.find(
+              (item) => item.id === (downloadPanel.accountId ?? account?.id),
+            )}
+          />
+        </Modal>
       )}
       <FeedbackAlerts />
       {compactLayout && (

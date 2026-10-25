@@ -226,7 +226,11 @@ export function Select({
 
   return (
     <SelectContext.Provider value={ctx}>
-      <div ref={rootRef} className={cn("relative", className)}>
+      <div
+        ref={rootRef}
+        data-slot="select"
+        className={cn("relative", className)}
+      >
         {children}
       </div>
     </SelectContext.Provider>
@@ -256,6 +260,7 @@ export function SelectTrigger({ className, children }: SelectTriggerProps) {
     <motion.button
       type="button"
       id={ctx.triggerId}
+      data-slot="select-trigger"
       disabled={ctx.disabled}
       aria-haspopup="listbox"
       aria-expanded={ctx.open}
@@ -296,6 +301,7 @@ export function SelectValue({ placeholder, className }: SelectValueProps) {
   const label = ctx.labelFor(ctx.value);
   return (
     <span
+      data-slot="select-value"
       className={cn(
         label ? "text-foreground" : "text-muted-foreground",
         className,

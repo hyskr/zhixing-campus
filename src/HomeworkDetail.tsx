@@ -133,10 +133,7 @@ export default function HomeworkDetail({
               size="sm"
               variant="secondary"
               onClick={() =>
-                act(
-                  () => downloadFiles(account, attachmentLinks([f])),
-                  "已加入下载",
-                )
+                act(() => downloadFiles(account, attachmentLinks([f])), "")
               }
             >
               <Download size={14} />

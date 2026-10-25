@@ -3,6 +3,7 @@ package cn.zhixing.bjtu
 import android.graphics.Color
 import android.os.Bundle
 import android.webkit.JavascriptInterface
+import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.SystemBarStyle
@@ -48,6 +49,8 @@ class MainActivity : TauriActivity() {
   }
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
+    // The local app renders school HTTP media; network_security_config limits cleartext hosts.
+    webView.settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
     campusView = webView
     webView.addJavascriptInterface(CampusWindow(), "CampusWindow")
     webView.post {

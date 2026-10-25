@@ -96,6 +96,8 @@ export default function MoreSettings({ account }: { account?: Account }) {
             上网账号
             <Input
               aria-label="校园网上网账号"
+              inputMode="numeric"
+              autoComplete="username"
               value={String(networkAccount)}
               onChange={(e) => setNetworkAccount(e)}
             />
@@ -105,6 +107,7 @@ export default function MoreSettings({ account }: { account?: Account }) {
             <Input
               aria-label="校园网上网密码"
               type="password"
+              autoComplete="current-password"
               value={String(password)}
               onChange={(e) => setPassword(e)}
               placeholder="保存后可留空"
@@ -117,6 +120,7 @@ export default function MoreSettings({ account }: { account?: Account }) {
               min="1"
               max="3600"
               aria-label="校园网认证间隔"
+              inputMode="numeric"
               value={String(interval)}
               onChange={(e) => setInterval(e)}
             />

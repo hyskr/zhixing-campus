@@ -123,3 +123,7 @@ mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":f
 | x86_64-unknown-linux-gnu.deb | 25.44 | 20.76 | 18.4% |
 
 应用的版本信息与发布说明通过 Rust 读取同一 HTTPS 更新清单，客户端不依赖 GitHub REST API，也不需要 GitHub 令牌。
+
+## 发布流水线
+
+桌面 `v*` 与安卓 `android-v*` tag 运行依赖安装、编译、签名与产物发布。桌面 PR 保留前端与 Rust 单元测试；tag 打包不额外执行独立测试。构建自身的编译、tag 版本一致性和发布签名要求继续执行。

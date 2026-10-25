@@ -438,6 +438,7 @@ pub fn start_background(app: tauri::AppHandle) {
                                 let _ = fs::write(path, bytes);
                             }
                             if !fresh.is_empty() {
+                                let _ = app.emit("campus-inapp-notice", json!({"title":format!("校园邮箱 · {} 封新邮件",fresh.len()),"body":fresh.iter().take(3).cloned().collect::<Vec<_>>().join("\n"),"page":"mail","accountId":prefs.mail_account}));
                                 let _ = app
                                     .notification()
                                     .builder()
@@ -709,6 +710,7 @@ pub async fn refresh_mailbox(
     .map_err(|e| e.to_string())?;
     let prefs = state.preferences.lock().unwrap().clone();
     if prefs.mail_notifications && prefs.mail_account == username && !fresh.is_empty() {
+        let _ = app.emit("campus-inapp-notice", json!({"title":format!("校园邮箱 · {} 封新邮件",fresh.len()),"body":fresh.iter().take(3).cloned().collect::<Vec<_>>().join("\n"),"page":"mail","accountId":username}));
         let _ = app
             .notification()
             .builder()

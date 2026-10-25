@@ -96,17 +96,34 @@ export default function MobileWeekSchedule({
                       onClick={() => setCell({ day: d + 1, period: index + 1 })}
                       aria-label={`周${name}第 ${index + 1} 节，${items.map((c) => `${c.name}，${c.place || "地点待定"}，${c.teacher || "教师待定"}`).join("；")}`}
                     >
-                      {items.slice(0, 2).map((c) => (
+                      {items.length > 1 ? (
+                        <>
+                          <span className="mobile-week-course-line">
+                            <strong>
+                              {items[0].name.replace(/\s*\[研\]/g, "")}
+                            </strong>
+                          </span>
+                          <span className="mobile-week-overlap-summary">
+                            <span
+                              className="mobile-week-overlap-colors"
+                              aria-hidden="true"
+                            >
+                              {items.slice(0, 3).map((course) => (
+                                <i key={course.id} className={course.color} />
+                              ))}
+                            </span>
+                            <em>共 {items.length} 门</em>
+                          </span>
+                        </>
+                      ) : (
                         <span
-                          className={`mobile-week-course-line ${c.color}`}
-                          key={c.id}
+                          className={`mobile-week-course-line ${items[0].color}`}
                         >
-                          <strong>{c.name.replace(/\s*\[研\]/g, "")}</strong>
-                          <small>{c.place || "地点待定"}</small>
+                          <strong>
+                            {items[0].name.replace(/\s*\[研\]/g, "")}
+                          </strong>
+                          <small>{items[0].place || "地点待定"}</small>
                         </span>
-                      ))}
-                      {items.length > 2 && (
-                        <em>共 {items.length} 门 · 点开查看</em>
                       )}
                     </button>
                   )}
@@ -119,7 +136,7 @@ export default function MobileWeekSchedule({
       <div className="mobile-week-caption">
         <span>
           <i />
-          左右滑动切周 · 点按课程详情
+          左右滑动切周 · 多课点开查看
         </span>
         <span>
           {new Set(courses.map((c) => `${c.day}:${c.period}`)).size} 个时段

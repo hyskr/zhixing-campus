@@ -207,6 +207,7 @@ function Preview({
   account: Account;
   onClose: () => void;
 }) {
+  const [downloading, setDownloading] = useState(false);
   const viewer = useRef<HTMLDivElement>(null),
     [bytes, setBytes] = useState<Uint8Array | null>(null),
     [format, setFormat] = useState(previewExtension(item.name, item.url)),
@@ -292,6 +293,17 @@ function Preview({
     };
   }, [item.id, account.id]);
   const pdf = bytes && isPdf(bytes);
+  async function download() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadFiles(account, [item]);
+    } catch (error) {
+      setError(String(error));
+    } finally {
+      setDownloading(false);
+    }
+  }
   async function fullscreen() {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -311,16 +323,11 @@ function Preview({
           </Button>
           <Button
             size="sm"
-            onClick={async () => {
-              try {
-                await downloadFiles(account, [item]);
-              } catch (e) {
-                setError(String(e));
-              }
-            }}
+            disabled={downloading}
+            onClick={() => void download()}
           >
             <Download size={14} />
-            下载
+            {downloading ? "正在加入…" : "下载"}
           </Button>
         </div>
         {loading ? (
@@ -368,9 +375,7 @@ function Preview({
               <DockItem
                 aria-label="下载文件"
                 onClick={() => {
-                  void downloadFiles(account, [item]).catch((reason) =>
-                    setError(String(reason)),
-                  );
+                  void download();
                 }}
               >
                 <Download size={19} />

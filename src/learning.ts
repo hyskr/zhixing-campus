@@ -1,3 +1,4 @@
+import { queueDownloads } from "./downloadFeedback";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
 import type {
@@ -51,7 +52,9 @@ export async function loadHomeworkDetail(
       comment: h.status === "已提交" ? "分析完整，结论清晰。" : "",
       openedAt: "",
       deadline: h.deadline,
-      submitCount:24,allCount:36,reviewStatus:h.status==="已提交"?"已批改":"未批改",
+      submitCount: 24,
+      allCount: 36,
+      reviewStatus: h.status === "已提交" ? "已批改" : "未批改",
       repeatAllowed: true,
       reviewError: "",
     };
@@ -113,16 +116,13 @@ export async function copyLinks(account: Account, items: LinkFile[]) {
 }
 export async function downloadFiles(account: Account, items: LinkFile[]) {
   if (account.demo || !isTauri())
-    throw new Error("请在桌面应用中连接校园账号后下载文件。");
+    throw new Error("请在应用中连接校园账号后下载文件。");
   const values: DownloadItem[] = items.map((i) => ({
     ...i,
     id: crypto.randomUUID(),
     kind: "resource",
   }));
-  return invoke<boolean>("download_items", {
-    username: account.id,
-    items: values,
-  });
+  return queueDownloads(account.id, values);
 }
 export async function loadSpace(
   account: Account,

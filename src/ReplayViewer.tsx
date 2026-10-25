@@ -1,6 +1,7 @@
+import { RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/motion/button";
-import { Checkbox } from "@/components/motion/checkbox";
+import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import {
   Select,
   SelectContent,
@@ -16,16 +17,28 @@ import { useErrorState } from "./ui";
 export default function ReplayViewer({
   links,
   view,
+  onViewChange,
+  onRefresh,
+  refreshing = false,
 }: {
   links: ReplayLink[];
   view: string;
+  onViewChange: (view: string) => void;
+  onRefresh: () => Promise<void>;
+  refreshing?: boolean;
 }) {
   const [multiple, setMultiple] = useState(false);
   const [rate, setRate] = useState("1");
   const videos = useRef(new Map<string, HTMLVideoElement>());
   const position = useRef({ time: 0, paused: true });
   const [, setError] = useErrorState();
-  const visible = multiple ? links : links.filter((link) => link.view === view);
+  const visible = multiple
+    ? [...links].sort(
+        (a, b) => Number(b.view === view) - Number(a.view === view),
+      )
+    : links.filter((link) => link.view === view);
+  const primaryLabel =
+    links.find((link) => link.view === view)?.label ?? "所选画面";
   const master = () => videos.current.get(view);
   function synchronize(force = false) {
     const leader = master();
@@ -56,39 +69,66 @@ export default function ReplayViewer({
   }, [view]);
   return (
     <section className="replay-viewer">
-      <div className="replay-controls">
-        <Checkbox
-          label="多视角同步"
-          checked={multiple}
-          disabled={links.length < 2}
-          onCheckedChange={setMultiple}
-        />
-        <label>
-          播放速度
-          <Select value={rate} onValueChange={setRate}>
-            <SelectTrigger aria-label="播放速度">
+      <div className="replay-playback-setup">
+        <Tabs
+          value={multiple ? "multiple" : "single"}
+          onValueChange={(value) => setMultiple(value === "multiple")}
+          variant="segment"
+          className="replay-mode-tabs"
+        >
+          <TabsList aria-label="播放方式">
+            <TabsTrigger value="single">单画面</TabsTrigger>
+            <TabsTrigger value="multiple" disabled={links.length < 2}>
+              多画面同步
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <label className="replay-master-picker">
+          <span>{multiple ? "主画面与声音" : "选择画面"}</span>
+          <Select value={view} onValueChange={onViewChange}>
+            <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[0.75, 1, 1.25, 1.5, 2].map((value) => (
-                <SelectItem key={value} value={String(value)}>
-                  {value}×
+              {links.map((link) => (
+                <SelectItem key={link.view} value={link.view}>
+                  {link.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </label>
-        <Button size="sm" variant="ghost" onClick={() => synchronize(true)}>
-          同步画面
-        </Button>
-        <span>声音与播放控制跟随所选视角</span>
+        {multiple && (
+          <p className="replay-mode-help">
+            在下方“{primaryLabel}
+            ”点击播放或拖动进度，其他画面会同步跟随并保持静音。
+          </p>
+        )}
       </div>
       <div className={`replay-streams ${multiple ? "multiple" : ""}`}>
         {visible.map((link) => (
-          <div key={link.view}>
+          <div
+            key={link.view}
+            className={
+              link.view === view
+                ? "replay-primary-stream"
+                : "replay-secondary-stream"
+            }
+          >
             <div className="replay-stream-label">
               {link.label}
-              {link.view === view ? " · 主视角 / 声音" : " · 静音同步"}
+              {multiple &&
+                (link.view === view ? (
+                  <span className="replay-primary-label">主画面 · 有声音</span>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => onViewChange(link.view)}
+                  >
+                    设为主画面
+                  </Button>
+                ))}
             </div>
             <Stream
               link={link}
@@ -117,10 +157,38 @@ export default function ReplayViewer({
                     };
                 }
               }}
-              onError={setError}
+              onRefresh={onRefresh}
+              refreshing={refreshing}
             />
           </div>
         ))}
+      </div>
+      <div className="replay-controls">
+        <label>
+          <span>播放速度</span>
+          <Select value={rate} onValueChange={setRate}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[0.75, 1, 1.25, 1.5, 2].map((value) => (
+                <SelectItem key={value} value={String(value)}>
+                  {value}×
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </label>
+        {multiple && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => synchronize(true)}
+          >
+            <RefreshCw size={14} />
+            重新对齐画面
+          </Button>
+        )}
       </div>
     </section>
   );
@@ -132,7 +200,8 @@ function Stream({
   onReady,
   onChange,
   onTime,
-  onError,
+  onRefresh,
+  refreshing,
 }: {
   link: ReplayLink;
   primary: boolean;
@@ -140,32 +209,42 @@ function Stream({
   onReady: (video: HTMLVideoElement) => void;
   onChange: () => void;
   onTime: () => void;
-  onError: (message: string) => void;
+  onRefresh: () => Promise<void>;
+  refreshing: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
+  const [failure, setFailure] = useState("");
   useEffect(() => {
     const video = ref.current!;
+    setFailure("");
     let active = true;
     let hls: import("hls.js").default | undefined;
     if (
       /\.m3u8(?:$|[?#])/i.test(link.url) &&
       !video.canPlayType("application/vnd.apple.mpegurl")
     ) {
-      void import("hls.js").then(({ default: Hls }) => {
-        if (!active) return;
-        if (!Hls.isSupported()) {
-          onError("当前窗口不支持此 HLS 回放，请使用外部播放器。");
-          return;
-        }
-        hls = new Hls();
-        hls.loadSource(link.url);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.ERROR, (_, data) => {
-          if (data.fatal)
-            onError("HLS 回放加载失败，请重新获取链接或使用外部播放器。");
+      void import("hls.js")
+        .then(({ default: Hls }) => {
+          if (!active) return;
+          if (!Hls.isSupported()) {
+            setFailure("当前系统无法解码此 HLS 回放，可在下方外部打开。");
+            return;
+          }
+          hls = new Hls();
+          hls.loadSource(link.url);
+          hls.attachMedia(video);
+          hls.on(Hls.Events.ERROR, (_, data) => {
+            if (data.fatal)
+              setFailure("视频流读取失败，请刷新播放地址后重试。");
+          });
+        })
+        .catch(() => {
+          if (active) setFailure("播放器未能加载，请重新打开回放。");
         });
-      });
-    } else video.src = link.url;
+    } else {
+      video.src = link.url;
+      video.load();
+    }
     return () => {
       active = false;
       hls?.destroy();
@@ -174,25 +253,50 @@ function Stream({
     };
   }, [link.url]);
   return (
-    <video
-      ref={(video) => {
-        ref.current = video;
-        register(video);
-      }}
-      className="replay-video"
-      controls={primary}
-      muted={!primary}
-      playsInline
-      preload="metadata"
-      onLoadedMetadata={(event) => onReady(event.currentTarget)}
-      onPlay={primary ? onChange : undefined}
-      onPause={primary ? onChange : undefined}
-      onSeeked={primary ? onChange : undefined}
-      onRateChange={primary ? onChange : undefined}
-      onTimeUpdate={onTime}
-      onError={() =>
-        onError("回放加载失败，请重新获取链接，或使用外部播放器打开。")
-      }
-    />
+    <div className="replay-stream-surface">
+      <video
+        ref={(video) => {
+          ref.current = video;
+          register(video);
+        }}
+        className="replay-video"
+        controls={primary}
+        muted={!primary}
+        playsInline
+        preload="metadata"
+        onLoadedMetadata={(event) => {
+          setFailure("");
+          onReady(event.currentTarget);
+        }}
+        onPlay={primary ? onChange : undefined}
+        onPause={primary ? onChange : undefined}
+        onSeeked={primary ? onChange : undefined}
+        onRateChange={primary ? onChange : undefined}
+        onTimeUpdate={onTime}
+        onError={() => {
+          const code = ref.current?.error?.code;
+          setFailure(
+            code === 3
+              ? "视频格式无法解码，可尝试切换视角或在外部打开。"
+              : code === 2
+                ? "视频连接中断，请检查网络并刷新播放地址。"
+                : "无法读取视频，请刷新播放地址；仍失败时可在外部打开。",
+          );
+        }}
+      />
+      {failure && (
+        <div className="replay-playback-error" role="status">
+          <p>{failure}</p>
+          <Button
+            variant="secondary"
+            disabled={refreshing}
+            onClick={() => void onRefresh()}
+          >
+            <RefreshCw size={16} className={refreshing ? "spin" : ""} />
+            {refreshing ? "正在获取" : "重新获取视频"}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

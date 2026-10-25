@@ -95,11 +95,12 @@ pub fn record_sync(app: &tauri::AppHandle, username: &str, result: &Value) -> Re
         fresh
     };
     if prefs.grade_notifications && prefs.reminder_account == username && !fresh.is_empty() {
-        deliver(
+        let _ = app.emit("campus-inapp-notice", json!({"title":format!("学业成绩 · {} 门更新",fresh.len()),"body":fresh.iter().take(4).cloned().collect::<Vec<_>>().join("\n"),"page":"grades","accountId":username}));
+        if let Err(error) = deliver(
             app,
             &format!("学业成绩 · {} 门更新", fresh.len()),
             &fresh.into_iter().take(4).collect::<Vec<_>>().join("\n"),
-        )?;
+        ) { eprintln!("成绩系统通知未投递：{error}"); }
     }
     Ok(())
 }
@@ -227,7 +228,8 @@ fn check_courses(app: &tauri::AppHandle, prefs: &settings::Preferences) -> Resul
         } else {
             format!("{} 分钟后上课", prefs.course_reminder_minutes)
         };
-        deliver(app, &title, &body)?;
+        let _ = app.emit("campus-inapp-notice", json!({"title":title,"body":body,"page":"schedule","accountId":prefs.reminder_account}));
+        if let Err(error) = deliver(app, &title, &body) { eprintln!("上课系统通知未投递：{error}"); }
         account.sent_courses.push(key);
     }
     persist(&state, &accounts)

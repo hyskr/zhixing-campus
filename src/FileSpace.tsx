@@ -158,9 +158,7 @@ export default function FileSpace({ account }: { account: Account }) {
             <Button
               size="sm"
               disabled={!values.length || busy}
-              onClick={() =>
-                action(() => downloadFiles(account, values), "已加入下载")
-              }
+              onClick={() => action(() => downloadFiles(account, values), "")}
             >
               <Download size={14} />
               下载选中
@@ -234,10 +232,7 @@ export default function FileSpace({ account }: { account: Account }) {
                         size="sm"
                         variant="secondary"
                         onClick={() =>
-                          action(
-                            () => downloadFiles(account, [f]),
-                            "已加入下载",
-                          )
+                          action(() => downloadFiles(account, [f]), "")
                         }
                       >
                         <Download size={14} />
@@ -281,10 +276,7 @@ export default function FileSpace({ account }: { account: Account }) {
                     label: "下载文件",
                     icon: <Download size={19} />,
                     run: () =>
-                      action(
-                        () => downloadFiles(account, [moreFile]),
-                        "已加入下载",
-                      ),
+                      action(() => downloadFiles(account, [moreFile]), ""),
                   },
                 ]
               : []
