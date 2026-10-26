@@ -1,10 +1,10 @@
 {
-  "version": "0.18.1",
-  "createdAt": "2026-10-26T10:23:19.224335137Z",
+  "version": "0.18.2",
+  "createdAt": "2026-10-26T16:59:39.438431907Z",
   "minShellVersion": "0.18.0",
   "archive": {
-    "url": "https://github.com/hyskr/zhixing-campus/releases/download/frontend-v0.18.1/bundle-0.18.1.tar.gz",
-    "sha256": "8b9c0e49ba9247d98df36d06f834cb5f72852324bece2cf108d7a6c98f186b2c",
-    "size": 17260821
+    "url": "https://github.com/hyskr/zhixing-campus/releases/download/frontend-v0.18.2/bundle-0.18.2.tar.gz",
+    "sha256": "ab17dc39516416f2e39cd3fa43ef695e931e47e9a142fb44475b6789094b9908",
+    "size": 17261146
   }
 }
