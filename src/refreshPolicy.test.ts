@@ -25,3 +25,12 @@ it("无效时间触发刷新", () => {
   data.lastSync = "invalid";
   expect(needsRefresh(data, "all", now)).toBe(true);
 });
+
+it("部分同步不将失败模块标记为新鲜缓存", () => {
+  const data = emptyData();
+  data.lastSync = new Date(now).toISOString();
+  data.syncedAt = { mail: data.lastSync };
+  expect(needsRefresh(data, "all", now)).toBe(true);
+  expect(needsRefresh(data, "grades", now)).toBe(true);
+  expect(needsRefresh(data, "mail", now)).toBe(false);
+});

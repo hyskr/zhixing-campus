@@ -22,7 +22,10 @@ export function needsRefresh(
   scope: string,
   now = Date.now(),
 ) {
-  const stamp = data.syncedAt?.[scope] ?? data.syncedAt?.all ?? data.lastSync;
+  const stamp = data.syncedAt
+    ? (data.syncedAt[scope] ??
+      (scope === "all" ? undefined : data.syncedAt.all))
+    : data.lastSync;
   const time = stamp ? Date.parse(stamp) : 0;
   return (
     !Number.isFinite(time) ||

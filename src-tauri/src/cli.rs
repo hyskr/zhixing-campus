@@ -178,7 +178,7 @@ fn data_dir(args: &Args) -> Result<PathBuf> {
     if !args.value("data-dir").is_empty() {
         return Ok(PathBuf::from(args.value("data-dir")));
     }
-    cli_install::default_data_directory().map_err(Failure::from)
+    cli_install::default_data_directory().map_err(local)
 }
 fn state(directory: &Path) -> CampusState {
     CampusState {
@@ -822,7 +822,7 @@ async fn execute(args: &Args) -> Result<Value> {
         ));
     }
     if args.path == "cli install" {
-        return cli_install::install().map_err(Failure::from);
+        return cli_install::install().map_err(local);
     }
     let dir = data_dir(args)?;
     let state = state(&dir);
