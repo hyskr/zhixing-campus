@@ -12,7 +12,9 @@ struct ReleaseManifest {
 // https://v2.tauri.app/plugin/updater/#static-json-file
 #[tauri::command]
 pub async fn update_release(app: tauri::AppHandle) -> Result<Value, String> {
-    if cfg!(target_os="android") { return crate::android_updates::release_info(&app).await; }
+    if cfg!(target_os = "android") {
+        return crate::android_updates::release_info(&app).await;
+    }
     let endpoint = app
         .config()
         .plugins
@@ -47,4 +49,17 @@ pub async fn update_release(app: tauri::AppHandle) -> Result<Value, String> {
         "date": release.pub_date.unwrap_or_default(),
         "url": "https://github.com/hyskr/zhixing-campus/releases/latest",
     }))
+}
+
+#[tauri::command]
+pub async fn restart_application(app: tauri::AppHandle) -> Result<(), String> {
+    #[cfg(target_os = "android")]
+    {
+        crate::mobile::restart(&app)
+    }
+    #[cfg(not(target_os = "android"))]
+    {
+        app.request_restart();
+        Ok(())
+    }
 }

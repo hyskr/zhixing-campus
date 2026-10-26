@@ -23,6 +23,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".RestartActivity" android:process=":restart" android:exported="false" android:excludeFromRecents="true" android:noHistory="true" />
+
         <activity android:name=".SchoolBrowserActivity" android:exported="false" />
 
         <provider

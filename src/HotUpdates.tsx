@@ -1,4 +1,9 @@
 import {
+  autoRestartEnabled,
+  canRestartApplication,
+  restartApplication,
+} from "./restart";
+import {
   createContext,
   useContext,
   useEffect,
@@ -110,6 +115,13 @@ function useHotUpdates() {
       document.removeEventListener("visibilitychange", due);
     };
   }, []);
+  async function restart() {
+    try {
+      await restartApplication();
+    } catch (reason) {
+      feedback(String(reason), "error");
+    }
+  }
   async function stage() {
     if (working.current) return;
     working.current = true;
@@ -128,7 +140,14 @@ function useHotUpdates() {
       const value = await download();
       if (value.status === "staged" || value.status === "alreadyStaged") {
         setStaged(value.version);
-        feedback("界面更新已下载，下次重新打开应用时生效");
+        if (autoRestartEnabled() && (await canRestartApplication())) {
+          feedback("界面更新已下载，正在重启应用");
+          await restart();
+        } else
+          feedback("界面更新已下载，重启后生效", "info", {
+            label: "立即重启",
+            onClick: () => void restart(),
+          });
       } else {
         setOutcome(value);
         feedback("当前没有可应用的界面更新", "info");
@@ -142,7 +161,17 @@ function useHotUpdates() {
       setBusy(false);
     }
   }
-  return { bundle, outcome, busy, staged, progress, error, inspect, stage };
+  return {
+    bundle,
+    outcome,
+    busy,
+    staged,
+    progress,
+    error,
+    inspect,
+    stage,
+    restart,
+  };
 }
 const Context = createContext<ReturnType<typeof useHotUpdates> | null>(null);
 export function HotUpdateProvider({ children }: { children: ReactNode }) {
@@ -191,6 +220,11 @@ export default function HotUpdateSettings() {
         >
           检查界面更新
         </Button>
+        {state.staged && (
+          <Button disabled={state.busy} onClick={() => void state.restart()}>
+            立即重启并应用
+          </Button>
+        )}
         {outcome?.status === "available" && !state.staged && (
           <Button disabled={state.busy} onClick={() => void state.stage()}>
             {state.busy ? `正在下载 ${state.progress}%` : "下载界面更新"}

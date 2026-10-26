@@ -11,7 +11,8 @@ import {
 } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { relaunch } from "@tauri-apps/plugin-process";
+import { autoRestartEnabled, restartApplication } from "./restart";
+import UpdateRestartSettings from "./UpdateRestartSettings";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Update } from "@tauri-apps/plugin-updater";
 import { ArrowUpCircle, ExternalLink, RefreshCw } from "lucide-react";
@@ -244,6 +245,7 @@ function useUpdaterState() {
       feedback("更新已安装，重启后生效");
       await update.current.close();
       update.current = null;
+      if (autoRestartEnabled()) await restart();
     } catch (error) {
       setPhase("error");
       feedback(`更新失败：${String(error)}`, "error");
@@ -253,7 +255,7 @@ function useUpdaterState() {
   }
   async function restart() {
     try {
-      await relaunch();
+      await restartApplication();
     } catch (error) {
       feedback(`重启失败，请退出并重新打开应用：${String(error)}`, "error");
     }
@@ -326,6 +328,7 @@ export default function AppUpdateSettings() {
           : "版本信息、发布说明与应用内更新。"
       }
     >
+      <UpdateRestartSettings />
       <div className="app-update-summary">
         <ArrowUpCircle size={30} />
         <div>

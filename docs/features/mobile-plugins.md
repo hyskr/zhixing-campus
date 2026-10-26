@@ -45,3 +45,9 @@ Rust、Kotlin、权限、CLI 或原生依赖变化，通过完整安装包发布
 - [Window State 官方文档](https://v2.tauri.app/plugin/window-state/)
 - [Android Installer](https://github.com/iMalFect/tauri-plugin-android-installer)
 - [Hot Update](https://github.com/yanqianglu/tauri-plugin-hot-update)
+
+## 更新后重启
+
+设置 → 应用更新提供“更新后自动重启”，默认开启。界面更新下载和校验完成后主动冷启动，桌面完整更新安装完成后主动重启；关闭时保留“立即重启并应用”。开始更新前保存正在编辑的内容。
+
+Android 冷启动由 0.19.0 起的原生重启 Activity 提供，使用独立进程重建主进程；旧 APK 无法通过前端热更新新增该能力。APK 安装仍由系统确认，系统替换应用后下次启动核对升级版本。

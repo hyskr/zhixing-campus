@@ -108,3 +108,11 @@ pub fn export_file(
         .map_err(|e| e.to_string())?;
     Ok(result["uri"].as_str().unwrap_or_default().to_string())
 }
+
+pub fn restart(app: &tauri::AppHandle) -> Result<(), String> {
+    app.state::<Mobile>()
+        .0
+        .run_mobile_plugin::<Value>("restartApp", json!({}))
+        .map_err(|e| e.to_string())?;
+    Ok(())
+}

@@ -81,4 +81,16 @@ class CampusMobilePlugin(private val activity:Activity):Plugin(activity) {
         } catch(error:Exception){destination?.let{activity.contentResolver.delete(it,null,null)};invoke.reject("导出文件失败：${error.message}")}
     }
 
+    @Command fun restartApp(invoke:Invoke) {
+        activity.runOnUiThread {
+            val request=Intent(activity,RestartActivity::class.java)
+                .putExtra("previousPid",android.os.Process.myPid())
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            try {
+                activity.startActivity(request)
+                invoke.resolve(JSObject())
+            } catch(error:Exception){invoke.reject("无法重启应用：${error.message}")}
+        }
+    }
+
 }

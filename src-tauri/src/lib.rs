@@ -1097,6 +1097,7 @@ pub fn run() {
             cli_install::cli_info,
             cli_install::install_cli,
             updates::update_release,
+            updates::restart_application,
             android_updates::download_android_update,
             android_updates::cancel_android_update,
             reminders::test_notification,
