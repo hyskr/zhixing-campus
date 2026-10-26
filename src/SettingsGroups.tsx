@@ -74,10 +74,24 @@ const category: Record<string, string> = {
   diagnostics: "diagnostics",
 };
 const SettingsGroupContext = createContext("appearance");
-export function SettingsGroups({ children }: { children: ReactNode }) {
-  const [active, setActive] = useState("appearance");
+export function SettingsGroups({
+  children,
+  updatesRequest,
+}: {
+  children: ReactNode;
+  updatesRequest?: number;
+}) {
+  const [active, setActive] = useState(
+    updatesRequest ? "updates" : "appearance",
+  );
   const compact = useCompactLayout();
-  const [detail, setDetail] = useState(false);
+  const [detail, setDetail] = useState(!!updatesRequest);
+  useEffect(() => {
+    if (updatesRequest) {
+      setActive("updates");
+      setDetail(true);
+    }
+  }, [updatesRequest]);
   useEffect(() => {
     if (!compact || !detail) return;
     const back = (event: Event) => {

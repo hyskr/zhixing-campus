@@ -1,7 +1,12 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { Update } from "@tauri-apps/plugin-updater";
-import { installUpdate, latestRelease } from "./updater";
+import {
+  installUpdate,
+  latestRelease,
+  isNewerVersion,
+  shouldRemindUpdate,
+} from "./updater";
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn(),
   isTauri: vi.fn(() => false),
@@ -73,4 +78,28 @@ it("桌面版本信息走原生静态清单，绕开 GitHub API 和 WebView 请�
   expect((await latestRelease()).version).toBe("0.13.1");
   expect(invoke).toHaveBeenCalledWith("update_release");
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["0.17.1", "0.17.0", true],
+  ["0.17.0", "0.17.0", false],
+  ["0.16.9", "0.17.0", false],
+  ["0.10.0", "0.9.9", true],
+  ["1.0.0", "1.0.0-beta.2", true],
+  ["1.0.0-beta.10", "1.0.0-beta.2", true],
+  ["1.0.0-beta.2", "1.0.0", false],
+])("比较新版 %s 与已安装 %s", (next, current, expected) => {
+  expect(isNewerVersion(next, current)).toBe(expected);
+});
+it("同一版本一天内不重复提醒，新版本立即提醒", () => {
+  const now = 1_000_000_000,
+    previous = { version: "0.17.1", at: now };
+  expect(shouldRemindUpdate("0.17.1", null, now)).toBe(true);
+  expect(shouldRemindUpdate("0.17.1", previous, now + 6 * 60 * 60_000)).toBe(
+    false,
+  );
+  expect(shouldRemindUpdate("0.17.1", previous, now + 24 * 60 * 60_000)).toBe(
+    true,
+  );
+  expect(shouldRemindUpdate("0.17.2", previous, now + 60_000)).toBe(true);
 });

@@ -23,7 +23,13 @@ import AppearanceSettings from "./AppearanceSettings";
 import NotificationSettings from "./NotificationSettings";
 import { usePreferences } from "./preferences";
 import type { Account, Preferences } from "./types";
-export default function Settings({ account }: { account?: Account }) {
+export default function Settings({
+  account,
+  updatesRequest,
+}: {
+  account?: Account;
+  updatesRequest?: number;
+}) {
   const setStatus = useFeedback("info");
   const { preferences, ready, save } = usePreferences();
   const [busy, setBusy] = useState(false),
@@ -66,7 +72,7 @@ export default function Settings({ account }: { account?: Account }) {
         title="设置"
         description="按自己的习惯，让校园日常更顺手。"
       />
-      <SettingsGroups>
+      <SettingsGroups updatesRequest={updatesRequest}>
         <AppUpdateSettings />
         <SettingsGroup
           id="appearance"
@@ -231,7 +237,7 @@ export default function Settings({ account }: { account?: Account }) {
         </SettingsGroup>
         <NotificationSettings account={account} />
         <MoreSettings account={account} />
-        <CliSettings/>
+        <CliSettings />
       </SettingsGroups>
     </div>
   );

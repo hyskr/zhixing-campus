@@ -16,9 +16,11 @@ import { ArrowUpCircle, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/motion/button";
 import { Loader } from "@/components/motion/loader";
 import { SettingsGroup } from "./SettingsGroups";
-import { useFeedback } from "./ui";
+import { useFeedback, showFeedback, dismissFeedback } from "./ui";
 import {
   checkUpdate,
+  isNewerVersion,
+  shouldRemindUpdate,
   installUpdate,
   latestRelease,
   RELEASES_URL,
@@ -48,6 +50,11 @@ function useUpdaterState() {
   const [checkedAt, setCheckedAt] = useState("");
   const update = useRef<Update | null>(null);
   const working = useRef(false);
+  const installed = useRef(false);
+  const lastCheck = useRef(0);
+  const inspectRef = useRef<(automatic?: boolean) => Promise<void>>(
+    async () => {},
+  );
   const feedback = useFeedback();
   useEffect(() => {
     if (!isTauri()) return;
@@ -61,8 +68,9 @@ function useUpdaterState() {
       if (!working.current) void update.current?.close();
     };
   }, []);
-  async function inspect() {
-    if (working.current || phase === "installed" || supported === null) return;
+  async function inspect(automatic = false) {
+    if (working.current || installed.current || supported === null) return;
+    lastCheck.current = Date.now();
     working.current = true;
     setPhase("checking");
     try {
@@ -70,8 +78,44 @@ function useUpdaterState() {
       update.current = null;
       const metadata = await latestRelease();
       setRelease(metadata);
-      if (isTauri() && supported) update.current = await checkUpdate();
-      setPhase(update.current ? "available" : "latest");
+      if (
+        isTauri() &&
+        supported &&
+        (!automatic || isNewerVersion(metadata.version, version))
+      )
+        update.current = await checkUpdate();
+      const available =
+        !!update.current || isNewerVersion(metadata.version, version);
+      setPhase(available ? "available" : "latest");
+      if (automatic && available) {
+        let previous: { version: string; at: number } | null = null;
+        try {
+          previous = JSON.parse(
+            localStorage.getItem("zhixing.update-reminder.v1") ?? "null",
+          );
+        } catch {}
+        if (shouldRemindUpdate(metadata.version, previous)) {
+          showFeedback(
+            `发现新版本 ${metadata.version}`,
+            "info",
+            {
+              label: "查看更新",
+              onClick: () => {
+                dismissFeedback("app-update-available");
+                window.dispatchEvent(new Event("campus:open-updates"));
+              },
+            },
+            "app-update-available",
+            { description: "查看更新说明并选择下载安装。", duration: 0 },
+          );
+          try {
+            localStorage.setItem(
+              "zhixing.update-reminder.v1",
+              JSON.stringify({ version: metadata.version, at: Date.now() }),
+            );
+          } catch {}
+        }
+      }
       setCheckedAt(
         new Date().toLocaleTimeString("zh-CN", {
           hour: "2-digit",
@@ -80,11 +124,36 @@ function useUpdaterState() {
       );
     } catch (error) {
       setPhase("error");
-      feedback(String(error), "error");
+      if (!automatic) feedback(String(error), "error");
     } finally {
       working.current = false;
     }
   }
+  inspectRef.current = inspect;
+  useEffect(() => {
+    if (!isTauri() || isAndroid || supported === null) return;
+    const checkWhenDue = () => {
+      if (
+        document.visibilityState !== "visible" ||
+        !navigator.onLine ||
+        Date.now() - lastCheck.current < 6 * 60 * 60_000
+      )
+        return;
+      void inspectRef.current(true);
+    };
+    const startup = window.setTimeout(checkWhenDue, 10_000);
+    const timer = window.setInterval(checkWhenDue, 60 * 60_000);
+    window.addEventListener("focus", checkWhenDue);
+    window.addEventListener("online", checkWhenDue);
+    document.addEventListener("visibilitychange", checkWhenDue);
+    return () => {
+      window.clearTimeout(startup);
+      window.clearInterval(timer);
+      window.removeEventListener("focus", checkWhenDue);
+      window.removeEventListener("online", checkWhenDue);
+      document.removeEventListener("visibilitychange", checkWhenDue);
+    };
+  }, [supported]);
   async function install() {
     if (working.current || !update.current) return;
     working.current = true;
@@ -104,6 +173,7 @@ function useUpdaterState() {
         },
         () => setPhase("installing"),
       );
+      installed.current = true;
       setPhase("installed");
       feedback("更新已安装，重启后生效");
       await update.current.close();
@@ -127,6 +197,7 @@ function useUpdaterState() {
     release,
     phase,
     supported,
+    canInstall: !!update.current,
     progress,
     checkedAt,
     inspect,
@@ -146,7 +217,7 @@ export function AppUpdaterProvider({ children }: { children: ReactNode }) {
 }
 export default function AppUpdateSettings() {
   const state = useContext(UpdaterContext)!;
-  const { phase, release, supported, version, progress } = state;
+  const { phase, release, supported, canInstall, version, progress } = state;
   const feedback = useFeedback();
   const busy = ["checking", "downloading", "installing"].includes(phase);
   const percent = progress.total
@@ -168,7 +239,9 @@ export default function AppUpdateSettings() {
   const status = {
     idle: "检查 GitHub Release 上的最新正式版本。",
     checking: "正在检查更新…",
-    available: "新版本已就绪，可下载安装。",
+    available: canInstall
+      ? "新版本已就绪，可下载安装。"
+      : "发现新版本，请在发布页面下载安装包。",
     latest: supported ? "当前已是最新版本。" : "已获取最新发布信息。",
     downloading: `正在下载 ${percent === undefined ? `${(progress.loaded / 1048576).toFixed(1)} MB` : `${percent}%`}`,
     installing: "正在安装更新，请稍候…",
@@ -234,7 +307,7 @@ export default function AppUpdateSettings() {
           <RefreshCw size={15} />
           检查更新
         </Button>
-        {phase === "available" && (
+        {phase === "available" && canInstall && (
           <Button onClick={() => void state.install()}>
             下载并安装 {release?.version}
           </Button>
@@ -253,6 +326,7 @@ export default function AppUpdateSettings() {
           : isTauri()
             ? "当前安装格式请在发布页面下载安装包更新。Linux 应用内更新需使用 AppImage。"
             : "应用内安装仅在桌面版中可用。"}
+        自动检测在启动后及回到前台时执行，同一版本每天最多提醒一次。
         {state.checkedAt && ` 最近检查 ${state.checkedAt}。`}
       </p>
       {release && (

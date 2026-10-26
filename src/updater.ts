@@ -42,3 +42,40 @@ export async function installUpdate(
   onInstalling();
   await update.install();
 }
+
+export function isNewerVersion(candidate: string, current: string): boolean {
+  const parse = (value: string) =>
+    /^v?(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?(?:\+[\w.-]+)?$/.exec(value);
+  const next = parse(candidate),
+    installed = parse(current);
+  if (!next || !installed) return false;
+  for (let index = 1; index <= 3; index++) {
+    if (+next[index] !== +installed[index])
+      return +next[index] > +installed[index];
+  }
+  if (!next[4] || !installed[4]) return !next[4] && !!installed[4];
+  const a = next[4].split("."),
+    b = installed[4].split(".");
+  for (let index = 0; index < Math.max(a.length, b.length); index++) {
+    if (a[index] === undefined) return false;
+    if (b[index] === undefined) return true;
+    if (a[index] === b[index]) continue;
+    const numericA = /^\d+$/.test(a[index]),
+      numericB = /^\d+$/.test(b[index]);
+    if (numericA && numericB) return +a[index] > +b[index];
+    if (numericA !== numericB) return !numericA;
+    return a[index] > b[index];
+  }
+  return false;
+}
+export function shouldRemindUpdate(
+  version: string,
+  previous: { version: string; at: number } | null,
+  now = Date.now(),
+) {
+  return (
+    !previous ||
+    previous.version !== version ||
+    now - previous.at >= 24 * 60 * 60_000
+  );
+}

@@ -136,6 +136,15 @@ export default function App() {
   const [dialog, setDialog] = useState<"changes" | "mail" | "help" | null>(
     null,
   );
+  const [updatesRequest, setUpdatesRequest] = useState(0);
+  useEffect(() => {
+    const open = () => {
+      setUpdatesRequest((value) => value + 1);
+      setPage("settings");
+    };
+    window.addEventListener("campus:open-updates", open);
+    return () => window.removeEventListener("campus:open-updates", open);
+  }, []);
   const setToast = useFeedback("success");
   const notificationsTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -865,7 +874,7 @@ export default function App() {
         >
           {page === "settings" ? (
             <div className="page-content">
-              <Settings account={account} />
+              <Settings account={account} updatesRequest={updatesRequest} />
             </div>
           ) : page === "downloads" ? (
             <div className="page-content">
