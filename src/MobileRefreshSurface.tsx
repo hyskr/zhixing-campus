@@ -1,3 +1,4 @@
+import { haptic } from "./haptics";
 import { useEffect, type ReactNode } from "react";
 import { PullToRefresh } from "@/components/motion/pull-to-refresh";
 
@@ -37,7 +38,16 @@ export default function MobileRefreshSurface({
     return (
       <PullToRefresh
         as={main ? "main" : "section"}
-        onRefresh={refresh}
+        onRefresh={async () => {
+          haptic();
+          try {
+            await refresh();
+            haptic("success");
+          } catch (error) {
+            haptic("error");
+            throw error;
+          }
+        }}
         refreshing={refreshing}
         disabled={disabled}
         className={main ? `${className} mobile-refresh-main` : className}

@@ -1,0 +1,15 @@
+{
+  "identifier": "android-plugins",
+  "description": "Android 安装更新与触觉反馈",
+  "windows": [
+    "main"
+  ],
+  "platforms": [
+    "android"
+  ],
+  "permissions": [
+    "android-installer:default",
+    "haptics:allow-selection-feedback",
+    "haptics:allow-notification-feedback"
+  ]
+}

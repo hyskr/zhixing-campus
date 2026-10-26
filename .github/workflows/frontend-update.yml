@@ -1,0 +1,60 @@
+name: Frontend update
+on:
+  push:
+    tags: ['frontend-v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '界面版本，例如 0.18.1'
+        required: true
+permissions:
+  contents: write
+concurrency:
+  group: frontend-update
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: jdx/mise-action@v5
+      - run: bun install --frozen-lockfile
+      - name: Build interface
+        run: bun run build
+      - name: Linux signer dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential libssl-dev librsvg2-dev libayatana-appindicator3-dev
+      - name: Install release signer
+        run: cargo install tauri-plugin-hot-update --version 0.1.1 --features cli --locked
+      - name: Sign and publish interface
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          HOT_UPDATE_KEY_PASSWORD: ''
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          version="${GITHUB_REF_NAME#frontend-v}"
+          if [ -n "$INPUT_VERSION" ]; then version="$INPUT_VERSION"; fi
+          export FRONTEND_VERSION="$version"
+          bun -e 'if(!/^\d+\.\d+\.\d+$/.test(process.env.FRONTEND_VERSION??""))throw Error("A stable interface version is required")'
+          shell=$(bun -p '(await Bun.file("package.json").json()).version')
+          python3 - <<'PY'
+          import os,base64
+          from pathlib import Path
+          path=Path(os.environ['RUNNER_TEMP'])/'frontend-update.key'
+          path.write_bytes(base64.b64decode(os.environ['TAURI_SIGNING_PRIVATE_KEY']))
+          path.chmod(0o600)
+          PY
+          tag="frontend-v$version"
+          hot-update-sign --dist dist --version "$version" --min-shell "$shell" --key "$RUNNER_TEMP/frontend-update.key" --base-url "https://github.com/$GH_REPO/releases/download/$tag" --out output/frontend
+          rm -f "$RUNNER_TEMP/frontend-update.key"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" output/frontend/* --clobber
+          else
+            gh release create "$tag" output/frontend/* --latest=false --prerelease=false --title "知行 Campus 界面 $version" --notes "界面资源更新，最低应用版本 $shell。"
+          fi
+          bun scripts/publish-update-channel.ts output/frontend/manifest.json frontend/manifest.json output/frontend/manifest.json.minisig frontend/manifest.json.minisig

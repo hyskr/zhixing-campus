@@ -1,3 +1,5 @@
+import { listen } from "@tauri-apps/api/event";
+import { openAndroidInstaller } from "./androidUpdater";
 import { isAndroid } from "./platform";
 import {
   createContext,
@@ -48,6 +50,7 @@ function useUpdaterState() {
   );
   const [progress, setProgress] = useState({ loaded: 0, total: 0 });
   const [checkedAt, setCheckedAt] = useState("");
+  const [apkPath, setApkPath] = useState("");
   const update = useRef<Update | null>(null);
   const working = useRef(false);
   const installed = useRef(false);
@@ -59,8 +62,26 @@ function useUpdaterState() {
   useEffect(() => {
     if (!isTauri()) return;
     void getVersion()
-      .then(setVersion)
+      .then((value) => {
+        setVersion(value);
+        try {
+          const expected = localStorage.getItem(
+            "zhixing.android-update-target",
+          );
+          if (
+            expected &&
+            (value === expected || isNewerVersion(value, expected))
+          ) {
+            feedback(`已更新至 ${value}`);
+            localStorage.removeItem("zhixing.android-update-target");
+          }
+        } catch {}
+      })
       .catch(() => {});
+    if (isAndroid) {
+      setSupported(true);
+      return;
+    }
     void invoke<boolean>("supports_in_app_update")
       .then(setSupported)
       .catch(() => setSupported(false));
@@ -78,8 +99,10 @@ function useUpdaterState() {
       update.current = null;
       const metadata = await latestRelease();
       setRelease(metadata);
+      if (isAndroid) setApkPath(metadata.downloadedPath ?? "");
       if (
         isTauri() &&
+        !isAndroid &&
         supported &&
         (!automatic || isNewerVersion(metadata.version, version))
       )
@@ -131,7 +154,7 @@ function useUpdaterState() {
   }
   inspectRef.current = inspect;
   useEffect(() => {
-    if (!isTauri() || isAndroid || supported === null) return;
+    if (!isTauri() || supported === null) return;
     const checkWhenDue = () => {
       if (
         document.visibilityState !== "visible" ||
@@ -155,6 +178,49 @@ function useUpdaterState() {
     };
   }, [supported]);
   async function install() {
+    if (isAndroid) {
+      if (working.current || !release?.apkUrl) return;
+      working.current = true;
+      let unlisten: (() => void) | undefined;
+      try {
+        let path = apkPath,
+          target = release.version;
+        if (!path) {
+          setPhase("downloading");
+          setProgress({ loaded: 0, total: 0 });
+          unlisten = await listen<{ loaded: number; total: number }>(
+            "app-update-download",
+            ({ payload }) => setProgress(payload),
+          );
+          const result = await invoke<{ path: string; version: string }>(
+            "download_android_update",
+          );
+          path = result.path;
+          target = result.version;
+          setApkPath(path);
+          feedback("更新包下载完成，正在准备安装");
+        }
+        setPhase("installing");
+        if (!(await openAndroidInstaller(path, target))) {
+          setPhase("available");
+          feedback("更新包已保留，请允许安装此来源应用后重试", "info");
+          return;
+        }
+        setPhase("available");
+        feedback("已打开系统安装界面，请确认更新", "info");
+      } catch (error) {
+        const cancelled = String(error).includes("已取消");
+        setPhase(cancelled ? "available" : "error");
+        feedback(
+          cancelled ? "已取消更新下载" : `更新失败：${String(error)}`,
+          cancelled ? "info" : "error",
+        );
+      } finally {
+        unlisten?.();
+        working.current = false;
+      }
+      return;
+    }
     if (working.current || !update.current) return;
     working.current = true;
     setPhase("downloading");
@@ -197,7 +263,9 @@ function useUpdaterState() {
     release,
     phase,
     supported,
-    canInstall: !!update.current,
+    canInstall: isAndroid ? !!release?.apkUrl : !!update.current,
+    apkPath,
+    cancel: () => invoke("cancel_android_update"),
     progress,
     checkedAt,
     inspect,
@@ -248,40 +316,26 @@ export default function AppUpdateSettings() {
     installed: "更新已安装，重启应用后生效。",
     error: "更新未完成，可重新检查后重试。",
   }[phase];
-  if (isAndroid)
-    return (
-      <SettingsGroup
-        id="updates"
-        title="知行 Campus · Android"
-        description="Android 预览版本与安装更新。"
-      >
-        <div className="app-update-summary">
-          <ArrowUpCircle size={30} />
-          <div>
-            <strong>当前版本 {version}</strong>
-            <p>Android 预览版</p>
-          </div>
-        </div>
-        <p className="app-update-hint">
-          Android 使用 APK 安装更新。下载新版后，由系统确认安装。
-        </p>
-        <Button onClick={() => void openUrl(RELEASES_URL)}>
-          查看 Android 安装包
-        </Button>
-      </SettingsGroup>
-    );
   return (
     <SettingsGroup
       id="updates"
       title="知行 Campus"
-      description="版本信息、发布说明与应用内更新。"
+      description={
+        isAndroid
+          ? "Android 正式版本、发布说明与安装更新。"
+          : "版本信息、发布说明与应用内更新。"
+      }
     >
       <div className="app-update-summary">
         <ArrowUpCircle size={30} />
         <div>
           <strong>当前版本 {version}</strong>
           <p>
-            {isTauri() ? "桌面应用" : "浏览器预览"}
+            {isAndroid
+              ? "Android 正式版"
+              : isTauri()
+                ? "桌面应用"
+                : "浏览器预览"}
             {release && ` · 最新发布 ${release.version}`}
           </p>
         </div>
@@ -309,7 +363,20 @@ export default function AppUpdateSettings() {
         </Button>
         {phase === "available" && canInstall && (
           <Button onClick={() => void state.install()}>
-            下载并安装 {release?.version}
+            {isAndroid && state.apkPath ? "安装" : "下载并安装"}{" "}
+            {release?.version}
+          </Button>
+        )}
+        {isAndroid && phase === "downloading" && (
+          <Button
+            variant="ghost"
+            onClick={() =>
+              void state
+                .cancel()
+                .catch((error) => feedback(String(error), "error"))
+            }
+          >
+            取消下载
           </Button>
         )}
         {phase === "installed" && (
@@ -321,11 +388,13 @@ export default function AppUpdateSettings() {
         </Button>
       </div>
       <p className="app-update-hint">
-        {supported
-          ? "下载后验证更新签名。安装时请先保存正在编辑的内容；Windows 安装器会关闭并重新打开应用，macOS 与 AppImage 安装后可点击重启。"
-          : isTauri()
-            ? "当前安装格式请在发布页面下载安装包更新。Linux 应用内更新需使用 AppImage。"
-            : "应用内安装仅在桌面版中可用。"}
+        {isAndroid
+          ? "更新包在应用内下载，首次安装需允许此来源。系统确认后覆盖升级，保留原有账号与数据。"
+          : supported
+            ? "下载后验证更新签名。安装时请先保存正在编辑的内容；Windows 安装器会关闭并重新打开应用，macOS 与 AppImage 安装后可点击重启。"
+            : isTauri()
+              ? "当前安装格式请在发布页面下载安装包更新。Linux 应用内更新需使用 AppImage。"
+              : "应用内安装仅在桌面版中可用。"}
         自动检测在启动后及回到前台时执行，同一版本每天最多提醒一次。
         {state.checkedAt && ` 最近检查 ${state.checkedAt}。`}
       </p>

@@ -23,6 +23,7 @@ mod sso;
 #[cfg(desktop)]
 mod tray;
 mod updates;
+mod android_updates;
 use base64::{engine::general_purpose::STANDARD, Engine};
 use parsers::{selector, string, text};
 use reqwest::{Client, Url};
@@ -1026,7 +1027,9 @@ fn handle_startup_notification(app: &tauri::AppHandle, args: &[String]) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let builder = tauri::Builder::default();
+    let mut context = tauri::generate_context!();
+    let hot_update = tauri_plugin_hot_update::install(&mut context);
+    let builder = tauri::Builder::default().plugin(tauri_plugin_hot_update::init(hot_update));
     #[cfg(desktop)]
     let builder = builder
         .plugin(tauri_plugin_single_instance::init(|app, args, _| {
@@ -1034,9 +1037,10 @@ pub fn run() {
             handle_startup_notification(app, &args);
         }))
         .on_window_event(tray::on_window_event)
-        .plugin(tauri_plugin_updater::Builder::new().build());
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::default().with_state_flags(tauri_plugin_window_state::StateFlags::SIZE | tauri_plugin_window_state::StateFlags::POSITION | tauri_plugin_window_state::StateFlags::MAXIMIZED).build());
     #[cfg(target_os = "android")]
-    let builder = builder.plugin(mobile::init());
+    let builder = builder.plugin(mobile::init()).plugin(tauri_plugin_haptics::init()).plugin(tauri_plugin_android_installer::init());
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -1048,6 +1052,7 @@ pub fn run() {
         .manage(devices::DeviceJobs::default())
         .manage(sso::SsoState::default())
         .manage(media::DownloadState::default())
+        .manage(android_updates::UpdateDownload::default())
         .setup(|app| {
             let directory = app.path().app_data_dir()?.join("sessions");
             fs::create_dir_all(&directory)?;
@@ -1092,6 +1097,8 @@ pub fn run() {
             cli_install::cli_info,
             cli_install::install_cli,
             updates::update_release,
+            android_updates::download_android_update,
+            android_updates::cancel_android_update,
             reminders::test_notification,
             reminders::cache_reminder_data,
             campus::open_school_page,
@@ -1146,7 +1153,7 @@ pub fn run() {
             saved_password,
             remove_account
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("无法启动知行校园")
         .run(|app, event| {
             #[cfg(target_os = "macos")]

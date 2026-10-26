@@ -1,3 +1,4 @@
+import { haptic } from "./haptics";
 import { Home, CalendarDays, NotebookPen, Mail, Grid2X2 } from "lucide-react";
 import { Button } from "@/components/motion/button";
 import type { Page } from "./types";
@@ -27,6 +28,7 @@ export default function MobileNavigation({
           aria-label={label}
           aria-current={page === id ? "page" : undefined}
           onClick={() => {
+            if (page !== id) haptic();
             if (page === id)
               window.dispatchEvent(
                 new CustomEvent("campus:tab-reselect", { detail: id }),

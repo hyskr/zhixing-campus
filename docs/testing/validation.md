@@ -305,3 +305,14 @@ GitHub Actions [40212033005](https://github.com/hyskr/zhixing-campus/actions/run
 - 本机桌面保存账号的登录状态、课程列表与邮箱读取成功，未重新输入账号密码。
 - 15 项 CLI 契约与安装检查通过，并接入各桌面平台 CI 构建步骤。
 - 扩展真实读取：课表、作业、已发送与余额成功；成绩请求超时，设备接口无法连接，均返回非零退出码与结构化错误。
+
+## 0.18.0 原生插件与正式更新
+
+- 80 项前端测试、51 项 Rust 测试通过；6 项依赖外部环境的 Rust 测试默认忽略。
+- Android Release APK 构建成功，签名验证与 16 KB ZIP 对齐通过；原生 versionName 为 0.18.0、versionCode 为 18000。
+- APK 合并清单包含 REQUEST_INSTALL_PACKAGES 与 VIBRATE，安装插件的独立 FileProvider 与现有文件导出 Provider 共存。
+- Android 更新清单从 APK 读取原生版本与大小；测试覆盖正式 tag、安装授权接受／拒绝及安装器启动失败。
+- 现有 Tauri 签名密钥成功生成前端归档、清单与分离签名；临时私钥文件已清理。
+- 暂无连接的 ADB 真机，触觉手感和 vivo 安装界面未实测。
+- macOS 正式应用包构建成功，包内 CLI 的 15 项契约与安装检查通过。
+- Android 14 模拟器覆盖安装成功并启动；页面加载，未出现系统崩溃对话框。真机触觉与系统安装流程仍待设备实测。

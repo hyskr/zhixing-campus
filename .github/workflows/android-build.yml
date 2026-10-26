@@ -42,7 +42,7 @@ jobs:
       - name: Check Android tag
         if: startsWith(github.ref, 'refs/tags/android-v')
         run: |
-          bun -e 'const version=(await Bun.file("package.json").json()).version; const tag=process.env.GITHUB_REF_NAME; if(tag!==`android-v${version}` && !tag.startsWith(`android-v${version}-`)) throw Error("Android tag does not match application version");'
+          bun -e 'const version=(await Bun.file("package.json").json()).version; const tag=process.env.GITHUB_REF_NAME; if(tag!==`android-v${version}`) throw Error("Android tag does not match application version");'
       - name: Install frontend dependencies
         run: bun install --frozen-lockfile
       - name: Configure Android signing
@@ -78,15 +78,20 @@ jobs:
           name: android-arm64-apk
           path: output/android/*.apk
           if-no-files-found: error
-      - name: Publish Android preview
+      - name: Publish Android release
         if: startsWith(github.ref, 'refs/tags/android-v')
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(bun -p '(await Bun.file("package.json").json()).version')
+          bun scripts/android-manifest.ts "output/android/zhixing-campus_${version}_android-arm64.apk"
           notes="docs/releases/android-${version}.md"
-          if test -f "$notes"; then
-            gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --notes-file "$notes"
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" output/android/*.apk --clobber
+            gh release edit "$GITHUB_REF_NAME" --prerelease=false --latest=false
+          elif test -f "$notes"; then
+            gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease=false --latest=false --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --notes-file "$notes"
           else
-            gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --generate-notes
+            gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease=false --latest=false --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --generate-notes
           fi
+          bun scripts/publish-update-channel.ts output/android/android.json android.json

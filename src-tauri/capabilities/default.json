@@ -13,6 +13,7 @@
     "notification:allow-is-permission-granted",
     "notification:allow-register-action-types",
     "notification:allow-register-listener",
-    "notification:allow-remove-listener"
+    "notification:allow-remove-listener",
+    "hot-update:default"
   ]
 }

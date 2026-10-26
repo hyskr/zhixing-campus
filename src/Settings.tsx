@@ -1,3 +1,4 @@
+import HotUpdateSettings from "./HotUpdates";
 import CliSettings from "./CliSettings";
 import { isAndroid } from "./platform";
 import { useErrorState } from "./ui";
@@ -74,6 +75,7 @@ export default function Settings({
       />
       <SettingsGroups updatesRequest={updatesRequest}>
         <AppUpdateSettings />
+        <HotUpdateSettings />
         <SettingsGroup
           id="appearance"
           title="界面风格"

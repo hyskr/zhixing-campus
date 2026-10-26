@@ -1,3 +1,4 @@
+import { HotUpdateProvider } from "./HotUpdates";
 import "@fontsource-variable/geist/wght.css";
 import "@fontsource-variable/geist-mono/wght.css";
 import { syncAndroidInsets } from "./androidInsets";
@@ -23,14 +24,16 @@ syncAndroidInsets();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AppUpdaterProvider>
-      <PreferencesProvider>
-        <DownloadsProvider>
-          <FilePreviewProvider>
-            <App />
-          </FilePreviewProvider>
-        </DownloadsProvider>
-      </PreferencesProvider>
-    </AppUpdaterProvider>
+    <HotUpdateProvider>
+      <AppUpdaterProvider>
+        <PreferencesProvider>
+          <DownloadsProvider>
+            <FilePreviewProvider>
+              <App />
+            </FilePreviewProvider>
+          </DownloadsProvider>
+        </PreferencesProvider>
+      </AppUpdaterProvider>
+    </HotUpdateProvider>
   </React.StrictMode>,
 );

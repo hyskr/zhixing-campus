@@ -11,6 +11,9 @@ export interface ReleaseInfo {
   notes: string;
   url: string;
   date: string;
+  apkUrl?: string;
+  versionCode?: number;
+  downloadedPath?: string;
 }
 export async function latestRelease(): Promise<ReleaseInfo> {
   if (isTauri()) return invoke<ReleaseInfo>("update_release");

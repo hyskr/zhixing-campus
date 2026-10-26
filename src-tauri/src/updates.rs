@@ -12,6 +12,7 @@ struct ReleaseManifest {
 // https://v2.tauri.app/plugin/updater/#static-json-file
 #[tauri::command]
 pub async fn update_release(app: tauri::AppHandle) -> Result<Value, String> {
+    if cfg!(target_os="android") { return crate::android_updates::release_info(&app).await; }
     let endpoint = app
         .config()
         .plugins

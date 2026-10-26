@@ -1,3 +1,4 @@
+import { haptic } from "./haptics";
 import { useRef, useState } from "react";
 import { BookOpen, MapPin, UserRound, ArrowUpRight } from "lucide-react";
 import MobileDetailPage from "./MobileDetailPage";
@@ -48,6 +49,7 @@ export default function MobileWeekSchedule({
             dy = p.clientY - start.y;
           if (Math.abs(dx) >= 48 && Math.abs(dx) > Math.abs(dy) * 1.3) {
             event.preventDefault();
+            haptic();
             onWeekChange(dx < 0 ? 1 : -1);
           }
         }}
