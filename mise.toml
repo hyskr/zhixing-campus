@@ -25,11 +25,11 @@ run = ["bun run test", "cargo test --manifest-path src-tauri/Cargo.toml --lib"]
 
 [tasks.build]
 description = "构建当前平台安装包"
-run = "bun run tauri build"
+run = "bun scripts/build-desktop.ts"
 
 [tasks."build:app"]
 description = "构建 macOS 应用"
-run = "bun run tauri build --bundles app"
+run = "bun scripts/build-desktop.ts --bundles app"
 
 [tasks."test:live"]
 description = "读取已保存凭据，逐项巡检真实只读接口并生成报告"
@@ -42,3 +42,11 @@ run = "bun run tauri android dev"
 [tasks."android:build"]
 description = "构建 Android arm64 APK"
 run = "bun run tauri android build --ci --target aarch64 --apk"
+
+[tasks.cli]
+description = "运行供终端和 AI 使用的 CLI"
+run = "cargo run --quiet --manifest-path src-tauri/Cargo.toml --features cli --bin zhixing --"
+
+[tasks."cli:build"]
+description = "构建独立 CLI 可执行文件"
+run = "cargo build --release --manifest-path src-tauri/Cargo.toml --features cli --bin zhixing"

@@ -324,3 +324,5 @@
     flex-shrink: 0;
   }
 }
+
+.cli-command-example{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--surface-muted,var(--muted));border-radius:8px;flex-wrap:wrap}.cli-command-example code{overflow-wrap:anywhere;font-size:12px}.cli-command-example button{flex-shrink:0}

@@ -17,3 +17,9 @@
 - [两端共用界面规范](design/shared-surfaces.md)
 - [0.16.0 更新说明](releases/0.16.0.md)
 - [Android 0.16.0](releases/android-0.16.0.md)
+
+- [CLI 与 AI 调用](guides/cli.md)
+- [页面刷新时机](features/refresh-policy.md)
+- [CLI 设计来源](references/cli-sources.md)
+
+- [0.17.0：命令行与刷新](releases/0.17.0.md)

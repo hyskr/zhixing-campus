@@ -19,3 +19,6 @@ mise.local.toml
 credentials.json
 downloads.json
 sessions/
+
+# Target-specific CLI sidecars are produced before desktop bundling.
+src-tauri/binaries/

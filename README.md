@@ -61,3 +61,7 @@ docs/                 使用指南、功能、协议、设计、来源与验证�
 [构建与发布指南](docs/guides/building.md) · [发布说明](docs/releases/0.13.1.md) · [验证记录](docs/testing/validation.md) · [第三方许可](docs/references/third-party.md)
 
 Android 使用 `android-v*` tag 独立构建已签名 arm64 APK，发布为预览版；[Android 指南](docs/guides/android.md)。
+
+## 终端与 AI 调用
+
+桌面安装包内包含独立 `zhixing` CLI，直接复用桌面保存账号与登录态。支持课表、成绩、作业、资料、回放、邮件、教室、余额、设备与下载；提供 JSON、schema 和稳定退出码。使用方法见 [CLI 指南](docs/guides/cli.md)，页面自动更新时机见 [刷新策略](docs/features/refresh-policy.md)。

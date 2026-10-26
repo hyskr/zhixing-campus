@@ -1,8 +1,17 @@
 [package]
 name = "zhixing-campus"
-version = "0.16.0"
+version = "0.17.0"
 description = "北京交通大学校园信息客户端"
 edition = "2021"
+default-run = "zhixing-campus"
+
+[features]
+cli = ["dep:sm2", "dep:rand", "dep:rpassword"]
+
+[[bin]]
+name = "zhixing"
+path = "src/bin/zhixing.rs"
+required-features = ["cli"]
 
 [lib]
 name = "zhixing_campus_lib"
@@ -12,6 +21,9 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+sm2 = { version = "0.14", features = ["pke"], optional = true }
+rand = { version = "0.10", optional = true }
+rpassword = { version = "7", optional = true }
 tauri = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

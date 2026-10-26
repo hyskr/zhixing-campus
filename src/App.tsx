@@ -1,3 +1,4 @@
+import { needsRefresh, refreshScopes } from "./refreshPolicy";
 import MobileTopBar from "./MobileTopBar";
 import MobileSearch from "./MobileSearch";
 import Applications from "./Applications";
@@ -124,6 +125,9 @@ export default function App() {
   const [courseName, setCourseName] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const syncGate = useRef(false);
+  const refreshAttempts = useRef(new Map<string, number>());
+  const startupAccount = useRef(new Set<string>());
   const [mobileRefreshing, setMobileRefreshing] = useState(false);
   const [syncLabel, setSyncLabel] = useState("");
   const [accountMenu, setAccountMenu] = useState(false);
@@ -360,8 +364,13 @@ export default function App() {
       void off.then((stop) => stop());
     };
   }, []);
-  async function sync(target = account, scope = pageScope ?? "all") {
-    if (!target || syncing) return;
+  async function sync(
+    target = account,
+    scope = pageScope ?? "all",
+    automatic = false,
+  ) {
+    if (!target || syncGate.current) return;
+    syncGate.current = true;
     setSyncing(true);
     setSyncLabel("正在连接校园系统");
     try {
@@ -426,24 +435,35 @@ export default function App() {
               }
             : s,
         );
-        setToast(
-          result.failures.length
-            ? `部分同步完成：${result.failures.join("；")}`
-            : scope === "all"
-              ? "校园数据已同步"
-              : "当前页面已同步",
-          result.failures.length ? "info" : "success",
-          result.failures.length
-            ? {
-                label: "重试同步",
-                onClick: () => {
-                  void sync(target, scope);
-                },
-              }
-            : undefined,
-        );
+        if (automatic && result.failures.length)
+          refreshAttempts.current.set(
+            `${target.id}:${scope}`,
+            Date.now() + 4 * 60_000,
+          );
+        if (!automatic || result.failures.length)
+          setToast(
+            result.failures.length
+              ? `部分同步完成：${result.failures.join("；")}`
+              : scope === "all"
+                ? "校园数据已同步"
+                : "当前页面已同步",
+            result.failures.length ? "info" : "success",
+            result.failures.length
+              ? {
+                  label: "重试同步",
+                  onClick: () => {
+                    void sync(target, scope);
+                  },
+                }
+              : undefined,
+          );
       }
     } catch (error) {
+      if (automatic)
+        refreshAttempts.current.set(
+          `${target.id}:${scope}`,
+          Date.now() + 4 * 60_000,
+        );
       const message =
         error instanceof ManualCaptchaRequired
           ? "验证码需要手动填写，请重新登录"
@@ -453,12 +473,53 @@ export default function App() {
         message.includes("登录状态已失效") ||
         error instanceof ManualCaptchaRequired
       )
-        setLogin({ studentId: target.id });
+        if (!automatic) setLogin({ studentId: target.id });
     } finally {
+      syncGate.current = false;
       setSyncing(false);
       setSyncLabel("");
     }
   }
+  useEffect(() => {
+    if (!account || account.demo || !isTauri()) return;
+    const target = account;
+    const refresh = () => {
+      if (
+        document.visibilityState !== "visible" ||
+        !navigator.onLine ||
+        syncGate.current ||
+        login ||
+        document.activeElement?.matches(
+          "input,textarea,[contenteditable=true]",
+        ) ||
+        document.querySelector('[data-mobile-page],[role="dialog"]')
+      )
+        return;
+      const startup = !startupAccount.current.has(target.id);
+      const scope = startup ? "all" : refreshScopes[page];
+      if (!scope || (scope === "services" && deviceView)) return;
+      const key = `${target.id}:${scope}`,
+        now = Date.now();
+      if (now - (refreshAttempts.current.get(key) ?? 0) < 60_000) return;
+      if (!needsRefresh(data, scope, now)) {
+        if (startup) startupAccount.current.add(target.id);
+        return;
+      }
+      if (startup) startupAccount.current.add(target.id);
+      refreshAttempts.current.set(key, now);
+      void sync(target, scope, true);
+    };
+    refresh();
+    const foreground = () => refresh();
+    window.addEventListener("focus", foreground);
+    document.addEventListener("visibilitychange", foreground);
+    const timer = window.setInterval(() => refresh(), 60_000);
+    return () => {
+      window.removeEventListener("focus", foreground);
+      document.removeEventListener("visibilitychange", foreground);
+      window.clearInterval(timer);
+    };
+  }, [account?.id, page, data.syncedAt, data.lastSync, login, deviceView]);
   async function loadResource(node: Resource) {
     const target = account;
     if (!target || target.demo) return node.children;

@@ -26,3 +26,11 @@ for (const [glob, suffix] of formats) {
 }
 if (!count) throw Error(`No installers found for ${target}`);
 console.log(`Staged ${count} packages for ${target}`);
+
+const cliExtension = target.includes("windows") ? ".exe" : "";
+const cliSource = `src-tauri/target/${target}/release/zhixing${cliExtension}`;
+await copyFile(
+  cliSource,
+  `output/packages/zhixing-cli_${version}_${target}${cliExtension}`,
+);
+await copyFile("docs/guides/cli.md", "output/packages/CLI.md");

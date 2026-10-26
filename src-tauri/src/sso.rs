@@ -1,7 +1,7 @@
 use super::*;
 #[derive(Default)]
 pub struct SsoState {
-    pending: Mutex<HashMap<String, (Session, Value)>>,
+    pub(super) pending: Mutex<HashMap<String, (Session, Value)>>,
     captcha_users: Mutex<std::collections::HashSet<String>>,
 }
 const HOME: &str = "https://mis.bjtu.edu.cn/home/";

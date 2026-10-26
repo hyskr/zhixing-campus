@@ -23,8 +23,8 @@ Windows MSI 使用 `zh-CN` 语言，支持中文产品名称。
 
 ```bash
 git push origin main
-git tag -a v0.13.0 -m "知行 Campus 0.12.0"
-git push origin v0.14.0
+git tag -a v0.17.0 -m "知行 Campus 0.17.0"
+git push origin v0.17.0
 ```
 
 Tag 与三个版本号必须一致。正式 tag 发布到稳定更新通道；含连字符的版本作为预发布，不覆盖稳定版。PR 仅构建安装包，不使用签名私钥或发布 Release。
@@ -88,7 +88,7 @@ TAURI_SIGNING_PRIVATE_KEY="$HOME/.tauri/zhixing-campus.key" TAURI_SIGNING_PRIVAT
 不持有签名私钥的贡献者可构建普通安装包：
 
 ```bash
-mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+mise exec -- bun scripts/build-desktop.ts --config '{"bundle":{"createUpdaterArtifacts":false}}'
 ```
 
 ## 体积组成与官方建议
@@ -127,3 +127,9 @@ mise exec -- bun run tauri build --config '{"bundle":{"createUpdaterArtifacts":f
 ## 发布流水线
 
 桌面 `v*` 与安卓 `android-v*` tag 运行依赖安装、编译、签名与产物发布。桌面 PR 保留前端与 Rust 单元测试；tag 打包不额外执行独立测试。构建自身的编译、tag 版本一致性和发布签名要求继续执行。
+
+## 与桌面一起安装 CLI
+
+桌面流水线先构建前端与 `zhixing` console binary，`scripts/prepare-cli.ts` 准备架构后缀的 sidecar。Tauri 构建合并 `src-tauri/tauri.desktop.conf.json`，将命令行放到应用的可执行目录；Android 不引入此 sidecar。每个平台同时在 Release 提供独立 CLI 可执行文件。
+
+本机构建请使用 `mise run build` 或 `bun scripts/build-desktop.ts --bundles app`，以同时准备与捆绑 CLI。只执行基础 `bun run tauri build` 不包含额外 CLI。

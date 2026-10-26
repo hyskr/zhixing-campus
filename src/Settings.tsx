@@ -1,3 +1,4 @@
+import CliSettings from "./CliSettings";
 import { isAndroid } from "./platform";
 import { useErrorState } from "./ui";
 import { useFeedback } from "./ui";
@@ -230,6 +231,7 @@ export default function Settings({ account }: { account?: Account }) {
         </SettingsGroup>
         <NotificationSettings account={account} />
         <MoreSettings account={account} />
+        <CliSettings/>
       </SettingsGroups>
     </div>
   );

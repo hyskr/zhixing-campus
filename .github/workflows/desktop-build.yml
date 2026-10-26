@@ -97,6 +97,13 @@ jobs:
         if: github.event_name == 'pull_request' && runner.os == 'Linux'
         run: cargo test --locked --manifest-path src-tauri/Cargo.toml --lib --target ${{ matrix.target }}
 
+      - name: Build bundled CLI
+        run: |
+          bun run build
+          cargo build --release --locked --manifest-path src-tauri/Cargo.toml --features cli --bin zhixing --target ${{ matrix.target }}
+          bun scripts/prepare-cli.ts "${{ matrix.target }}"
+          bun scripts/test-cli.ts "src-tauri/target/${{ matrix.target }}/release/zhixing${{ runner.os == 'Windows' && '.exe' || '' }}"
+
       - name: Build desktop installers
         uses: tauri-apps/tauri-action@v1
         env:
@@ -106,7 +113,7 @@ jobs:
         with:
           tauriScript: bun run tauri
           args: >-
-            --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+            --config src-tauri/tauri.desktop.conf.json --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
             ${{ github.event_name == 'pull_request' && '--config "{\"bundle\":{\"createUpdaterArtifacts\":false}}"' || '' }}
 
       - name: Stage platform packages

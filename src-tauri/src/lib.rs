@@ -1,3 +1,8 @@
+#[cfg(all(feature = "cli", not(target_os = "android")))]
+mod cli;
+mod cli_install;
+#[cfg(all(feature = "cli", not(target_os = "android")))]
+pub use cli::run as run_cli;
 mod campus;
 mod classrooms;
 mod credentials;
@@ -1084,6 +1089,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             supports_in_app_update,
+            cli_install::cli_info,
+            cli_install::install_cli,
             updates::update_release,
             reminders::test_notification,
             reminders::cache_reminder_data,

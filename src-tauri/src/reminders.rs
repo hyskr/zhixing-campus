@@ -136,7 +136,7 @@ pub fn cache_reminder_data(
     }
     persist(&state, &accounts)
 }
-fn in_week(text: &str, week: i64) -> bool {
+pub(super) fn in_week(text: &str, week: i64) -> bool {
     let re = regex::Regex::new(r"(\d+)(?:\s*[-~—]\s*(\d+))?").unwrap();
     let mut any = false;
     let mut within = false;
