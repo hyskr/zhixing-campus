@@ -1906,9 +1906,6 @@ h3:not(.typeset *) {
   justify-content: flex-start;
   margin-inline: 0;
 }
-.file-space-tabs [role="tab"]:first-child {
-  padding-inline-start: 0 !important;
-}
 .file-selection-toolbar .file-select-all {
   display: inline-flex;
   align-items: center;

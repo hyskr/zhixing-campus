@@ -709,7 +709,7 @@ export default function App() {
                   task.state === "queued" || task.state === "downloading",
               ).length
             }
-            onDownloads={() => setDownloadPanel({})}
+            onDownloads={() => navigate("downloads")}
             page={page}
             account={account}
             week={data.currentWeek}

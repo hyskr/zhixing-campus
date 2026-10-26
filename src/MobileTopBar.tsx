@@ -92,17 +92,19 @@ export default function MobileTopBar({
             <span className="mobile-changes-dot" aria-hidden="true" />
           )}
         </Button>
-        {downloadCount > 0 && (
-          <Button
-            variant="ghost"
-            className="mobile-download-status"
-            aria-label={`查看下载，${downloadCount} 个任务进行中`}
-            onClick={onDownloads}
-          >
-            <Download size={21} />
-            <small>{downloadCount}</small>
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          className="mobile-download-status"
+          aria-label={
+            downloadCount > 0
+              ? `下载管理，${downloadCount} 个任务进行中`
+              : "下载管理"
+          }
+          onClick={onDownloads}
+        >
+          <Download size={21} />
+          {downloadCount > 0 && <small>{downloadCount}</small>}
+        </Button>
         {home ? (
           <Button
             variant="ghost"

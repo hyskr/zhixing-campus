@@ -27,7 +27,7 @@ export default function FileSpace({ account }: { account: Account }) {
   const [moreFile, setMoreFile] = useState<SpaceFile | null>(null);
   const setMessage = useFeedback("success");
   const preview = useFilePreview();
-  const [tab, setTab] = useState("个人资源空间"),
+  const [tab, setTab] = useState("上传与已上传文件"),
     [query, setQuery] = useState(""),
     [request, setRequest] = useState(""),
     [version, setVersion] = useState(0),
@@ -85,7 +85,7 @@ export default function FileSpace({ account }: { account: Account }) {
         className="file-space-tabs"
       >
         <TabsList>
-          {["个人资源空间", "上传与已上传文件"].map((t) => (
+          {["上传与已上传文件", "个人资源空间"].map((t) => (
             <TabsTrigger key={t} value={t}>
               {t}
             </TabsTrigger>
