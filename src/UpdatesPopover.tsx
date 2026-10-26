@@ -48,6 +48,7 @@ export default function UpdatesPopover({
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     .slice(0, 6);
   useEffect(() => {
+    window.dispatchEvent(new Event("campus:close-page-menus"));
     close.current?.focus();
     return () => trigger.current?.focus({ preventScroll: true });
   }, [trigger]);

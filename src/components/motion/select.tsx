@@ -191,6 +191,12 @@ export function Select({
     };
   }, [open, setOpen]);
 
+  useEffect(() => {
+    const close = () => setOpen(false);
+    window.addEventListener("campus:close-page-menus", close);
+    return () => window.removeEventListener("campus:close-page-menus", close);
+  }, [setOpen]);
+
   const ctx = useMemo<SelectContextValue>(
     () => ({
       value: current,

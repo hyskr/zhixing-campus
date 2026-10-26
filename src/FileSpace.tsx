@@ -131,18 +131,22 @@ export default function FileSpace({ account }: { account: Account }) {
             </Button>
           </div>
           <div className="file-selection-toolbar">
-            <label>
-              <Checkbox
-                aria-label="全选个人资源"
-                checked={
-                  !!files.length && files.every((f) => selected.includes(f.id))
-                }
-                onCheckedChange={(e) =>
-                  setSelected(e ? files.map((f) => f.id) : [])
-                }
-              />
-              全选 · {files.length} 个文件
-            </label>
+            <Checkbox
+              className="file-select-all"
+              label={`全选 · ${files.length} 个文件`}
+              aria-label="全选个人资源"
+              disabled={!files.length || loading || busy}
+              checked={
+                !!files.length && files.every((f) => selected.includes(f.id))
+              }
+              indeterminate={
+                files.some((f) => selected.includes(f.id)) &&
+                !files.every((f) => selected.includes(f.id))
+              }
+              onCheckedChange={(checked) =>
+                setSelected(checked ? files.map((f) => f.id) : [])
+              }
+            />
             <span />
             <Button
               size="sm"

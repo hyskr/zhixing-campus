@@ -1897,6 +1897,29 @@ h3:not(.typeset *) {
 .learning-tabs {
   margin-bottom: 22px;
 }
+.file-space-tabs {
+  align-self: flex-start;
+  width: 100%;
+  text-align: left;
+}
+.file-space-tabs [role="tablist"] {
+  justify-content: flex-start;
+  margin-inline: 0;
+}
+.file-space-tabs [role="tab"]:first-child {
+  padding-inline-start: 0 !important;
+}
+.file-selection-toolbar .file-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  line-height: 20px;
+}
+.file-selection-toolbar .file-select-all > [role="checkbox"] {
+  margin: 0;
+  vertical-align: middle;
+}
 .file-space-panel {
   padding: 22px;
 }
@@ -5627,7 +5650,8 @@ body,
   position: fixed;
   top: 58px;
   right: 24px;
-  z-index: 45;
+  z-index: 80;
+  isolation: isolate;
   width: min(390px, calc(100vw - 32px));
 }
 .updates-backdrop {
@@ -5644,7 +5668,9 @@ body,
   border-radius: 12px !important;
   overflow: hidden;
   box-shadow: 0 12px 36px #1822161f !important;
-  background: #fff !important;
+  background: var(--card) !important;
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
 }
 .updates-heading {
   display: flex;

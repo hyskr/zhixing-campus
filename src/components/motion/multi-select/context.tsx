@@ -77,8 +77,9 @@ export type MultiSelectContextValue = {
   activeLayoutId: string;
 };
 
-export const MultiSelectContext =
-  createContext<MultiSelectContextValue | null>(null);
+export const MultiSelectContext = createContext<MultiSelectContextValue | null>(
+  null,
+);
 export const MultiSelectGroupContext = createContext<string | null>(null);
 
 export function useMultiSelectContext(component: string) {
@@ -173,6 +174,12 @@ export function MultiSelect({
     },
     [disabled, onOpenChange, openControlled, updateQuery],
   );
+
+  useEffect(() => {
+    const close = () => updateOpen(false);
+    window.addEventListener("campus:close-page-menus", close);
+    return () => window.removeEventListener("campus:close-page-menus", close);
+  }, [updateOpen]);
 
   const registerItem = useCallback((item: RegisteredMultiSelectItem) => {
     setItems((current) => {
@@ -284,7 +291,8 @@ export function MultiSelect({
     if (!item || !list) return;
     const itemRect = item.getBoundingClientRect();
     const listRect = list.getBoundingClientRect();
-    if (itemRect.top < listRect.top) list.scrollTop -= listRect.top - itemRect.top;
+    if (itemRect.top < listRect.top)
+      list.scrollTop -= listRect.top - itemRect.top;
     else if (itemRect.bottom > listRect.bottom) {
       list.scrollTop += itemRect.bottom - listRect.bottom;
     }
@@ -332,7 +340,8 @@ export function MultiSelect({
       registerItem,
       unregisterItem,
       labelFor: (itemValue) => items.get(itemValue)?.label ?? itemValue,
-      isVisible: (itemValue) => !listQuery.trim() || visibleValues.has(itemValue),
+      isVisible: (itemValue) =>
+        !listQuery.trim() || visibleValues.has(itemValue),
       hasVisibleItems: (groupId) => visibleGroupIds.has(groupId),
       visibleCount: visibleItems.length,
       activeItemId: activeItem?.id,
