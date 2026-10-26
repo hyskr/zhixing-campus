@@ -701,6 +701,8 @@ export default function App() {
       <div className="main-shell">
         {compactLayout ? (
           <MobileTopBar
+            onChanges={() => setDialog("changes")}
+            changeCount={data.changes.length}
             downloadCount={
               downloadTasks.filter(
                 (task) =>

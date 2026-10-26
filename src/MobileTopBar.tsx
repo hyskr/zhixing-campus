@@ -1,5 +1,6 @@
 import {
   ChevronLeft,
+  Bell,
   Download,
   RefreshCw,
   Search,
@@ -36,6 +37,8 @@ export default function MobileTopBar({
   onRefresh,
   downloadCount = 0,
   onDownloads,
+  onChanges,
+  changeCount = 0,
 }: {
   page: Page;
   account?: Account;
@@ -48,6 +51,8 @@ export default function MobileTopBar({
   onRefresh: () => void;
   downloadCount?: number;
   onDownloads: () => void;
+  onChanges: () => void;
+  changeCount?: number;
 }) {
   const home = page === "overview";
   const subtitle = home
@@ -76,6 +81,17 @@ export default function MobileTopBar({
         {subtitle && <p>{subtitle}</p>}
       </div>
       <div className="mobile-topbar-actions">
+        <Button
+          variant="ghost"
+          className="mobile-changes-button"
+          aria-label={`校园动态${changeCount ? `，${changeCount} 条更新` : ""}`}
+          onClick={onChanges}
+        >
+          <Bell size={21} />
+          {changeCount > 0 && (
+            <span className="mobile-changes-dot" aria-hidden="true" />
+          )}
+        </Button>
         {downloadCount > 0 && (
           <Button
             variant="ghost"

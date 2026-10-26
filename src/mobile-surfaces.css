@@ -1756,3 +1756,6 @@ body:has(.campus-confirmation) > button[aria-label="Dismiss modal"] {
 .campus-modal:has(.downloads-page) .page-heading {
   display: none;
 }
+
+.mobile-topbar-actions .mobile-changes-button { position: relative; flex-shrink: 0; }
+.mobile-changes-dot { position: absolute; top: 8px; right: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--primary); box-shadow: 0 0 0 2px var(--background); pointer-events: none; }
