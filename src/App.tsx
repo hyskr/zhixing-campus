@@ -880,6 +880,14 @@ export default function App() {
             <div className="page-content">
               <Downloads account={account} />
             </div>
+          ) : page === "applications" ? (
+            <div className="page-content">
+              <Applications
+                account={account}
+                navigate={navigate}
+                onLogin={() => setLogin({})}
+              />
+            </div>
           ) : !account ? (
             <div className="no-account">
               <span className="brand-mark">
@@ -910,13 +918,6 @@ export default function App() {
                   onChange={openChange}
                   onHomeworkUpdate={retryCourse}
                   onCourse={setCourseName}
-                />
-              )}
-              {page === "applications" && (
-                <Applications
-                  account={account}
-                  navigate={navigate}
-                  onLogin={() => setLogin({})}
                 />
               )}
               {page === "schedule" && (
