@@ -52,9 +52,15 @@ jobs:
           tag="frontend-v$version"
           hot-update-sign --dist dist --version "$version" --min-shell "$shell" --key "$RUNNER_TEMP/frontend-update.key" --base-url "https://github.com/$GH_REPO/releases/download/$tag" --out output/frontend
           rm -f "$RUNNER_TEMP/frontend-update.key"
+          notes="docs/releases/frontend/$version.md"
+          if [ ! -f "$notes" ]; then
+            echo "Missing release notes: $notes"
+            exit 1
+          fi
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" output/frontend/* --clobber
+            gh release edit "$tag" --notes-file "$notes"
           else
-            gh release create "$tag" output/frontend/* --latest=false --prerelease=false --title "知行 Campus 界面 $version" --notes "界面资源更新，最低应用版本 $shell。"
+            gh release create "$tag" output/frontend/* --latest=false --prerelease=false --title "知行 Campus 界面 $version" --notes-file "$notes"
           fi
           bun scripts/publish-update-channel.ts output/frontend/manifest.json frontend/manifest.json output/frontend/manifest.json.minisig frontend/manifest.json.minisig
