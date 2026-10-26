@@ -133,3 +133,9 @@ mise exec -- bun scripts/build-desktop.ts --config '{"bundle":{"createUpdaterArt
 桌面流水线先构建前端与 `zhixing` console binary，`scripts/prepare-cli.ts` 准备架构后缀的 sidecar。Tauri 构建合并 `src-tauri/tauri.desktop.conf.json`，将命令行放到应用的可执行目录；Android 不引入此 sidecar。每个平台同时在 Release 提供独立 CLI 可执行文件。
 
 本机构建请使用 `mise run build` 或 `bun scripts/build-desktop.ts --bundles app`，以同时准备与捆绑 CLI。只执行基础 `bun run tauri build` 不包含额外 CLI。
+
+## 发布提交与触发
+
+桌面发布推送 `v<应用版本>`，Android 正式发布推送 `android-v<应用版本>`，界面发布推送 `frontend-v<界面版本>`。仅推送 main 不会自动打安装包。
+
+发布 tag 对应的提交不要包含 `[skip ci]` 或 `[ci skip]`，否则 GitHub 会跳过 push 触发的工作流。已推送但被跳过的 tag，可在 Actions 手动运行对应工作流并选择该 tag；界面工作流同时填写界面版本。桌面和 Android 必须选择对应 tag 才会进入 Release 发布步骤。
