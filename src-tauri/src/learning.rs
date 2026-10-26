@@ -226,6 +226,15 @@ async fn upload_data(
     note_id: Option<&str>,
 ) -> Result<Value, String> {
     let bytes = STANDARD.decode(data).map_err(|_| "无法读取所选文件")?;
+    upload_bytes(session, smart, name, bytes, note_id).await
+}
+pub(super) async fn upload_bytes(
+    session: &Session,
+    smart: &SmartSession,
+    name: &str,
+    bytes: Vec<u8>,
+    note_id: Option<&str>,
+) -> Result<Value, String> {
     let size = bytes.len();
     let body = reqwest::multipart::Form::new().part(
         "file",
@@ -282,7 +291,23 @@ pub async fn submit_homework(
 ) -> Result<bool, String> {
     let session = get_session(&state, &username)?;
     let smart = smart_session(&session).await?;
-    let raw = raw_homework(&session, &smart, &course_id, &source_id, kind).await?;
+    submit_data(
+        &session, &smart, &course_id, &source_id, kind, &content, &files,
+    )
+    .await?;
+    save_session(&state, &username, &session)?;
+    Ok(true)
+}
+pub(super) async fn submit_data(
+    session: &Session,
+    smart: &SmartSession,
+    course_id: &str,
+    source_id: &str,
+    kind: usize,
+    content: &str,
+    files: &[UploadedFile],
+) -> Result<(), String> {
+    let raw = raw_homework(session, smart, course_id, source_id, kind).await?;
     if string(&raw["subStatus"]) == "已提交" && string(&raw["is_repeat"]) == "0" {
         return Err("该作业不允许重复提交".into());
     }
@@ -297,12 +322,12 @@ pub async fn submit_homework(
             ("content", encode(&content).as_str()),
             ("groupName", ""),
             ("groupId", ""),
-            ("courseId", &course_id),
+            ("courseId", course_id),
             ("contentType", kind.to_string().as_str()),
             ("fz", &string(&raw["is_fz"])),
             ("jxrl_id", ""),
             ("fileList", &file_list),
-            ("upId", &source_id),
+            ("upId", source_id),
             ("return_num", &string(&raw["return_num"])),
             ("isTeacher", "0"),
         ])
@@ -326,8 +351,7 @@ pub async fn submit_homework(
             "学校未确认提交成功，请刷新作业状态后再操作".into()
         });
     }
-    save_session(&state, &username, &session)?;
-    Ok(true)
+    Ok(())
 }
 #[tauri::command]
 // 参考来源：参考账号资源查询与资源链接获取流程。

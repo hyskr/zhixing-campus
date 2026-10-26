@@ -149,6 +149,9 @@ export default function App() {
   const notificationsTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  useEffect(() => {
+    setNotificationsOpen(false);
+  }, [page, searchOpen, dialog, login]);
   const account =
     store.accounts.find((a) => a.id === store.activeId) ?? store.accounts[0];
   const data = store.data[account?.id] ?? emptyData();

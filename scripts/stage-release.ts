@@ -34,3 +34,8 @@ await copyFile(
   `output/packages/zhixing-cli_${version}_${target}${cliExtension}`,
 );
 await copyFile("docs/guides/cli.md", "output/packages/CLI.md");
+
+await copyFile(
+  "licenses/comfy-table.txt",
+  "output/packages/COMFY-TABLE-LICENSE.txt",
+);

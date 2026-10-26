@@ -1,4 +1,11 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { createPortal } from "react-dom";
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useRef,
+  type RefObject,
+} from "react";
 import { Bell, ArrowRight, X } from "lucide-react";
 import { Card } from "@/components/motion/card";
 import { Button } from "@/components/motion/button";
@@ -19,6 +26,24 @@ export default function UpdatesPopover({
   onViewAll: () => void;
 }) {
   const close = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState({ top: 64, right: 16 });
+  useLayoutEffect(() => {
+    const position = () => {
+      const rect = trigger.current?.getBoundingClientRect();
+      if (rect)
+        setAnchor({
+          top: rect.bottom + 8,
+          right: Math.max(16, window.innerWidth - rect.right),
+        });
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
+  }, [trigger]);
   const recent = [...changes]
     .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
     .slice(0, 6);
@@ -26,8 +51,8 @@ export default function UpdatesPopover({
     close.current?.focus();
     return () => trigger.current?.focus({ preventScroll: true });
   }, [trigger]);
-  return (
-    <div className="updates-popover-wrap">
+  return createPortal(
+    <div className="updates-popover-wrap" style={anchor}>
       <button
         className="updates-backdrop"
         tabIndex={-1}
@@ -115,6 +140,7 @@ export default function UpdatesPopover({
           </footer>
         )}
       </Card>
-    </div>
+    </div>,
+    document.body,
   );
 }

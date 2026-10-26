@@ -112,7 +112,37 @@ zhixing mail mark-read --account 学号 --id 邮件ID --confirm
 zhixing mail mark-unread --account 学号 --id 邮件ID --confirm
 ```
 
-下载同步等待文件写入完成；`--out` 已存在时返回错误，不覆盖原文件。下载进度为 stderr 的逐行 JSON。远端写操作当前支持邮件已读状态，发信、作业提交和设备下线仍通过应用执行。
+下载同步等待文件写入完成；`--out` 已存在时返回错误，不覆盖原文件。下载进度在 JSON 模式下写入 stderr 的逐行 JSON，表格模式下显示可读进度。远端写操作支持邮件已读状态与作业提交；发信和设备下线通过应用执行。
+
+## 可读表格
+
+```bash
+zhixing course list
+zhixing grades list --output table
+zhixing homework list --output text
+zhixing mail inbox --output table
+zhixing homework submit --help
+```
+
+列表按业务显示中文列名，邮件时间使用北京时间，空列表显示“暂无记录”。教室占用按周一到周日显示七节次的状态，回放、资料和作业均保留调用下一条命令所需的原始 ID。需要完整机器字段时使用 `--output json`。
+
+## 提交作业
+
+```bash
+zhixing homework submit --account 学号 --course 课程ID --id sourceId \
+  --type homework --content "作业说明见附件" \
+  --file ./报告.pdf --file ./源码.zip --confirm
+
+zhixing homework submit --course 课程ID --id sourceId \
+  --content-file ./正文.html --file ./报告.pdf --confirm --output json
+
+cat ./正文.txt | zhixing homework submit --course 课程ID --id sourceId \
+  --content-stdin --confirm --output json
+```
+
+`--type` 支持 `homework`、`experiment`、`design`，默认为作业。正文从 `--content`、UTF-8 `--content-file` 或 `--content-stdin` 中选择一种，按原文提交；`--file` 可重复指定。上传与提交复用桌面版已有学校接口。
+
+所有提交必须提供 `--confirm`。已提交任务再次提交还需 `--replace`，正文和附件会整体替换，请提供完整内容；学校禁止重复提交时返回错误。提交结果以学校成功响应为准，写操作不自动重放，遇到错误先用 `homework show` 查看状态再决定是否重试。CLI 暂不提供发信功能。
 
 ## AI 调用契约
 
@@ -122,7 +152,7 @@ zhixing schema homework show --output json
 zhixing --version --output json
 ```
 
-管道默认 JSON；终端默认可读缩进数据。`--output json` 强制机器格式，`--pretty` 只改变缩进。stdout 每次只有一个结果对象，stderr 用于进度和交互提示。
+终端默认显示中文表格，管道默认 JSON。`--output text` 或 `--output table` 强制可读表格，支持中文宽度和长内容换行；`--output json` 强制机器格式，`--pretty` 只改变 JSON 缩进。JSON 模式 stdout 每次只有一个结果对象，stderr 输出结构化进度；表格模式 stderr 显示可读进度和错误，部分成功的结果仍显示在 stdout。
 
 ```json
 {"schema_version":1,"ok":true,"data":{},"error":null,"meta":{"version":"0.17.0","timezone":"Asia/Shanghai","complete":true},"next_actions":[]}

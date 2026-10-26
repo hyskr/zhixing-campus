@@ -6,7 +6,7 @@ edition = "2021"
 default-run = "zhixing-campus"
 
 [features]
-cli = ["dep:sm2", "dep:rand", "dep:rpassword"]
+cli = ["dep:sm2", "dep:rand", "dep:rpassword", "dep:comfy-table"]
 
 [[bin]]
 name = "zhixing"
@@ -21,6 +21,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+comfy-table = { version = "7", optional = true }
 sm2 = { version = "0.14", features = ["pke"], optional = true }
 rand = { version = "0.10", optional = true }
 rpassword = { version = "7", optional = true }

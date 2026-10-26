@@ -73,3 +73,5 @@ BeUI（starc007/ui-components）采用 MIT 许可，完整文本随项目保存�
 - 官方 Haptics、Window State：MIT / Apache-2.0。
 - [tauri-plugin-android-installer](https://github.com/iMalFect/tauri-plugin-android-installer)：MIT / Apache-2.0。
 - [tauri-plugin-hot-update](https://github.com/yanqianglu/tauri-plugin-hot-update)：MIT / Apache-2.0。
+
+CLI 可读表格使用 [comfy-table](https://github.com/Nukesor/comfy-table)，MIT License，文本见 `licenses/comfy-table.txt`。

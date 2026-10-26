@@ -1,6 +1,8 @@
 //! Console interface over the same account sessions and campus adapters as the app.
 //! Command/output design references are recorded in docs/references/cli-sources.md.
 use super::*;
+#[path = "cli_output.rs"]
+mod output;
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 
@@ -44,6 +46,7 @@ fn local(error: impl std::fmt::Display) -> Failure {
 struct Args {
     path: String,
     flags: HashMap<String, String>,
+    files: Vec<String>,
 }
 impl Args {
     fn value(&self, key: &str) -> &str {
@@ -83,6 +86,7 @@ impl Args {
 fn parse() -> Result<Args> {
     let mut words = Vec::new();
     let mut flags = HashMap::new();
+    let mut files = Vec::new();
     let mut raw = std::env::args().skip(1).peekable();
     let switches = [
         "help",
@@ -92,10 +96,31 @@ fn parse() -> Result<Args> {
         "confirm",
         "refresh",
         "pretty",
+        "replace",
+        "content-stdin",
     ];
     let values = [
-        "account", "data-dir", "output", "storage", "captcha", "course", "id", "type", "category",
-        "parent", "start", "limit", "building", "week", "semester", "query", "out", "view",
+        "account",
+        "data-dir",
+        "output",
+        "storage",
+        "captcha",
+        "course",
+        "id",
+        "type",
+        "category",
+        "parent",
+        "start",
+        "limit",
+        "building",
+        "week",
+        "semester",
+        "query",
+        "out",
+        "view",
+        "content",
+        "content-file",
+        "file",
     ];
     while let Some(arg) = raw.next() {
         if arg == "-h" {
@@ -111,7 +136,7 @@ fn parse() -> Result<Args> {
                 .split_once('=')
                 .map(|(a, b)| (a, Some(b)))
                 .unwrap_or((option, None));
-            let value = if switches.contains(&key) {
+            let value: String = if switches.contains(&key) {
                 if inline.is_some() {
                     return Err(fail(
                         "INVALID_ARGUMENT",
@@ -123,12 +148,14 @@ fn parse() -> Result<Args> {
             } else if values.contains(&key) {
                 inline
                     .map(str::to_owned)
-                    .or_else(|| raw.next())
-                    .filter(|v| !v.starts_with("--"))
+                    .or_else(|| raw.next().filter(|v| !v.starts_with("--")))
                     .ok_or_else(|| fail("INVALID_ARGUMENT", format!("--{key} 缺少参数"), 2))?
             } else {
                 return Err(fail("INVALID_ARGUMENT", format!("未知参数 --{key}"), 2));
             };
+            if key == "file" {
+                files.push(value.clone());
+            }
             flags.insert(key.into(), value);
         } else {
             words.push(arg);
@@ -137,6 +164,7 @@ fn parse() -> Result<Args> {
     Ok(Args {
         path: words.join(" "),
         flags,
+        files,
     })
 }
 fn commands() -> Value {
@@ -154,6 +182,7 @@ fn commands() -> Value {
         {"path":"course list","summary":"智慧课程列表，返回后续命令使用的课程 id","writes":false,"flags":[]},
         {"path":"homework list","summary":"按课程读取作业、实验、课程设计，保留部分失败","writes":false,"flags":["course","type"]},
         {"path":"homework show","summary":"正文、附件、提交记录与批阅","writes":false,"flags":["course","id","type"]},
+        {"path":"homework submit","summary":"提交作业正文和本机附件；重复提交需 --replace，所有提交需 --confirm","writes":true,"flags":["course","id","type","content","content-file","content-stdin","file","replace","confirm"]},
         {"path":"resource list","summary":"课程资源分类或指定目录子项","writes":false,"flags":["course","category","parent"]},
         {"path":"resource space","summary":"个人文件空间","writes":false,"flags":["query"]},
         {"path":"replay list","summary":"课程回放","writes":false,"flags":["course"]},
@@ -172,7 +201,7 @@ fn commands() -> Value {
     ])
 }
 fn schema() -> Value {
-    json!({"name":"zhixing","version":env!("CARGO_PKG_VERSION"),"schema_version":1,"global_flags":{"account":"账号；只有一个保存账号时可省略","data-dir":"默认使用桌面应用数据目录","output":"auto|json|text；管道默认 JSON","refresh":"读接口会话失效后使用已保存密码重新 SSO 登录一次","pretty":"缩进 JSON"},"commands":commands(),"response":{"schema_version":1,"ok":true,"data":{},"error":null,"meta":{"timezone":"Asia/Shanghai","complete":true},"next_actions":[]},"exit_codes":{"0":"成功","1":"本地读写错误","2":"参数错误","3":"登录或人工验证码","4":"找不到目标","5":"需要显式确认","6":"网络或平台错误","7":"部分结果"}})
+    json!({"name":"zhixing","version":env!("CARGO_PKG_VERSION"),"schema_version":1,"global_flags":{"account":"账号；只有一个保存账号时可省略","data-dir":"默认使用桌面应用数据目录","output":"auto|json|text|table；终端默认表格，管道默认 JSON","refresh":"读接口会话失效后使用已保存密码重新 SSO 登录一次","pretty":"缩进 JSON"},"commands":commands(),"response":{"schema_version":1,"ok":true,"data":{},"error":null,"meta":{"timezone":"Asia/Shanghai","complete":true},"next_actions":[]},"exit_codes":{"0":"成功","1":"本地读写错误","2":"参数错误","3":"登录或人工验证码","4":"找不到目标","5":"需要显式确认","6":"网络或平台错误","7":"部分结果"}})
 }
 fn data_dir(args: &Args) -> Result<PathBuf> {
     if !args.value("data-dir").is_empty() {
@@ -422,8 +451,28 @@ async fn login(args: &Args, state: &CampusState, id: &str) -> Result<Value> {
     }
     finish(args, state, id, &auth).await
 }
-fn progress(command: &str, event: &str, data: Value) {
-    eprintln!("{}", json!({"event":event,"command":command,"data":data}));
+fn human_output(args: &Args) -> bool {
+    matches!(args.value("output"), "text" | "table")
+        || (matches!(args.value("output"), "" | "auto") && std::io::stdout().is_terminal())
+}
+fn progress(args: &Args, event: &str, data: Value) {
+    if human_output(args) {
+        match event {
+            "course.read" => eprintln!(
+                "正在读取课程 {} · {}",
+                string(&data["id"]),
+                ["作业", "课程设计", "实验"][data["type"].as_u64().unwrap_or(0).min(2) as usize]
+            ),
+            "download.progress" => eprintln!(
+                "已下载 {:.1} MB",
+                data["bytes"].as_u64().unwrap_or(0) as f64 / 1048576.0
+            ),
+            "attachment.upload" => eprintln!("正在上传附件：{}", string(&data["name"])),
+            _ => {}
+        }
+    } else {
+        eprintln!("{}", json!({"event":event,"command":args.path,"data":data}));
+    }
 }
 async fn profile(session: &Session, id: &str) -> std::result::Result<Value, String> {
     let response = session
@@ -581,7 +630,7 @@ async fn smart_query(args: &Args, session: &Session) -> Result<Value> {
                     if args.has("type") && k != kind(args)? {
                         continue;
                     }
-                    progress(&args.path, "course.read", json!({"id":c["id"],"type":k}));
+                    progress(args, "course.read", json!({"id":c["id"],"type":k}));
                     match fetch_homework_type(session, &smart, c, k).await {
                         Ok(items) => rows.extend(items),
                         Err(error) => failures
@@ -599,6 +648,7 @@ async fn smart_query(args: &Args, session: &Session) -> Result<Value> {
             kind(args)?,
         )
         .await?),
+        "homework submit" => submit_homework(args, session, &smart).await,
         "resource list" => {
             let id = args.need("course")?;
             if !args.has("category") {
@@ -720,7 +770,7 @@ async fn smart_query(args: &Args, session: &Session) -> Result<Value> {
                     file.write_all(&chunk).await.map_err(local)?;
                     bytes += chunk.len() as u64;
                     if last.elapsed().as_secs() >= 1 {
-                        progress(&args.path, "download.progress", json!({"bytes":bytes}));
+                        progress(args, "download.progress", json!({"bytes":bytes}));
                         last = std::time::Instant::now();
                     }
                 }
@@ -746,6 +796,75 @@ async fn smart_query(args: &Args, session: &Session) -> Result<Value> {
         )),
     }
 }
+async fn submit_homework(args: &Args, session: &Session, smart: &SmartSession) -> Result<Value> {
+    use std::io::Read;
+    args.confirm()?;
+    let course = args.need("course")?;
+    let source = args.need("id")?;
+    let kind = kind(args)?;
+    let content = if args.has("content-file") {
+        fs::read_to_string(args.need("content-file")?).map_err(local)?
+    } else if args.has("content-stdin") {
+        let mut text = String::new();
+        std::io::stdin().read_to_string(&mut text).map_err(local)?;
+        text
+    } else {
+        args.value("content").to_string()
+    };
+    if content.trim().is_empty() && args.files.is_empty() {
+        return Err(fail(
+            "INVALID_ARGUMENT",
+            "请提供正文或至少一个 --file 附件",
+            2,
+        ));
+    }
+    // 在上传前确认所有本机附件可读。
+    for path in &args.files {
+        let file = fs::File::open(path).map_err(local)?;
+        if !file.metadata().map_err(local)?.is_file() {
+            return Err(fail("INVALID_ARGUMENT", format!("附件不是文件：{path}"), 2));
+        }
+    }
+    let detail = learning::detail_data(session, smart, course, source, kind).await?;
+    let previous = string(&detail["status"]) == "已提交"
+        || !string(&detail["submittedContent"]).is_empty()
+        || detail["submittedAttachments"]
+            .as_array()
+            .is_some_and(|files| !files.is_empty());
+    if previous {
+        if detail["repeatAllowed"] == false {
+            return Err(fail("UPSTREAM_ERROR", "该作业不允许重复提交", 6));
+        }
+        if !args.has("replace") {
+            return Err(fail(
+                "CONFIRM_REQUIRED",
+                "重复提交会替换已有正文和附件；确认提供完整内容后添加 --replace",
+                5,
+            ));
+        }
+    }
+    let mut files = Vec::new();
+    for path in &args.files {
+        let name = Path::new(path)
+            .file_name()
+            .and_then(|name| name.to_str())
+            .ok_or_else(|| fail("INVALID_ARGUMENT", "附件名称不可用", 2))?;
+        progress(args, "attachment.upload", json!({"name":name}));
+        let uploaded = learning::upload_bytes(
+            session,
+            smart,
+            name,
+            tokio::fs::read(path).await.map_err(local)?,
+            Some(source),
+        )
+        .await?;
+        files.push(serde_json::from_value::<learning::UploadedFile>(uploaded).map_err(local)?);
+    }
+    learning::submit_data(session, smart, course, source, kind, &content, &files).await?;
+    Ok(
+        json!({"submitted":true,"courseId":course,"sourceId":source,"type":["作业","课程设计","实验"][kind],"attachmentCount":files.len()}),
+    )
+}
 fn safe_error(message: &str) -> String {
     if message.contains("http://") || message.contains("https://") {
         "学校接口请求失败，请稍后重试".into()
@@ -756,6 +875,19 @@ fn safe_error(message: &str) -> String {
 async fn execute(args: &Args) -> Result<Value> {
     if args.has("version") {
         return Ok(json!({"version":env!("CARGO_PKG_VERSION")}));
+    }
+    if args.has("help") && !args.path.is_empty() {
+        if let Some(spec) = commands()
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|spec| spec["path"] == args.path)
+            .cloned()
+        {
+            return Ok(
+                json!({"command":spec,"global_flags":schema()["global_flags"],"response":schema()["response"]}),
+            );
+        }
     }
     if args.path == "schema" || args.has("help") || args.path.is_empty() {
         return Ok(schema());
@@ -821,6 +953,24 @@ async fn execute(args: &Args) -> Result<Value> {
             2,
         ));
     }
+    if args.path == "homework submit" {
+        args.confirm()?;
+        args.need("course")?;
+        args.need("id")?;
+        kind(args)?;
+        if ["content", "content-file", "content-stdin"]
+            .iter()
+            .filter(|key| args.has(key))
+            .count()
+            > 1
+        {
+            return Err(fail(
+                "INVALID_ARGUMENT",
+                "正文只能选择 --content、--content-file 或 --content-stdin 中一种",
+                2,
+            ));
+        }
+    }
     if args.path == "cli install" {
         return cli_install::install().map_err(local);
     }
@@ -880,6 +1030,7 @@ async fn execute(args: &Args) -> Result<Value> {
                 &Args {
                     path: "auth login".into(),
                     flags,
+                    files: Vec::new(),
                 },
                 &state,
                 &id,
@@ -890,12 +1041,14 @@ async fn execute(args: &Args) -> Result<Value> {
         Err(error) => return Err(error.into()),
     };
     let mut result = query(args, &session, &id).await;
-    if args.has("refresh") && result.as_ref().is_err_and(|e| e.exit == 3) {
+    if args.has("refresh") && spec["writes"] != true && result.as_ref().is_err_and(|e| e.exit == 3)
+    {
         let mut flags = args.flags.clone();
         flags.insert("saved-password".into(), "true".into());
         let auth_args = Args {
             path: "auth login".into(),
             flags,
+            files: Vec::new(),
         };
         login(&auth_args, &state, &id).await?;
         result = query(args, &get_session(&state, &id)?, &id).await;
@@ -908,17 +1061,18 @@ pub fn run() -> i32 {
     let output = parsed
         .as_ref()
         .map(|args| args.value("output"))
-        .unwrap_or("json");
-    let text = output == "text" || (output != "json" && std::io::stdout().is_terminal());
+        .unwrap_or("auto");
+    let text = matches!(output, "text" | "table")
+        || (matches!(output, "" | "auto") && std::io::stdout().is_terminal());
     let result = match &parsed {
-        Ok(args) if ["", "auto", "json", "text"].contains(&args.value("output")) => {
+        Ok(args) if ["", "auto", "json", "text", "table"].contains(&args.value("output")) => {
             tokio::runtime::Runtime::new()
                 .map_err(local)
                 .and_then(|runtime| runtime.block_on(execute(args)))
         }
         Ok(_) => Err(fail(
             "INVALID_ARGUMENT",
-            "--output 使用 auto、json 或 text",
+            "--output 使用 auto、json、text 或 table",
             2,
         )),
         Err(error) => Err(error.clone()),
@@ -956,10 +1110,31 @@ pub fn run() -> i32 {
     };
     let envelope = json!({"schema_version":1,"ok":exit==0,"data":data,"error":error,"meta":{"version":env!("CARGO_PKG_VERSION"),"timezone":"Asia/Shanghai","complete":complete},"next_actions":next});
     if text {
-        if error.is_null() {
-            println!("{}", serde_json::to_string_pretty(&data).unwrap());
-        } else {
-            eprintln!("{}", error["message"].as_str().unwrap_or("命令失败"));
+        if !data.is_null() {
+            print!(
+                "{}",
+                output::render(
+                    parsed.as_ref().map(|a| a.path.as_str()).unwrap_or(""),
+                    &data
+                )
+            );
+        }
+        if !error.is_null() {
+            eprintln!(
+                "错误 [{}]：{}",
+                string(&error["code"]),
+                if exit == 7 {
+                    "部分任务读取失败，成功结果和失败项已列出。"
+                } else {
+                    error["message"].as_str().unwrap_or("命令失败")
+                }
+            );
+            if !error["details"].is_null() {
+                eprint!("{}", output::render("", &error["details"]));
+            }
+            for command in next.as_array().into_iter().flatten() {
+                eprintln!("可使用：zhixing {}", string(command));
+            }
         }
     } else if parsed.as_ref().is_ok_and(|a| a.has("pretty")) {
         println!("{}", serde_json::to_string_pretty(&envelope).unwrap());

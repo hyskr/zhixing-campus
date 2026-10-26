@@ -230,6 +230,48 @@ async fn refresh_school_session(session: &Session, target: &str) -> Result<(), S
     }
     Ok(())
 }
+#[cfg(desktop)]
+fn build_school_browser(
+    app: &tauri::AppHandle,
+    label: &str,
+    directory: PathBuf,
+    features: Option<tauri::webview::NewWindowFeatures>,
+) -> Result<tauri::WebviewWindow, String> {
+    static NEXT_WINDOW: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    let opener = app.clone();
+    let child_directory = directory.clone();
+    let mut builder = tauri::WebviewWindowBuilder::new(
+        app,
+        label,
+        tauri::WebviewUrl::External(Url::parse("about:blank").unwrap()),
+    )
+    .title("交大网站 · 知行 Campus")
+    .inner_size(1180.0, 820.0)
+    .data_directory(directory)
+    .on_document_title_changed(|window, title| {
+        if !title.trim().is_empty() {
+            let _ = window.set_title(&format!("{title} · 知行 Campus"));
+        }
+    })
+    .on_new_window(move |_url, features| {
+        let label = format!(
+            "school-page-{}",
+            NEXT_WINDOW.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+        );
+        match build_school_browser(&opener, &label, child_directory.clone(), Some(features)) {
+            Ok(window) => tauri::webview::NewWindowResponse::Create { window },
+            Err(error) => {
+                eprintln!("无法打开校园子页面：{error}");
+                tauri::webview::NewWindowResponse::Deny
+            }
+        }
+    });
+    // 原生 opener 配置保留 Cookie、window.opener 与新窗口请求上下文。
+    if let Some(features) = features {
+        builder = builder.window_features(features);
+    }
+    builder.build().map_err(|e| e.to_string())
+}
 #[tauri::command]
 pub async fn open_school_page(
     username: String,
@@ -271,22 +313,14 @@ pub async fn open_school_page(
             .unwrap()
             .join("webviews")
             .join(&username);
-        let window = if let Some(window) = app.get_webview_window("school-browser") {
+        let label = format!("school-browser-{username}");
+        let window = if let Some(window) = app.get_webview_window(&label) {
             window
                 .navigate(Url::parse("about:blank").unwrap())
                 .map_err(|e| e.to_string())?;
             window
         } else {
-            tauri::WebviewWindowBuilder::new(
-                &app,
-                "school-browser",
-                tauri::WebviewUrl::External(Url::parse("about:blank").unwrap()),
-            )
-            .title("交大网站 · 知行 Campus")
-            .inner_size(1180.0, 820.0)
-            .data_directory(directory)
-            .build()
-            .map_err(|e| e.to_string())?
+            build_school_browser(&app, &label, directory, None)?
         };
         for cookie in window.cookies().map_err(|e| e.to_string())? {
             window.delete_cookie(cookie).map_err(|e| e.to_string())?;
