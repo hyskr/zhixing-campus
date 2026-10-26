@@ -11,6 +11,8 @@ CLI 与桌面应用一起安装，复用相同的账号、凭据保存方式、C
 | Linux DEB | `/usr/bin/zhixing` |
 | Linux AppImage | 随 AppImage 包含；也可从同版本 Release 获取独立 CLI 可执行文件 |
 
+单独下载 Release 中的 CLI 时，请先将文件重命名为 `zhixing`（Windows 为 `zhixing.exe`），放到固定目录；macOS/Linux 添加执行权限后可执行 `./zhixing cli install`。
+
 macOS 示例：
 
 ```bash
