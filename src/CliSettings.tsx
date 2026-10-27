@@ -37,7 +37,7 @@ export default function CliSettings() {
           </strong>
           <small>
             {info?.bundled
-              ? "无需重复下载或登录。安装后可在终端与 AI 工具中调用 zhixing。"
+              ? "安装一次即可在终端与 AI 工具中调用 zhixing；应用更新并启动后，终端命令自动同步更新。"
               : "当前开发环境尚未包含 CLI，正式桌面安装包中会一并提供。"}
           </small>
         </span>

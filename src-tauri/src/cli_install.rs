@@ -49,7 +49,7 @@ pub(super) fn default_data_directory() -> Result<PathBuf, String> {
             .join("cn.zhixing.bjtu")
     })
 }
-pub(super) fn install() -> Result<Value, String> {
+fn install_entry() -> Result<Value, String> {
     let source = executable()?;
     #[cfg(windows)]
     {
@@ -137,6 +137,42 @@ pub(super) fn install() -> Result<Value, String> {
         Err("当前平台请直接调用 CLI 完整路径".into())
     }
 }
+pub(super) fn install() -> Result<Value, String> {
+    let result = install_entry()?;
+    let directory = default_data_directory()?;
+    fs::create_dir_all(&directory).map_err(|e| e.to_string())?;
+    fs::write(directory.join("cli-installed"), b"zhixing\n").map_err(|e| e.to_string())?;
+    Ok(result)
+}
+
+#[cfg(desktop)]
+pub(super) fn refresh_installed() -> Result<(), String> {
+    let mut installed = default_data_directory()?.join("cli-installed").is_file();
+    #[cfg(unix)]
+    {
+        let target = home()?.join(".local/bin/zhixing");
+        installed |= fs::read_link(&target)
+            .map(|path| path.file_name() == Some(std::ffi::OsStr::new("zhixing")))
+            .unwrap_or(false)
+            || fs::read_to_string(&target).unwrap_or_default()
+                .starts_with("#!/bin/sh\n# zhixing CLI\n");
+    }
+    #[cfg(windows)]
+    if !installed {
+        let source = executable()?;
+        let result = std::process::Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command",
+                "$parts=@([Environment]::GetEnvironmentVariable('Path','User') -split ';'); if($parts -contains $env:ZHIXING_CLI_DIRECTORY) { exit 0 } else { exit 1 }"])
+            .env("ZHIXING_CLI_DIRECTORY", source.parent().unwrap())
+            .output().map_err(|e| e.to_string())?;
+        installed = result.status.success();
+    }
+    if installed {
+        install()?;
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub fn cli_info() -> Result<Value, String> {
     info()

@@ -1054,6 +1054,12 @@ pub fn run() {
         .manage(media::DownloadState::default())
         .manage(android_updates::UpdateDownload::default())
         .setup(|app| {
+            #[cfg(desktop)]
+            tauri::async_runtime::spawn_blocking(|| {
+                if let Err(error) = cli_install::refresh_installed() {
+                    eprintln!("终端命令更新失败：{error}");
+                }
+            });
             let directory = app.path().app_data_dir()?.join("sessions");
             fs::create_dir_all(&directory)?;
             media::init_history(
