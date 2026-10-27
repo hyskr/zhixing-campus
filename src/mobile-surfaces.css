@@ -842,20 +842,30 @@ body:has(.campus-confirmation) > button[aria-label="Dismiss modal"] {
     font-size: 12px;
   }
   .mobile-search-input {
-    display: flex;
-    align-items: center;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 0 12px;
-    background: var(--muted);
-    gap: 8px;
+    width: 100%;
+    min-width: 0;
   }
-  .mobile-search-input input {
-    border: 0 !important;
-    background: transparent !important;
+  .mobile-search-input .mobile-search-field {
     width: 100%;
     height: 48px;
-    padding: 0 4px !important;
+    min-width: 0;
+    border-radius: 14px;
+    background: var(--muted);
+  }
+  .mobile-search-input .mobile-search-control {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0 14px 0 42px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none;
+    line-height: normal;
+    appearance: none;
+    -webkit-appearance: none;
   }
   .mobile-search-page > p {
     color: var(--muted-foreground);

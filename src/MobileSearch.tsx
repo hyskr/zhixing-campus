@@ -23,17 +23,20 @@ export default function MobileSearch({
   return (
     <MobileDetailPage title="搜索" onBack={onClose}>
       <div className="mobile-search-page">
-        <div className="mobile-search-input">
-          <Search size={20} />
-          <Input
-            aria-label="搜索课程、作业或页面"
-            type="search"
-            enterKeyHint="search"
-            placeholder="搜索课程、作业或页面"
-            value={query}
-            onChange={setQuery}
-          />
-        </div>
+        <Input
+          className="mobile-search-input"
+          classNames={{
+            field: "mobile-search-field",
+            input: "mobile-search-control",
+          }}
+          leftIcon={<Search size={20} aria-hidden="true" />}
+          aria-label="搜索课程、作业或页面"
+          type="search"
+          enterKeyHint="search"
+          placeholder="搜索课程、作业或页面"
+          value={query}
+          onChange={setQuery}
+        />
         <p>{needle ? `${results.length} 个结果` : "页面与课程"}</p>
         <div className="mobile-search-results">
           {results.map((item) => {
