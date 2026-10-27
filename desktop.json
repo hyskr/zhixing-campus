@@ -1,0 +1,23 @@
+{
+  "version": "0.18.0",
+  "notes": "# 知行 Campus 0.18.0\n\n- 接入界面热更新，支持检查、下载与下次启动生效；保留内置界面回退。\n- 桌面记住窗口大小、位置和最大化状态。\n- 启动及返回前台检测正式安装包和界面更新，发现新版可进入更新页面。\n- Android 提供正式更新通道，应用内显示 APK 下载进度，可取消、重试并打开系统安装器。\n- Android 首次安装授权返回后继续处理，拒绝授权时保留下载文件；下次启动确认实际升级版本。\n- Android 导航、课表手势切周与下拉刷新加入触觉反馈。\n- CLI 与桌面应用一同分发，继续复用已有账号和登录会话。\n",
+  "pub_date": "2026-10-26T10:09:55Z",
+  "platforms": {
+    "darwin-aarch64": {
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.18.0/zhixing-campus_0.18.0_aarch64-apple-darwin.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4Nlpiekg0VDYyR0o5WnZlZ0hWZ2J2UG5BcnBuM09sOThoNjcwelMyUFVaUS9kK21GOEM1ZGJ1Qlk2bFRVblZkeHRwSHFTeFhwYmFxdVZGRyttazdlWDlONmdVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDEwMTQ5CWZpbGU655+l6KGMIENhbXB1cy5hcHAudGFyLmd6CXZlcnNpb246MC4xOC4wClFkZlNnMEJ1UDBiTlIzd0dwdEY0cEdhWGpVZE9LOFZSMXIzRERwQzVlcTUxZFZKREsxUXBOa3RjZlE4bmlQK2RFUksxOXFJZGluQ05sUHhHR3RmTEJnPT0K"
+    },
+    "darwin-x86_64": {
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.18.0/zhixing-campus_0.18.0_x86_64-apple-darwin.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4Nlpiek1QTkVhb1lTbzFjYTFERmYvdWVLVmM1N1VGVFYralZDRlU1SmM0dDdMRGF5bUlsUFE4bVN1NUNUVHZCOWYybVdhdXk2RE1hcy9icVFFb1owUndqQWd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDEwNjcxCWZpbGU655+l6KGMIENhbXB1cy5hcHAudGFyLmd6CXZlcnNpb246MC4xOC4wClFXSXJDM0J5ak0rUFR6dDRnQUlZcE5VVnc5MWpkVkR0NlJBYXhXdmlJeVdXM0t3QUdodkJLdkJtNFFxKy82RGlUNE14Tngyd1MvZktYY1lHR2N4dUNnPT0K"
+    },
+    "windows-x86_64": {
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.18.0/zhixing-campus_0.18.0_x86_64-pc-windows-msvc-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekJpL0NINzg3VmtTQjNCSERIV2RHZVpxQmgrRjZvNWlSb3VKVXdYVFVaOVJGRy9MdVNlR2VTTFloM2pBR05tRk5EQjN6Q0JpZzJQNTIxNTNGMXZoc1E0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDEwMjE0CWZpbGU655+l6KGMIENhbXB1c18wLjE4LjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuMTguMAprQkRpeW43UEV2T2tHRGZPdUlydEZKTUZZZTlhTnNyZUpQR1VkMXlWOUtONUx6K041U1psTHh2OGV4ZHRFSVd4UThPZ083ckNIMEE2T2dVSGxrNEZBdz09Cg=="
+    },
+    "linux-x86_64": {
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.18.0/zhixing-campus_0.18.0_x86_64-unknown-linux-gnu.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekN2MmtROXhRSURLVnJNdTQ3cXhLczJhOWd4eW41aXg3VmtONGJDcnBjVkNmWjJWR1dJOGlHbTh1eFpVdTlMMnZyZHFPN0UzZVBGZ3gzaER5K2NPMlE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDEwMTQ4CWZpbGU655+l6KGMIENhbXB1c18wLjE4LjBfYW1kNjQuQXBwSW1hZ2UJdmVyc2lvbjowLjE4LjAKTWpxTTdJVkVoV3BXK2djVURKUUI5dG1EVjZmRTc5SlVYYVZmTmo0MldibW9JL0JLR0psWmhxUzJEMlB1OTFGaFpDbnVhaGpwOVdIQnZjWEtIUyt2RHc9PQo="
+    }
+  }
+}
