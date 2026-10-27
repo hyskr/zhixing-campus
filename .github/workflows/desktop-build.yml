@@ -177,3 +177,12 @@ jobs:
             gh release edit "$RELEASE_TAG" --draft=false --latest
             bun scripts/publish-update-channel.ts release/latest.json desktop.json
           fi
+
+  qiniu:
+    name: Mirror published assets to Qiniu
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    uses: ./.github/workflows/qiniu-mirror.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

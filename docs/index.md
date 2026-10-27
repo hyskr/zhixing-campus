@@ -28,3 +28,5 @@
 - [0.18.0](releases/0.18.0.md) · [Android 0.18.0](releases/android-0.18.0.md)
 
 - [CLI 提交与校园浏览窗口](features/cli-submit-and-school-browser.md)
+
+- [七牛发布备份](guides/qiniu.md)

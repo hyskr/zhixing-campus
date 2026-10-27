@@ -95,3 +95,12 @@ jobs:
             gh release create "$GITHUB_REF_NAME" output/android/*.apk --prerelease=false --latest=false --title "知行 Campus Android ${GITHUB_REF_NAME#android-v}" --generate-notes
           fi
           bun scripts/publish-update-channel.ts output/android/android.json android.json
+
+  qiniu:
+    name: Mirror published assets to Qiniu
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/android-v')
+    uses: ./.github/workflows/qiniu-mirror.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit

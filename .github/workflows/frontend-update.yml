@@ -64,3 +64,11 @@ jobs:
             gh release create "$tag" output/frontend/* --latest=false --prerelease=false --title "知行 Campus 界面 $version" --notes-file "$notes"
           fi
           bun scripts/publish-update-channel.ts output/frontend/manifest.json frontend/manifest.json output/frontend/manifest.json.minisig frontend/manifest.json.minisig
+
+  qiniu:
+    name: Mirror published assets to Qiniu
+    needs: publish
+    uses: ./.github/workflows/qiniu-mirror.yml
+    with:
+      tag: ${{ inputs.version && format('frontend-v{0}', inputs.version) || github.ref_name }}
+    secrets: inherit

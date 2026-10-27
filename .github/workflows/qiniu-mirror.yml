@@ -1,0 +1,47 @@
+name: Mirror release to Qiniu
+on:
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: true
+    secrets:
+      QINIU_ACCESS_KEY:
+        required: true
+      QINIU_SECRET_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '已发布的 Release tag，例如 v0.19.1'
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: qiniu-${{ inputs.tag }}
+  cancel-in-progress: false
+jobs:
+  mirror:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Download qshell
+        run: |
+          curl --fail --location --retry 3 https://github.com/qiniu/qshell/releases/download/v2.19.12/qshell-v2.19.12-linux-amd64.tar.gz -o "$RUNNER_TEMP/qshell.tar.gz"
+          mkdir -p "$RUNNER_TEMP/qshell-bin"
+          tar -xzf "$RUNNER_TEMP/qshell.tar.gz" -C "$RUNNER_TEMP/qshell-bin"
+          binary=$(find "$RUNNER_TEMP/qshell-bin" -type f -name 'qshell*' ! -name '*.md' | head -n 1)
+          install -m 755 "$binary" "$RUNNER_TEMP/qshell"
+      - name: Download published release assets
+        run: gh release download "$RELEASE_TAG" --dir output/qiniu-release
+      - name: Mirror assets to Qiniu
+        env:
+          QINIU_ACCESS_KEY: ${{ secrets.QINIU_ACCESS_KEY }}
+          QINIU_SECRET_KEY: ${{ secrets.QINIU_SECRET_KEY }}
+          QINIU_BUCKET: ${{ vars.QINIU_BUCKET }}
+        run: python3 scripts/mirror-qiniu.py --tag "$RELEASE_TAG" --directory output/qiniu-release --qshell "$RUNNER_TEMP/qshell"
