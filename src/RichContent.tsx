@@ -3,6 +3,7 @@ import DOMPurify from "dompurify";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Account } from "./types";
+import "./rich-content.css";
 export default function RichContent({
   content,
   account,
@@ -57,7 +58,7 @@ export default function RichContent({
   }, [content, account.id, account.demo]);
   return (
     <div
-      className="typeset typeset-docs max-w-[37em]"
+      className="typeset typeset-docs homework-rich-content"
       onClick={(event) => {
         const a = (event.target as HTMLElement).closest("a");
         if (a) {
