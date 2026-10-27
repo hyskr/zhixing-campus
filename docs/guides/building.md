@@ -31,7 +31,7 @@ Tag 与三个版本号必须一致。正式 tag 发布到稳定更新通道；�
 
 ## 应用内更新
 
-`tauri-plugin-updater` 从公开仓库的 `releases/latest/download/latest.json` 检查正式版本。Windows 使用 NSIS、macOS 使用应用归档、Linux 使用 AppImage。DEB 安装版通过发布页面下载安装更新。界面入口为 **设置 → 应用更新**，不会自动安装或重启。
+`tauri-plugin-updater` 从 `update-channel` 分支的 `desktop.json` 检查正式版本。桌面安装包同时保留 Release 中的 `latest.json`，供旧版更新入口继续使用。Windows 使用 NSIS、macOS 使用应用归档、Linux 使用 AppImage。DEB 安装版通过发布页面下载安装更新。界面入口为 **设置 → 应用更新**，不会自动安装或重启。
 
 `TAURI_SIGNING_PRIVATE_KEY` 已配置为仓库 Actions Secret。私钥在本机 `~/.tauri/zhixing-campus.key`，公钥在 `tauri.conf.json`。后续版本继续使用同一私钥；请备份私钥，避免已安装应用无法验证新版本。签名与平台发布者签名、公证是独立流程。
 

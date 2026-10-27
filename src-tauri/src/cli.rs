@@ -862,7 +862,7 @@ async fn submit_homework(args: &Args, session: &Session, smart: &SmartSession) -
     }
     learning::submit_data(session, smart, course, source, kind, &content, &files).await?;
     Ok(
-        json!({"submitted":true,"courseId":course,"sourceId":source,"type":["作业","课程设计","实验"][kind],"attachmentCount":files.len()}),
+        json!({"submitted":true,"courseId":course,"sourceId":source,"type":(["作业","课程设计","实验"][kind]),"attachmentCount":files.len()}),
     )
 }
 fn safe_error(message: &str) -> String {

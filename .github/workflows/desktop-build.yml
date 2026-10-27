@@ -171,4 +171,9 @@ jobs:
           gh api "repos/$GH_REPO/releases/$release_id" > output-release.json
           bun scripts/update-manifest.ts output-release.json release release/latest.json
           gh release upload "$RELEASE_TAG" release/latest.json --clobber
-          gh release edit "$RELEASE_TAG" --draft=false --latest
+          if [[ "$RELEASE_TAG" == *-* ]]; then
+            gh release edit "$RELEASE_TAG" --draft=false --latest=false
+          else
+            gh release edit "$RELEASE_TAG" --draft=false --latest
+            bun scripts/publish-update-channel.ts release/latest.json desktop.json
+          fi
