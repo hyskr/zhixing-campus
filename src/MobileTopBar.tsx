@@ -31,6 +31,8 @@ export default function MobileTopBar({
   week,
   now,
   busy,
+  background = false,
+  refreshIssue = false,
   onBack,
   onSearch,
   onAccount,
@@ -45,6 +47,8 @@ export default function MobileTopBar({
   week: number;
   now: number;
   busy: boolean;
+  background?: boolean;
+  refreshIssue?: boolean;
   onBack: () => void;
   onSearch: () => void;
   onAccount: () => void;
@@ -62,7 +66,7 @@ export default function MobileTopBar({
       : undefined;
   return (
     <header
-      className={`mobile-topbar ${subtitle ? "has-subtitle" : ""} ${home ? "is-home" : ""}`}
+      className={`mobile-topbar ${subtitle || refreshIssue ? "has-subtitle" : ""} ${home ? "is-home" : ""}`}
     >
       {!roots.includes(page) && (
         <Button
@@ -78,7 +82,11 @@ export default function MobileTopBar({
         <h1>
           {titles[page] ?? navItems.find((item) => item.id === page)?.label}
         </h1>
-        {subtitle && <p>{subtitle}</p>}
+        {refreshIssue ? (
+          <p role="status">更新未完成 · 点击刷新</p>
+        ) : (
+          subtitle && <p>{background ? "后台更新中" : subtitle}</p>
+        )}
       </div>
       <div className="mobile-topbar-actions">
         <Button
@@ -105,7 +113,7 @@ export default function MobileTopBar({
           <Download size={21} />
           {downloadCount > 0 && <small>{downloadCount}</small>}
         </Button>
-        {home ? (
+        {home && !refreshIssue ? (
           <Button
             variant="ghost"
             className="mobile-profile-button"
@@ -114,10 +122,10 @@ export default function MobileTopBar({
           >
             <span>{account?.name.slice(0, 1) ?? <UserRound size={20} />}</span>
           </Button>
-        ) : page === "schedule" ? (
+        ) : page === "schedule" || refreshIssue ? (
           <Button
             variant="ghost"
-            aria-label="刷新本页"
+            aria-label={refreshIssue ? "更新未完成，点击重试" : "刷新本页"}
             disabled={busy || !account}
             onClick={onRefresh}
           >

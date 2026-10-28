@@ -1,3 +1,8 @@
+import {
+  updateCheckDue,
+  deferUpdateCheck,
+  scheduleUpdateChecks,
+} from "./updateCheckPolicy";
 import { listen } from "@tauri-apps/api/event";
 import { openAndroidInstaller } from "./androidUpdater";
 import { isAndroid } from "./platform";
@@ -55,7 +60,6 @@ function useUpdaterState() {
   const update = useRef<Update | null>(null);
   const working = useRef(false);
   const installed = useRef(false);
-  const lastCheck = useRef(0);
   const inspectRef = useRef<(automatic?: boolean) => Promise<void>>(
     async () => {},
   );
@@ -92,7 +96,7 @@ function useUpdaterState() {
   }, []);
   async function inspect(automatic = false) {
     if (working.current || installed.current || supported === null) return;
-    lastCheck.current = Date.now();
+    deferUpdateCheck("app", false);
     working.current = true;
     setPhase("checking");
     try {
@@ -110,6 +114,7 @@ function useUpdaterState() {
         update.current = await checkUpdate();
       const available =
         !!update.current || isNewerVersion(metadata.version, version);
+      deferUpdateCheck("app", true);
       setPhase(available ? "available" : "latest");
       if (automatic && available) {
         let previous: { version: string; at: number } | null = null;
@@ -156,27 +161,17 @@ function useUpdaterState() {
   inspectRef.current = inspect;
   useEffect(() => {
     if (!isTauri() || supported === null) return;
-    const checkWhenDue = () => {
-      if (
-        document.visibilityState !== "visible" ||
-        !navigator.onLine ||
-        Date.now() - lastCheck.current < 6 * 60 * 60_000
-      )
-        return;
-      void inspectRef.current(true);
-    };
-    const startup = window.setTimeout(checkWhenDue, 10_000);
-    const timer = window.setInterval(checkWhenDue, 60 * 60_000);
-    window.addEventListener("focus", checkWhenDue);
-    window.addEventListener("online", checkWhenDue);
-    document.addEventListener("visibilitychange", checkWhenDue);
-    return () => {
-      window.clearTimeout(startup);
-      window.clearInterval(timer);
-      window.removeEventListener("focus", checkWhenDue);
-      window.removeEventListener("online", checkWhenDue);
-      document.removeEventListener("visibilitychange", checkWhenDue);
-    };
+    return scheduleUpdateChecks(
+      () => {
+        if (
+          document.visibilityState === "visible" &&
+          navigator.onLine &&
+          updateCheckDue("app")
+        )
+          void inspectRef.current(true);
+      },
+      isAndroid ? 30_000 : 10_000,
+    );
   }, [supported]);
   async function install() {
     if (isAndroid) {

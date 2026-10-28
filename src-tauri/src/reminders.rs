@@ -62,6 +62,9 @@ fn deliver(app: &tauri::AppHandle, title: &str, body: &str) -> Result<(), String
         .map_err(|e| format!("系统通知投递失败：{e}"))
 }
 pub fn record_sync(app: &tauri::AppHandle, username: &str, result: &Value) -> Result<(), String> {
+    if result["grades"].is_array() {
+        campus::record_scope_sync(app, username, "grades");
+    }
     let state = app.state::<Reminders>();
     let prefs = app
         .state::<CampusState>()
@@ -253,6 +256,7 @@ pub fn start_background(app: tauri::AppHandle) {
             if prefs.grade_notifications
                 && !prefs.reminder_account.is_empty()
                 && last_grade.elapsed().as_secs() >= prefs.grade_interval * 60
+                && !campus::recently_synced(&app, &prefs.reminder_account, "grades", prefs.grade_interval)
             {
                 last_grade = std::time::Instant::now();
                 let result = async {
@@ -260,7 +264,9 @@ pub fn start_background(app: tauri::AppHandle) {
                         get_session(&app.state::<CampusState>(), &prefs.reminder_account)?;
                     ensure_aa(&session).await?;
                     let grades = fetch_grades(&session).await?;
-                    record_sync(&app, &prefs.reminder_account, &json!({"grades":grades}))
+                    record_sync(&app, &prefs.reminder_account, &json!({"grades":grades}))?;
+                    let _ = app.emit("campus-grades-updated", json!({"accountId":prefs.reminder_account,"grades":grades}));
+                    Ok::<(), String>(())
                 }
                 .await;
                 if let Err(error) = result {

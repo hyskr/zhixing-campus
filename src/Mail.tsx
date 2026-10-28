@@ -171,7 +171,7 @@ export default function Mail({
     }
   }, [target?.id, target?.folder]);
   useEffect(() => {
-    if (!rows.length) {
+    if (!rows.length && !refreshedAt && !compactLayout) {
       setBusy(true);
       void onRefresh()
         .catch((reason) => setError(String(reason)))

@@ -948,6 +948,7 @@ async fn sync_account(
         progress(&app, &username, "正在读取邮箱收件箱");
         match campus::inbox(&session).await {
             Ok(mail) => {
+                campus::record_scope_sync(&app, &username, "mail");
                 result["mailInbox"] = mail["rows"].clone();
                 result["mailCount"] = mail["unread"].clone();
                 result["mailTotal"] = mail["total"].clone();

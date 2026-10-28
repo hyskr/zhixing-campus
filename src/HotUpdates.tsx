@@ -1,4 +1,10 @@
 import {
+  updateCheckDue,
+  deferUpdateCheck,
+  scheduleUpdateChecks,
+} from "./updateCheckPolicy";
+import { isAndroid } from "./platform";
+import {
   autoRestartEnabled,
   canRestartApplication,
   restartApplication,
@@ -32,17 +38,17 @@ function useHotUpdates() {
     [progress, setProgress] = useState(0),
     [error, setError] = useState("");
   const working = useRef(false),
-    lastCheck = useRef(0),
     inspectRef = useRef<(automatic?: boolean) => Promise<void>>(async () => {});
   const feedback = useFeedback();
   async function inspect(automatic = false) {
     if (working.current || staged) return;
     working.current = true;
-    lastCheck.current = Date.now();
+    deferUpdateCheck("frontend", false);
     setBusy(true);
     setError("");
     try {
       const value = await check();
+      deferUpdateCheck("frontend", true);
       setOutcome(value);
       if (value.status === "alreadyStaged") setStaged(value.version);
       if (automatic && value.status === "available") {
@@ -92,27 +98,21 @@ function useHotUpdates() {
           if (!stopped) setError(String(reason));
         });
     }, 0);
-    const due = () => {
-      if (
-        document.visibilityState === "visible" &&
-        navigator.onLine &&
-        Date.now() - lastCheck.current >= 6 * 60 * 60_000
-      )
-        void inspectRef.current(true);
-    };
-    const startup = window.setTimeout(due, 20_000),
-      timer = window.setInterval(due, 60 * 60_000);
-    window.addEventListener("focus", due);
-    window.addEventListener("online", due);
-    document.addEventListener("visibilitychange", due);
+    const stopChecks = scheduleUpdateChecks(
+      () => {
+        if (
+          document.visibilityState === "visible" &&
+          navigator.onLine &&
+          updateCheckDue("frontend")
+        )
+          void inspectRef.current(true);
+      },
+      isAndroid ? 45_000 : 20_000,
+    );
     return () => {
       stopped = true;
       window.clearTimeout(ready);
-      window.clearTimeout(startup);
-      window.clearInterval(timer);
-      window.removeEventListener("focus", due);
-      window.removeEventListener("online", due);
-      document.removeEventListener("visibilitychange", due);
+      stopChecks();
     };
   }, []);
   async function restart() {

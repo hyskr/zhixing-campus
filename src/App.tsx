@@ -1,4 +1,10 @@
-import { needsRefresh, refreshScopes } from "./refreshPolicy";
+import {
+  needsRefresh,
+  refreshScopes,
+  mobileRefreshScopes,
+  mobileRefreshAge,
+} from "./refreshPolicy";
+import { usePreferences } from "./preferences";
 import MobileTopBar from "./MobileTopBar";
 import MobileSearch from "./MobileSearch";
 import Applications from "./Applications";
@@ -6,7 +12,7 @@ import MobileRefreshSurface, {
   pageRefreshHandler,
 } from "./MobileRefreshSurface";
 import MobileNavigation from "./MobileNavigation";
-import { useCompactLayout } from "./platform";
+import { isAndroid, useCompactLayout } from "./platform";
 import ReminderBridge from "./ReminderBridge";
 import { makeDemoMail } from "./demo";
 import Classrooms from "./Classrooms";
@@ -90,6 +96,7 @@ import {
 
 export default function App() {
   const compactLayout = useCompactLayout();
+  const { preferences, ready: preferencesReady } = usePreferences();
   const [store, setStore] = useState(loadStore);
   const { tasks: downloadTasks } = useDownloads();
   const now = useNow();
@@ -126,6 +133,18 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [syncing, setSyncing] = useState(false);
   const syncGate = useRef(false);
+  const syncFlight = useRef<{
+    accountId: string;
+    scope: string;
+    promise: Promise<void>;
+  } | null>(null);
+  const [automaticSync, setAutomaticSync] = useState(false);
+  const [refreshIssue, setRefreshIssue] = useState<{
+    accountId: string;
+    scope: string;
+  } | null>(null);
+  const hiddenSince = useRef<number | null>(null);
+  const resumeRefreshAt = useRef(0);
   const refreshAttempts = useRef(new Map<string, number>());
   const startupAccount = useRef(new Set<string>());
   const [mobileRefreshing, setMobileRefreshing] = useState(false);
@@ -273,7 +292,7 @@ export default function App() {
           } as Record<string, string>
         )[page];
   async function refreshMobilePage() {
-    if (mobileRefreshing || syncing) return;
+    if (mobileRefreshing) return;
     setMobileRefreshing(true);
     try {
       const refresh = pageRefreshHandler();
@@ -330,6 +349,12 @@ export default function App() {
       };
     }>("campus-mail-updated", ({ payload }) => {
       if (active)
+        setRefreshIssue((previous) =>
+          previous?.accountId === payload.accountId && previous.scope === "mail"
+            ? null
+            : previous,
+        );
+      if (active)
         setStore((s) =>
           s.data[payload.accountId]
             ? {
@@ -346,6 +371,45 @@ export default function App() {
                 },
               }
             : s,
+        );
+    });
+    return () => {
+      active = false;
+      void off.then((stop) => stop());
+    };
+  }, []);
+  useEffect(() => {
+    if (!isTauri()) return;
+    let active = true;
+    const off = listen<{
+      accountId: string;
+      grades: import("./types").Grade[];
+    }>("campus-grades-updated", ({ payload }) => {
+      if (active)
+        setRefreshIssue((previous) =>
+          previous?.accountId === payload.accountId &&
+          previous.scope === "grades"
+            ? null
+            : previous,
+        );
+      if (active)
+        setStore((store) =>
+          store.data[payload.accountId]
+            ? {
+                ...store,
+                data: {
+                  ...store.data,
+                  [payload.accountId]: applySync(
+                    store.data[payload.accountId],
+                    {
+                      scope: "grades",
+                      grades: payload.grades,
+                      failures: [],
+                    },
+                  ),
+                },
+              }
+            : store,
         );
     });
     return () => {
@@ -381,9 +445,34 @@ export default function App() {
     scope = pageScope ?? "all",
     automatic = false,
   ) {
-    if (!target || syncGate.current) return;
+    if (!target) return;
+    while (syncFlight.current) {
+      if (automatic) return;
+      const flight = syncFlight.current;
+      await flight.promise;
+      if (
+        flight.accountId === target.id &&
+        (flight.scope === scope || flight.scope === "all")
+      )
+        return;
+    }
+    const promise = performSync(target, scope, automatic);
+    const flight = { accountId: target.id, scope, promise };
+    syncFlight.current = flight;
+    try {
+      await promise;
+    } finally {
+      if (syncFlight.current === flight) syncFlight.current = null;
+    }
+  }
+  async function performSync(
+    target: Account,
+    scope: string,
+    automatic: boolean,
+  ) {
     syncGate.current = true;
     setSyncing(true);
+    setAutomaticSync(automatic);
     setSyncLabel("正在连接校园系统");
     try {
       if (target.demo) {
@@ -452,7 +541,15 @@ export default function App() {
             `${target.id}:${scope}`,
             Date.now() + 4 * 60_000,
           );
-        if (!automatic || result.failures.length)
+        setRefreshIssue((previous) =>
+          result.failures.length
+            ? { accountId: target.id, scope }
+            : previous?.accountId === target.id &&
+                (previous.scope === scope || scope === "all")
+              ? null
+              : previous,
+        );
+        if (!automatic || (!isAndroid && result.failures.length))
           setToast(
             result.failures.length
               ? `部分同步完成：${result.failures.join("；")}`
@@ -480,7 +577,8 @@ export default function App() {
         error instanceof ManualCaptchaRequired
           ? "验证码需要手动填写，请重新登录"
           : String(error);
-      setToast(message, "error");
+      setRefreshIssue({ accountId: target.id, scope });
+      if (!automatic || !isAndroid) setToast(message, "error");
       if (
         message.includes("登录状态已失效") ||
         error instanceof ManualCaptchaRequired
@@ -489,49 +587,97 @@ export default function App() {
     } finally {
       syncGate.current = false;
       setSyncing(false);
+      setAutomaticSync(false);
       setSyncLabel("");
     }
   }
+  const automaticRefresh = useRef<() => Promise<boolean>>(async () => false);
+  automaticRefresh.current = async () => {
+    if (
+      !account ||
+      account.demo ||
+      !isTauri() ||
+      !preferencesReady ||
+      document.visibilityState !== "visible" ||
+      !navigator.onLine ||
+      syncGate.current ||
+      login ||
+      (isAndroid && Date.now() < resumeRefreshAt.current) ||
+      document.activeElement?.matches(
+        "input,textarea,[contenteditable=true]",
+      ) ||
+      document.querySelector('[data-mobile-page],[role="dialog"]')
+    )
+      return false;
+    const target = account;
+    const startup = !startupAccount.current.has(target.id);
+    const scopes = isAndroid
+      ? mobileRefreshScopes(page)
+      : [startup ? "all" : refreshScopes[page]].filter(
+          (scope): scope is string => !!scope,
+        );
+    const time = Date.now();
+    const scope = scopes.find(
+      (scope) =>
+        !(scope === "services" && deviceView) &&
+        time - (refreshAttempts.current.get(`${target.id}:${scope}`) ?? 0) >=
+          60_000 &&
+        needsRefresh(
+          data,
+          scope,
+          time,
+          isAndroid ? mobileRefreshAge(scope, preferences) : undefined,
+        ),
+    );
+    if (!scope) {
+      if (startup) startupAccount.current.add(target.id);
+      return false;
+    }
+    startupAccount.current.add(target.id);
+    refreshAttempts.current.set(`${target.id}:${scope}`, time);
+    await sync(target, scope, true);
+    return true;
+  };
   useEffect(() => {
     if (!account || account.demo || !isTauri()) return;
-    const target = account;
-    const refresh = () => {
-      if (
-        document.visibilityState !== "visible" ||
-        !navigator.onLine ||
-        syncGate.current ||
-        login ||
-        document.activeElement?.matches(
-          "input,textarea,[contenteditable=true]",
-        ) ||
-        document.querySelector('[data-mobile-page],[role="dialog"]')
-      )
-        return;
-      const startup = !startupAccount.current.has(target.id);
-      const scope = startup ? "all" : refreshScopes[page];
-      if (!scope || (scope === "services" && deviceView)) return;
-      const key = `${target.id}:${scope}`,
-        now = Date.now();
-      if (now - (refreshAttempts.current.get(key) ?? 0) < 60_000) return;
-      if (!needsRefresh(data, scope, now)) {
-        if (startup) startupAccount.current.add(target.id);
+    resumeRefreshAt.current = 0;
+    let stopped = false;
+    let pending: number | undefined;
+    const schedule = (delay: number) => {
+      window.clearTimeout(pending);
+      pending = window.setTimeout(async () => {
+        const refreshed = await automaticRefresh.current();
+        if (!stopped && document.visibilityState === "visible")
+          schedule(isAndroid ? (refreshed ? 2_000 : 30_000) : 60_000);
+      }, delay);
+    };
+    const foreground = () => {
+      if (document.visibilityState !== "visible") {
+        hiddenSince.current = Date.now();
+        window.clearTimeout(pending);
         return;
       }
-      if (startup) startupAccount.current.add(target.id);
-      refreshAttempts.current.set(key, now);
-      void sync(target, scope, true);
+      if (isAndroid && hiddenSince.current !== null) {
+        const brief = Date.now() - hiddenSince.current < 60_000;
+        hiddenSince.current = null;
+        resumeRefreshAt.current = Date.now() + (brief ? 60_000 : 1_500);
+      }
+      schedule(
+        isAndroid ? Math.max(1_500, resumeRefreshAt.current - Date.now()) : 0,
+      );
     };
-    refresh();
-    const foreground = () => refresh();
-    window.addEventListener("focus", foreground);
+    schedule(isAndroid ? 1_500 : 0);
+    if (!isAndroid) window.addEventListener("focus", foreground);
+    window.addEventListener("online", foreground);
     document.addEventListener("visibilitychange", foreground);
-    const timer = window.setInterval(() => refresh(), 60_000);
     return () => {
+      stopped = true;
+      window.clearTimeout(pending);
       window.removeEventListener("focus", foreground);
+      window.removeEventListener("online", foreground);
       document.removeEventListener("visibilitychange", foreground);
-      window.clearInterval(timer);
     };
-  }, [account?.id, page, data.syncedAt, data.lastSync, login, deviceView]);
+  }, [account?.id, page]);
   async function loadResource(node: Resource) {
     const target = account;
     if (!target || target.demo) return node.children;
@@ -715,6 +861,12 @@ export default function App() {
             week={data.currentWeek}
             now={now}
             busy={syncing || mobileRefreshing}
+            background={automaticSync && !mobileRefreshing}
+            refreshIssue={
+              !!refreshIssue &&
+              refreshIssue.accountId === account?.id &&
+              (page === "overview" || refreshIssue?.scope === pageScope)
+            }
             onBack={() => {
               (
                 window as Window & { __campusBack?: () => boolean }
@@ -873,7 +1025,7 @@ export default function App() {
               ? refreshMobilePage
               : undefined
           }
-          refreshing={mobileRefreshing || syncing}
+          refreshing={mobileRefreshing || (syncing && !automaticSync)}
 
           disabled={!pageScope && page !== "classrooms"}
         >

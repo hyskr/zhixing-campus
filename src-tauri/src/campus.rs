@@ -5,7 +5,19 @@ pub struct Features {
     pub directory: Mutex<PathBuf>,
     pub baselines: Mutex<HashMap<String, Vec<String>>>,
     pub network: Mutex<Value>,
+    recent_syncs: Mutex<HashMap<(String, String), std::time::Instant>>,
 }
+pub(super) fn record_scope_sync(app: &tauri::AppHandle, username: &str, scope: &str) {
+    app.state::<Features>().recent_syncs.lock().unwrap()
+        .insert((username.into(), scope.into()), std::time::Instant::now());
+}
+
+pub(super) fn recently_synced(app: &tauri::AppHandle, username: &str, scope: &str, minutes: u64) -> bool {
+    app.state::<Features>().recent_syncs.lock().unwrap()
+        .get(&(username.into(), scope.into()))
+        .is_some_and(|time| time.elapsed() < Duration::from_secs(minutes * 60))
+}
+
 // 参考来源：参考 MIS 邮箱 SSO、Coremail.sid 及 mbox:listThreads；原生 WebView 登录态由本项目衔接。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/mail/system.js
 pub async fn mail_session(session: &Session) -> Result<String, String> {
@@ -449,12 +461,14 @@ pub fn start_background(app: tauri::AppHandle) {
             if prefs.mail_notifications
                 && !prefs.mail_account.is_empty()
                 && last_mail.elapsed().as_secs() >= prefs.mail_interval * 60
+                && !recently_synced(&app, &prefs.mail_account, "mail", prefs.mail_interval)
             {
                 last_mail = std::time::Instant::now();
                 let session = get_session(&app.state::<CampusState>(), &prefs.mail_account);
                 if let Ok(session) = session {
                     match inbox(&session).await {
                         Ok(mail) => {
+                            record_scope_sync(&app, &prefs.mail_account, "mail");
                             let feature = app.state::<Features>();
                             let rows = mail["rows"].as_array().unwrap();
                             let mut baseline = feature.baselines.lock().unwrap();
@@ -725,6 +739,7 @@ pub async fn refresh_mailbox(
 ) -> Result<Value, String> {
     let session = get_session(&state, &username)?;
     let mail = inbox(&session).await?;
+    record_scope_sync(&app, &username, "mail");
     let rows = mail["rows"].as_array().unwrap();
     let mut baseline = features.baselines.lock().unwrap();
     let fresh = new_unread(rows, baseline.get(&username));
