@@ -1,9 +1,9 @@
 {
-  "version": "0.19.1",
-  "versionCode": 19001,
-  "notes": "# 知行 Campus Android 0.19.1\n\n- 更新后可自动重启，也可关闭自动重启并手动应用。\n- 文件空间默认打开左侧“上传与已上传文件”，个人资源位于右侧。\n- Android 顶栏提供校园动态及常驻下载管理入口。\n- 通知面板独立显示，修正全选对齐；校园浏览窗口支持子页面。\n",
-  "date": "2026-10-27T04:13:40.154Z",
-  "size": 30797905,
-  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.19.1",
-  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.19.1/zhixing-campus_0.19.1_android-arm64.apk"
+  "version": "0.20.0",
+  "versionCode": 20000,
+  "notes": "# 知行 Campus Android 0.20.0\n\n- 开屏立即显示缓存，约 1.5 秒后按当前页面的数据时效后台刷新。\n- 首页分批更新邮箱、课表和作业；成绩、资料及校园服务进入对应页面时检查。\n- 短暂锁屏或切回应用不立即重复请求，后台刷新不再触发整页下拉动画。\n- 邮箱和成绩按各自设置的间隔检查，并复用后台轮询结果。\n- 更新失败保留已有内容，顶栏提供手动重试入口。\n- 应用与界面版本检测延后启动，检查间隔保存在本机，重启后仍然有效。\n- 修正作业正文横向溢出，以及搜索框边框与输入宽度。\n\n支持 Android 10 及以上、arm64。可覆盖安装，保留账号与缓存。\n",
+  "date": "2026-10-28T13:22:07.841Z",
+  "size": 30802821,
+  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.20.0",
+  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.20.0/zhixing-campus_0.20.0_android-arm64.apk"
 }
