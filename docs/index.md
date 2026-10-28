@@ -30,3 +30,5 @@
 - [CLI 提交与校园浏览窗口](features/cli-submit-and-school-browser.md)
 
 - [七牛发布备份](guides/qiniu.md)
+
+- [0.20.0：缓存刷新与终端命令更新](releases/0.20.0.md) · [Android 0.20.0](releases/android-0.20.0.md)

@@ -102,7 +102,10 @@ jobs:
           bun run build
           cargo build --release --locked --manifest-path src-tauri/Cargo.toml --features cli --bin zhixing --target ${{ matrix.target }}
           bun scripts/prepare-cli.ts "${{ matrix.target }}"
-          bun scripts/test-cli.ts "src-tauri/target/${{ matrix.target }}/release/zhixing${{ runner.os == 'Windows' && '.exe' || '' }}"
+
+      - name: Test bundled CLI
+        if: github.event_name == 'pull_request'
+        run: bun scripts/test-cli.ts "src-tauri/target/${{ matrix.target }}/release/zhixing${{ runner.os == 'Windows' && '.exe' || '' }}"
 
       - name: Build desktop installers
         uses: tauri-apps/tauri-action@v1

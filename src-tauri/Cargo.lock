@@ -7332,7 +7332,7 @@ dependencies = [
 
 [[package]]
 name = "zhixing-campus"
-version = "0.19.1"
+version = "0.20.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
