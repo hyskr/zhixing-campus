@@ -139,3 +139,7 @@ mise exec -- bun scripts/build-desktop.ts --config '{"bundle":{"createUpdaterArt
 桌面发布推送 `v<应用版本>`，Android 正式发布推送 `android-v<应用版本>`，界面发布推送 `frontend-v<界面版本>`。仅推送 main 不会自动打安装包。
 
 发布 tag 对应的提交不要包含 `[skip ci]` 或 `[ci skip]`，否则 GitHub 会跳过 push 触发的工作流。已推送但被跳过的 tag，可在 Actions 手动运行对应工作流并选择该 tag；界面工作流同时填写界面版本。桌面和 Android 必须选择对应 tag 才会进入 Release 发布步骤。
+
+## Apple Silicon 单独补包
+
+Apple Silicon 使用 `macos-15` runner。需要复用已完成的平台产物时，手动运行 `Recover Apple Silicon release`，指定原桌面发布 tag 和原构建 run ID。流程核对原构建与 tag 的提交一致，下载 Windows、macOS Intel、Linux 产物，仅编译 Apple Silicon，然后合并发布并更新桌面清单。

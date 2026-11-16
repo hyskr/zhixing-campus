@@ -1,0 +1,98 @@
+name: Recover Apple Silicon release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing desktop release tag
+        required: true
+      source_run:
+        description: Desktop run containing Windows, Intel and Linux artifacts
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: desktop-recovery-${{ inputs.release_tag }}
+  cancel-in-progress: false
+
+jobs:
+  recover:
+    name: Build Apple Silicon and publish all platforms
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      SOURCE_RUN: ${{ inputs.source_run }}
+      APPLE_SIGNING_IDENTITY: '-'
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag }}
+      - uses: jdx/mise-action@v5
+      - name: Match source artifacts to release
+        shell: bash
+        run: |
+          python3 - <<'PYCODE'
+          import json,os,subprocess
+          from pathlib import Path
+          repo=os.environ['GH_REPO'];run=os.environ['SOURCE_RUN'];tag=os.environ['RELEASE_TAG']
+          version=json.loads(Path('package.json').read_text())['version']
+          if tag != 'v'+version: raise SystemExit('Tag does not match application version')
+          source=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{run}'],text=True))
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          if source['head_sha'] != head: raise SystemExit('Source artifacts belong to a different commit')
+          artifacts=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{run}/artifacts'],text=True))['artifacts']
+          for platform in ['windows-x64','macos-x64','linux-x64']:
+              candidates=[a for a in artifacts if a['name'].startswith('zhixing-campus-'+platform+'-') and not a['expired']]
+              if len(candidates)!=1: raise SystemExit('Missing or ambiguous artifact: '+platform)
+              subprocess.run(['gh','run','download',run,'--repo',repo,'--name',candidates[0]['name'],'--dir','release'],check=True)
+          PYCODE
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: aarch64-apple-darwin
+          cache-on-failure: true
+      - run: bun install --frozen-lockfile
+      - name: Build bundled CLI
+        run: |
+          bun run build
+          cargo build --release --locked --manifest-path src-tauri/Cargo.toml --features cli --bin zhixing --target aarch64-apple-darwin
+          bun scripts/prepare-cli.ts aarch64-apple-darwin
+      - name: Build Apple Silicon installers
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        with:
+          tauriScript: bun run tauri
+          args: --config src-tauri/tauri.desktop.conf.json --target aarch64-apple-darwin --bundles app,dmg
+      - name: Stage Apple Silicon packages
+        run: bun scripts/stage-release.ts aarch64-apple-darwin
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zhixing-campus-macos-arm64-recovery-${{ github.run_number }}
+          path: output/packages/*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Publish combined release and update channel
+        shell: bash
+        run: |
+          cp output/packages/* release/
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release create "$RELEASE_TAG" --verify-tag --draft --prerelease=false --notes-file "docs/releases/${RELEASE_TAG#v}.md" --title "知行 Campus $RELEASE_TAG"
+          fi
+          gh release upload "$RELEASE_TAG" release/* --clobber
+          release_id=$(gh release view "$RELEASE_TAG" --json databaseId --jq .databaseId)
+          gh api "repos/$GH_REPO/releases/$release_id" > output-release.json
+          bun scripts/update-manifest.ts output-release.json release release/latest.json
+          gh release upload "$RELEASE_TAG" release/latest.json --clobber
+          gh release edit "$RELEASE_TAG" --draft=false --latest
+          bun scripts/publish-update-channel.ts release/latest.json desktop.json
