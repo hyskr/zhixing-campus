@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           python3 - <<'PYCODE'
-          import json,os,subprocess
+          import json,os,subprocess,shutil
           from pathlib import Path
           repo=os.environ['GH_REPO'];run=os.environ['SOURCE_RUN'];tag=os.environ['RELEASE_TAG']
           version=json.loads(Path('package.json').read_text())['version']
@@ -48,10 +48,14 @@ jobs:
           head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
           if source['head_sha'] != head: raise SystemExit('Source artifacts belong to a different commit')
           artifacts=json.loads(subprocess.check_output(['gh','api',f'repos/{repo}/actions/runs/{run}/artifacts'],text=True))['artifacts']
+          Path('release').mkdir(exist_ok=True)
           for platform in ['windows-x64','macos-x64','linux-x64']:
               candidates=[a for a in artifacts if a['name'].startswith('zhixing-campus-'+platform+'-') and not a['expired']]
               if len(candidates)!=1: raise SystemExit('Missing or ambiguous artifact: '+platform)
-              subprocess.run(['gh','run','download',run,'--repo',repo,'--name',candidates[0]['name'],'--dir','release'],check=True)
+              directory=Path('recovered')/platform
+              subprocess.run(['gh','run','download',run,'--repo',repo,'--name',candidates[0]['name'],'--dir',str(directory)],check=True)
+              for file in directory.iterdir():
+                  if file.is_file(): shutil.copy2(file,Path('release')/file.name)
           PYCODE
       - uses: swatinem/rust-cache@v2
         with:
