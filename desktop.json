@@ -1,23 +1,23 @@
 {
-  "version": "0.20.0",
-  "notes": "# 知行 Campus 0.20.0\n\n- 作业要求与已交正文自动换行，图片随页面缩放，宽表格在正文内滚动，适配桌面与手机。\n- 已安装的 `zhixing` 终端命令在桌面应用启动时自动刷新入口，随应用使用新版 CLI。\n- Android 启动先显示缓存，首页按需更新邮箱、课表和作业，其他模块进入页面后刷新。\n- 自动同步使用顶栏进度，不触发下拉动画；短暂切后台后延后刷新，失败保留缓存并提供重试入口。\n- 邮箱和成绩沿用各自检查间隔，后台轮询复用近期同步结果，新成绩直接写回页面缓存。\n- 应用与界面版本检查延后进行，成功后六小时内不自动重复检查，检查间隔跨重启保留。\n- 修正 Android 搜索框重复边框和输入宽度。\n\nAndroid 完整刷新策略需要安装本版 APK。桌面终端命令首次安装后，无需每次升级重新安装。\n",
-  "pub_date": "2026-10-28T13:15:11Z",
+  "version": "0.21.0",
+  "notes": "# 知行 Campus 0.21.0\n\n- 智慧课程登录从平台首页读取课程接口实际使用的会话标识，并跟随首页跳转。\n- 课程数量超过 100 门时按接口总数补齐，返回不完整时保留已有缓存。\n- 课表保留单双周及不连续周次，页面显示与上课提醒按每个区间分别判断。\n- 作业截止时间按北京时间解析，倒计时、逾期判断和日期展示使用同一时刻。\n- Android 支持左右滑动切换页内标签及底部导航，课表网格仍用于滑动切周，邮件行保留左滑操作。\n- 发布流程移除七牛备份，安装包与更新继续通过 GitHub 提供。\n",
+  "pub_date": "2026-11-16T09:14:19Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.20.0/zhixing-campus_0.20.0_aarch64-apple-darwin.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4Nlpieks2amtvVFRVVHdYVjJlVk5NeTAwRDRnMTY1YWJmdlJDRWdFbWVmZ3crNFZ2U1lWa0p6eDZJcktoV21Fc0xZVFBWT3VUNFRhckJyQzBmc1Z1M01JdncwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTk0MzI2CWZpbGU655+l6KGMIENhbXB1cy5hcHAudGFyLmd6CXZlcnNpb246MC4yMC4wCmlpMUxXSWJoVFRIMEp2T29UeEIycHhySVZjSVQ1MzI0SGhSMFZ1elhxKzJTWVo5Y292STNVVlBTeU80QU00cit0S2tiV3FXSG9OUXd5WHVoeTVsSURnPT0K"
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.21.0/zhixing-campus_0.21.0_aarch64-apple-darwin.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekZaQnNNUjVTSWxJOWtpd1d6bCtHVE5Sbi9LbFhSUGp2RUk0VklmTFNFNXI2cGw1MEc1eGw2M2JvTEF2VHBhQUhIWWNFWXk2U0F1cTdRdVRFTDRqTEFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODIzNTU0CWZpbGU655+l6KGMIENhbXB1cy5hcHAudGFyLmd6CXZlcnNpb246MC4yMS4wCko4TFZKQitkRUYvMklZY0VLb2RIN28yOTdLbzIwV0ZzaXhMTGFRQU1aWjFqSlRnZTNxYkV5WDR2bGplMkNMeWJqMlhWcFVETk15K05sK09icE42M0RRPT0K"
     },
     "darwin-x86_64": {
-      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.20.0/zhixing-campus_0.20.0_x86_64-apple-darwin.app.tar.gz",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekFEU1ltYzlRVkphOVJOT3BSQU5aT0pmdk5ZTnZkdE5MR29zSWh3cmR1c2ZMVFA4ZFRIZGUwOUR2VHNCU05RVzN4cmh5ZzMvelFXaDZWQURYeDBWaVE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTk1MDMwCWZpbGU655+l6KGMIENhbXB1cy5hcHAudGFyLmd6CXZlcnNpb246MC4yMC4wCjRGcURNdEh2L3U1bWwyUVoxaWRCb1J6c3daNFV4Y3RVcVcrRXJlbU1OZm50MHNxanpOV1NGNmZaWVUwczRHRDBiTlRScFV2c2c5MmtGT1N3TlZnRkN3PT0K"
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.21.0/zhixing-campus_0.21.0_x86_64-apple-darwin.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekVsN0hmRERGdkxqc2ZkbURWMGVDMnBCSy96VzltNGx5ZndreEJDNnorZTVUcW5SK0RUWUFJZzhycUhPZmxJNkNzT3B6UVk3RVdQQ0Q3UFdEeTVpREFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODIxOTc4CWZpbGU655+l6KGMIENhbXB1cy5hcHAudGFyLmd6CXZlcnNpb246MC4yMS4wCmVFRWlRM2lVZm9TekxYcVRxUFovM09IMWtJdjhVa0ZFWHRsTDBrMURNb1RONVJUNENrdmZyRkRnUTB1K0FZRklESWs0N3ZHRTYrVHhKT21jTDQrTUFnPT0K"
     },
     "windows-x86_64": {
-      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.20.0/zhixing-campus_0.20.0_x86_64-pc-windows-msvc-setup.exe",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekZRY0FsQzk4U3piNmxuOFA3VEtZQWNiMkQvcVRhZjlIVStIUmVQOFBTT0Y3akZUSktUS1FwNGhtNm1mQU9MSlZodDMvaE5TZlp0djhKSkx5cmVzRHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTkzOTM5CWZpbGU655+l6KGMIENhbXB1c18wLjIwLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuMjAuMApiajJHM0R1K29NSmhTREMrTFlqMUl4UXN3OXVqeGhwNGh4b1Zqclk5bTNRZzlkWUIwMEdibHgrWTdnUzhpTkFhZWZoczEvNjlXallmYzhQMGhRV2dCZz09Cg=="
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.21.0/zhixing-campus_0.21.0_x86_64-pc-windows-msvc-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpieklhRE5MWmhpK1J0Yk80bXJhcGRseEZGMU1NSlZjeHVYdlBnYllIalU4Kzk3QnVxZnEzU3ljcWxaVVViNDRBSDMrR2cwdlR5V1NXeWY2RVU3WFZTcmd3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODIxMTU1CWZpbGU655+l6KGMIENhbXB1c18wLjIxLjBfeDY0LXNldHVwLmV4ZQl2ZXJzaW9uOjAuMjEuMAo5ODBxNzhaSXFtT1loVE8rdzRMMTZQaSsvZDFmWnM4TUJOMjAzRkM0Nng0Q0JwUkNNZVBBSG9KcUhWb056aHlkL2lYdno5WEk5Z0RvNkM4dFRSRWREZz09Cg=="
     },
     "linux-x86_64": {
-      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.20.0/zhixing-campus_0.20.0_x86_64-unknown-linux-gnu.AppImage",
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekFXaUlUV05BTG51cHBsUWxvM29RU0FVMjhya2xJSG5XVXduZFpuTWphVWZiWFFFUWRTd1pCaW1CdTNMYXpzcUpIUmwwS3FyOU9lczFtcDRqTEVBV2dNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTk0MTI4CWZpbGU655+l6KGMIENhbXB1c18wLjIwLjBfYW1kNjQuQXBwSW1hZ2UJdmVyc2lvbjowLjIwLjAKTDF5VkNEOWYwUU14a2l1QWFZd2ZkZ1JUQkZRRnE1ZnYvbjd5U21FdlJtM28ydWlEZURQbEFRVkRmMDhRRkJoOVBJL0RYZHNSOUVXTSszMXlxTlBFREE9PQo="
+      "url": "https://github.com/hyskr/zhixing-campus/releases/download/v0.21.0/zhixing-campus_0.21.0_x86_64-unknown-linux-gnu.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNTNiSmE4NlpiekFZcVBnMlIwT2I4MDJXY3VoUWRpRkdQdWlNMWNKSEd5TDFFbXFPVTNHM2Y0RzJvOGNTODY0cHFzaC9ORWlGNEZJcWN4ek1xYWJ3UDZSSkZvSkxCdEFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0ODIxMjcwCWZpbGU655+l6KGMIENhbXB1c18wLjIxLjBfYW1kNjQuQXBwSW1hZ2UJdmVyc2lvbjowLjIxLjAKN0VzODFscWNCcEJFL1RidXFhaC9YVFJscndGUFA2ZmI5dkRQT1A3Y2xEZkxISUJUbWEvdUw2NmMwTnRnaW0zRUNaVVZqc0N6U3ZPdllzVG5YSnJHQnc9PQo="
     }
   }
 }
