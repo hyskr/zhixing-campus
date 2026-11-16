@@ -33,3 +33,5 @@
 - [0.20.0：缓存刷新与终端命令更新](releases/0.20.0.md) · [Android 0.20.0](releases/android-0.20.0.md)
 
 - [2026-11-16 上游维护与 Android 标签手势](research/upstream-20261116.md)
+
+- [0.21.0：上游维护与标签滑动](releases/0.21.0.md) · [Android 0.21.0](releases/android-0.21.0.md)
