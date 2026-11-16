@@ -1,3 +1,4 @@
+import { schoolTime } from "./schoolTime";
 import MobileDetailPage from "./MobileDetailPage";
 import { useCompactLayout } from "./platform";
 import {
@@ -68,21 +69,21 @@ export const periodTimes = [
   "21:00–21:50",
 ];
 export const shortDate = (date: string) =>
-  Number.isFinite(new Date(date).getTime())
+  Number.isFinite(schoolTime(date))
     ? new Intl.DateTimeFormat("zh-CN", {
         month: "numeric",
         day: "numeric",
-      }).format(new Date(date))
+      }).format(new Date(schoolTime(date)))
     : "未提供";
 export const fullDate = (date: string) =>
-  Number.isFinite(new Date(date).getTime())
+  Number.isFinite(schoolTime(date))
     ? new Intl.DateTimeFormat("zh-CN", {
         month: "long",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
-      }).format(new Date(date))
+      }).format(new Date(schoolTime(date)))
     : "未提供时间";
 export const remaining = timeRemaining;
 export function SectionTitle({

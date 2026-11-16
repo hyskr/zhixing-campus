@@ -531,27 +531,7 @@ async fn prepare_smart(session: &Session) -> Result<SmartSession, String> {
     {
         quick_login::enter_from_mis(&session).await?;
     }
-    let cookie_id = {
-        let url = Url::parse("http://123.121.147.7:88/ve/").unwrap();
-        let jar = session.cookies.lock().map_err(|e| e.to_string())?;
-        let value = jar
-            .get_request_values(&url)
-            .find(|(name, _)| name.eq_ignore_ascii_case("JSESSIONID"))
-            .map(|(_, value)| value.to_string());
-        value
-    };
-    let article = smart_json(
-        session,
-        "coursePlatform/message.shtml",
-        &[("method", "getArticleList".into())],
-        None,
-    )
-    .await?;
-    let id = if !string(&article["sessionId"]).is_empty() {
-        string(&article["sessionId"])
-    } else {
-        cookie_id.ok_or("智慧课程平台未提供会话信息")?
-    };
+    let mut id = quick_login::course_session_id(session).await?;
     let semester = smart_json(
         session,
         "rp/common/teachCalendar.shtml",
@@ -559,6 +539,7 @@ async fn prepare_smart(session: &Session) -> Result<SmartSession, String> {
         Some(&id),
     )
     .await?;
+    if !string(&semester["sessionId"]).is_empty() { id = string(&semester["sessionId"]); }
     let rows = parsers::list(&semester, "result")?;
     let code = parsers::current_term(rows);
     if !rows.is_empty() && code.is_empty() {
@@ -567,19 +548,21 @@ async fn prepare_smart(session: &Session) -> Result<SmartSession, String> {
     let courses = if code.is_empty() {
         Vec::new()
     } else {
-        let object = smart_json(
-            session,
-            "coursePlatform/course.shtml",
-            &[
-                ("method", "getCourseList".into()),
-                ("pagesize", "100".into()),
-                ("page", "1".into()),
-                ("xqCode", code.clone()),
-            ],
-            Some(&id),
-        )
-        .await?;
-        parsers::smart_courses(&object)?
+        // https://github.com/s1y4x1/BJTU-course-assistant/commit/6290eb2255d4eb3c44b06813f454ba21ce16088e
+        let mut page_size = 100usize;
+        loop {
+            let object = smart_json(
+                session, "coursePlatform/course.shtml",
+                &[("method", "getCourseList".into()), ("pagesize", page_size.to_string()),
+                  ("page", "1".into()), ("xqCode", code.clone())], Some(&id),
+            ).await?;
+            if !string(&object["sessionId"]).is_empty() { id = string(&object["sessionId"]); }
+            let rows = parsers::smart_courses(&object)?;
+            let total = string(&object["total"]).parse::<usize>().unwrap_or(rows.len());
+            if total > page_size { page_size = total; continue; }
+            if rows.len() < total { return Err("智慧课程列表未返回完整数据，已保留上次课程".into()); }
+            break rows;
+        }
     };
     let smart = SmartSession {
         id,

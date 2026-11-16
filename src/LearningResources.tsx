@@ -263,7 +263,7 @@ export default function LearningResources({
           )}
         </div>
       ) : (
-        <>
+        <div data-tab-swipe-surface="" style={{ display: "contents" }}>
           <Tabs
             value={tab}
             onValueChange={(next) =>
@@ -317,7 +317,7 @@ export default function LearningResources({
               compact={compact}
             />
           )}
-        </>
+        </div>
       )}
       {detail && (
         <Modal

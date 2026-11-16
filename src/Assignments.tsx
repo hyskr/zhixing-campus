@@ -1,3 +1,4 @@
+import { schoolTime } from "./schoolTime";
 import { useErrorState } from "./ui";
 import { sameCourseName } from "./courseMatching";
 import {
@@ -92,7 +93,7 @@ export default function Assignments({
     }
   }
   return (
-    <>
+    <div data-tab-swipe-surface="" style={{ display: "contents" }}>
       {!compact && (
         <PageHeading
           eyebrow="ASSIGNMENTS"
@@ -289,7 +290,7 @@ export default function Assignments({
                         <span
                           className={
                             group.id === "pending" &&
-                            new Date(h.deadline).getTime() - now < 86400000
+                            schoolTime(h.deadline) - now < 86400000
                               ? "orange-text"
                               : ""
                           }
@@ -327,6 +328,6 @@ export default function Assignments({
           onClose={() => setSelected(null)}
         />
       )}
-    </>
+    </div>
   );
 }

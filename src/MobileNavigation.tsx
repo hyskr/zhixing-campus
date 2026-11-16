@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { bindTabSwipe } from "./tabSwipe";
 import { haptic } from "./haptics";
 import { Home, CalendarDays, NotebookPen, Mail, Grid2X2 } from "lucide-react";
 import { Button } from "@/components/motion/button";
@@ -18,8 +20,24 @@ export default function MobileNavigation({
   navigate: (page: Page, root?: boolean) => void;
   unread: number;
 }) {
+  const root = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!root.current) return;
+    return bindTabSwipe(root.current, (direction) => {
+      const index = primary.findIndex((item) => item.id === page);
+      const next = index >= 0 ? primary[index + direction] : undefined;
+      if (!next) return false;
+      navigate(next.id, true);
+      return true;
+    });
+  }, [page, navigate]);
   return (
-    <nav className="mobile-navigation" aria-label="底部导航">
+    <nav
+      ref={root}
+      data-tab-swipe-surface=""
+      className="mobile-navigation"
+      aria-label="底部导航"
+    >
       {primary.map(({ id, label, icon: Icon }) => (
         <Button
           key={id}

@@ -49,3 +49,8 @@ Android 原生窗口启用 edge-to-edge：系统状态栏和手势导航栏透�
 - [mobile-android-design](https://github.com/wshobson/agents/tree/main/plugins/ui-design/skills/mobile-android-design)：Material 3 信息结构、触控尺寸与安卓导航模式；本机已安装到 `~/.codex/skills/mobile-android-design`。
 
 双课格子上下等高，每门使用自己的课程颜色并保留名称与地点；短屏名称显示一行，较高屏幕显示两行。三门及以上显示数量，详情页列出全部课程及教师、地点和周次。时段总数按星期和节次去重统计。
+
+
+## 标签滑动
+
+Android 页内标签支持横向滑动切换，选中样式沿用 BeUI Tabs。作业、文件空间、课程资料和作业详情可在内容区滑动；邮件行保留左滑已读操作，可在文件夹标签区域切换。底部导航支持左右滑动，首页与应用页内容区也可切换主入口。课表网格继续滑动切周，标签条切换学期／选课课表；屏幕边缘留给系统返回手势。

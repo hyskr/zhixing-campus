@@ -454,7 +454,11 @@ export default function Mail({
             </Button>
           </div>
         </aside>
-        <section className="mail-index" aria-label="邮件列表">
+        <section
+          data-tab-swipe-surface=""
+          className="mail-index"
+          aria-label="邮件列表"
+        >
           {compactLayout && (
             <div className="mobile-mail-controls">
               <Tabs

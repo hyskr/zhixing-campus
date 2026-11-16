@@ -129,8 +129,48 @@ fn next_url(
         }
         return Ok(Some(target));
     }
+    if url.host_str() == Some("123.121.147.7") && url.path().starts_with("/ve/") {
+        return script_redirect(url, body);
+    }
     Ok(None)
 }
+fn script_redirect(url: &Url, body: &str) -> Result<Option<Url>, String> {
+    let source = regex::Regex::new(r"(?s)<!--.*?-->").unwrap().replace_all(body, "");
+    let redirect = regex::Regex::new(r#"(?i)(?:location(?:\.href)?\s*=\s*|location\.(?:replace|assign)\s*\(\s*)["']([^"']+)["']"#).unwrap();
+    let Some(captures) = redirect.captures(&source) else { return Ok(None) };
+    let target = url.join(&captures[1].replace("&amp;", "&")).map_err(|_| "智慧课程跳转地址无效")?;
+    if target.origin() != url.origin() || !target.path().starts_with("/ve/") {
+        return Err("智慧课程首页跳转地址不属于课程平台".into());
+    }
+    Ok(Some(target))
+}
+
+// 首页导航 sessionId 与课程 API 请求头不同，读取 getCourseList 中实际使用的值。
+// https://github.com/s1y4x1/BJTU-course-assistant/commit/c952ff339f8d852dd90b2d145c2f7a5e2542c651
+pub async fn course_session_id(session: &Session) -> Result<String, String> {
+    let mut url = Url::parse(&format!("{SMART}/core/main/index.shtml?method=index&type=qxkt")).unwrap();
+    let header = regex::Regex::new(r#"(?i)setRequestHeader\s*\(\s*["']sessionId["']\s*,\s*["']([^"']+)["']\s*\)"#).unwrap();
+    let comments = regex::Regex::new(r"(?s)<!--.*?-->").unwrap();
+    let function = regex::Regex::new(r"function\s+getCourseList\s*\(").unwrap();
+    for _ in 0..15 {
+        let response = get(session, url.as_str(), None).await?;
+        let destination = response.url().clone();
+        if requires_login(&destination) { return Err(AUTH_EXPIRED.into()); }
+        let body = response.text().await.map_err(network_error)?;
+        if parsers::expired_page(&body) { return Err(AUTH_EXPIRED.into()); }
+        let source = comments.replace_all(&body, "");
+        if let Some(start) = function.find(&source) {
+            if let Some(value) = header.captures(&source[start.start()..]) {
+                return Ok(value[1].to_string());
+            }
+        }
+        let Some(next) = next_url(&destination, None, &body, false)? else { break };
+        if next == destination { break; }
+        url = next;
+    }
+    Err("智慧课程首页未返回课程接口会话，请重新登录后重试".into())
+}
+
 async fn follow_entry(
     client: &Client,
     start: &str,

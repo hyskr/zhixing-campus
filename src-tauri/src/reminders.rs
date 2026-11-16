@@ -140,22 +140,20 @@ pub fn cache_reminder_data(
     persist(&state, &accounts)
 }
 pub(super) fn in_week(text: &str, week: i64) -> bool {
-    let re = regex::Regex::new(r"(\d+)(?:\s*[-~—]\s*(\d+))?").unwrap();
-    let mut any = false;
-    let mut within = false;
-    for cap in re.captures_iter(text) {
-        any = true;
-        let start = cap[1].parse::<i64>().unwrap();
-        let end = cap
-            .get(2)
-            .and_then(|v| v.as_str().parse::<i64>().ok())
-            .unwrap_or(start);
-        within |= (start..=end).contains(&week);
-    }
-    (!any || within)
-        && (!text.contains('单') || week % 2 == 1)
-        && (!text.contains('双') || week % 2 == 0)
+    let normalized: String = text.chars().filter(|c| !c.is_whitespace() && *c != '第' && *c != '周').map(|c| match c {
+        '，' | '、' => ',', '（' => '(', '）' => ')', '－' | '—' | '~' | '～' | '至' => '-', _ => c,
+    }).collect();
+    if !normalized.chars().any(|c| c.is_ascii_digit()) { return true; }
+    let re = regex::Regex::new(r"^(\d+)(?:-(\d+))?(?:\(([单双])\)|([单双]))?$").unwrap();
+    normalized.split(',').any(|part| {
+        let Some(cap) = re.captures(part) else { return false; };
+        let Ok(start) = cap[1].parse::<i64>() else { return false; };
+        let end = cap.get(2).and_then(|v| v.as_str().parse::<i64>().ok()).unwrap_or(start);
+        let parity = cap.get(3).or_else(|| cap.get(4)).map(|v| v.as_str());
+        (start..=end).contains(&week) && match parity { Some("单") => week % 2 == 1, Some("双") => week % 2 == 0, _ => true }
+    })
 }
+
 fn due_courses(
     account: &AccountReminders,
     now: NaiveDateTime,

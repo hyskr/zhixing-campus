@@ -1,3 +1,4 @@
+import { schoolTime } from "./schoolTime";
 import { useEffect, useState } from "react";
 import type { Homework } from "./types";
 export type HomeworkState = "pending" | "submitted" | "overdue";
@@ -9,19 +10,18 @@ export function homeworkState(item: Homework, now = Date.now()): HomeworkState {
     !!item.submittedAt?.trim()
   )
     return "submitted";
-  const deadline = new Date(item.deadline).getTime();
+  const deadline = schoolTime(item.deadline);
   return Number.isFinite(deadline) && deadline <= now ? "overdue" : "pending";
 }
 export function byDeadline(a: Homework, b: Homework) {
   return (
-    (new Date(a.deadline).getTime() || Infinity) -
-    (new Date(b.deadline).getTime() || Infinity)
+    (schoolTime(a.deadline) || Infinity) - (schoolTime(b.deadline) || Infinity)
   );
 }
 // 参考来源：参考持续更新截止倒计时的交互；采用普通文字和本项目时间格式。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/UI/deadline-countdown.js
 export function timeRemaining(date: string, now = Date.now()) {
-  const timestamp = new Date(date).getTime();
+  const timestamp = schoolTime(date);
   if (!Number.isFinite(timestamp)) return "未提供截止时间";
   const difference = timestamp - now;
   if (difference <= 0) return "已截止";

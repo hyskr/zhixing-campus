@@ -245,9 +245,12 @@ pub fn schedule(
                 }
                 let info = child.select(&selector("div[style^=max-width]")).next();
                 let raw_weeks = info.map(text).unwrap_or_default();
-                let weeks = raw_weeks
-                    .split_once('周')
-                    .map(|(s, _)| format!("{s}周").split_whitespace().collect::<String>())
+                // 保留“周”之后的单双周及不连续区间。
+                // https://github.com/HFDLYS/BJTUselfService/commit/6c6f856e90cb69670b91165b8d563840716a6bca
+                let weeks = Regex::new(r"^[第0-9\s,，、\-－—~～至周()（）单双]+")
+                    .unwrap().find(raw_weeks.trim())
+                    .map(|m| m.as_str().split_whitespace().collect::<String>())
+                    .filter(|value| value.contains('周'))
                     .unwrap_or_else(|| "未知".into());
                 let embedded = info
                     .and_then(|e| e.select(&selector("i")).next())

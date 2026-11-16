@@ -1,14 +1,25 @@
 "use client";
 // beui.dev/components/motion/tabs
 
+import { bindTabSwipe } from "@/tabSwipe";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { cancelFrame, frame, motion, MotionConfig, useReducedMotion, useSpring, type MotionValue, type Transition } from "motion/react";
+import {
+  cancelFrame,
+  frame,
+  motion,
+  MotionConfig,
+  useReducedMotion,
+  useSpring,
+  type MotionValue,
+  type Transition,
+} from "motion/react";
 import {
   createContext,
   useCallback,
   useContext,
   useId,
   useLayoutEffect,
+  useEffect,
   useRef,
   useMemo,
   useState,
@@ -77,6 +88,7 @@ export function Tabs({
   children: ReactNode;
   className?: string;
 }) {
+  const swipeRoot = useRef<HTMLDivElement>(null);
   const [internal, setInternal] = useState(defaultValue ?? "");
   const layoutId = useId();
   const reduce = useReducedMotion();
@@ -89,6 +101,29 @@ export function Tabs({
     },
     [controlled, onValueChange],
   );
+  const swipeChange = useRef(setValue);
+  swipeChange.current = setValue;
+  useEffect(() => {
+    const root = swipeRoot.current;
+    if (!root) return;
+    const parent = root.parentElement?.closest<HTMLElement>(
+      "[data-tab-swipe-surface]",
+    );
+    const surface = parent && !parent.matches(".main-content") ? parent : root;
+    if (surface === root) root.dataset.tabSwipeSurface = "";
+    return bindTabSwipe(surface, (direction) => {
+      const tabs = [
+        ...root.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+      ].filter((tab) => !tab.disabled);
+      const index = tabs.findIndex(
+        (tab) => tab.getAttribute("aria-selected") === "true",
+      );
+      const next = index >= 0 ? tabs[index + direction] : undefined;
+      if (!next) return false;
+      swipeChange.current(next.dataset.tabsValue!);
+      return true;
+    });
+  }, []);
   const x = useSpring(0, transition);
   const y = useSpring(0, transition);
   const width = useSpring(0, transition);
@@ -96,7 +131,16 @@ export function Tabs({
   const track = useMemo(() => ({ x, y, width, height }), [x, y, width, height]);
   const [placed, setPlaced] = useState(false);
   const contextValue = useMemo(
-    () => ({ value: current, setValue, layoutId, variant, icons, track, placed, setPlaced }),
+    () => ({
+      value: current,
+      setValue,
+      layoutId,
+      variant,
+      icons,
+      track,
+      placed,
+      setPlaced,
+    }),
     [current, icons, layoutId, setValue, variant, track, placed],
   );
   return (
@@ -106,7 +150,7 @@ export function Tabs({
             inside fixed/scrolled containers it would replay scroll offsets as
             movement. The pill only ever travels within the list, so scoping
             projection to the Tabs wrapper is always correct. */}
-        <motion.div layoutRoot className={className}>
+        <motion.div ref={swipeRoot} layoutRoot className={className}>
           {children}
         </motion.div>
       </TabsCtx.Provider>
@@ -135,7 +179,11 @@ export function TabsList({
   const viewportRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const viewportId = useId();
-  const [edges, setEdges] = useState({ overflow: false, left: false, right: false });
+  const [edges, setEdges] = useState({
+    overflow: false,
+    left: false,
+    right: false,
+  });
 
   const measure = useCallback(() => {
     const root = rootRef.current;
@@ -146,26 +194,50 @@ export function TabsList({
     const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
     const rtl = getComputedStyle(viewport).direction === "rtl";
     // Modern browsers expose negative scrollLeft in RTL. Clamp rubber-banding.
-    const fromLeft = Math.max(0, Math.min(max, rtl ? max + viewport.scrollLeft : viewport.scrollLeft));
+    const fromLeft = Math.max(
+      0,
+      Math.min(max, rtl ? max + viewport.scrollLeft : viewport.scrollLeft),
+    );
     const next = { overflow, left: fromLeft > 1, right: fromLeft < max - 1 };
-    setEdges((previous) => previous.overflow === next.overflow && previous.left === next.left && previous.right === next.right ? previous : next);
+    setEdges((previous) =>
+      previous.overflow === next.overflow &&
+      previous.left === next.left &&
+      previous.right === next.right
+        ? previous
+        : next,
+    );
   }, []);
 
-  const reveal = useCallback((tab: HTMLElement | null) => {
-    const viewport = viewportRef.current;
-    if (!viewport || !tab) return;
-    const frame = viewport.getBoundingClientRect();
-    const item = tab.getBoundingClientRect();
-    const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
-    const rtl = getComputedStyle(viewport).direction === "rtl";
-    const fromLeft = Math.max(0, Math.min(max, rtl ? max + viewport.scrollLeft : viewport.scrollLeft));
-    // Keep the selected/focused label clear of the arrows over the faded edges.
-    const left = frame.left + (fromLeft > 1 ? 36 : 0);
-    const right = frame.right - (fromLeft < max - 1 ? 36 : 0);
-    const delta = item.left < left ? item.left - left : item.right > right ? item.right - right : 0;
-    // Scroll only this viewport; scrollIntoView can also move the whole page.
-    if (delta) viewport.scrollBy({ left: delta, behavior: reduce ? "instant" : "smooth" });
-  }, [reduce]);
+  const reveal = useCallback(
+    (tab: HTMLElement | null) => {
+      const viewport = viewportRef.current;
+      if (!viewport || !tab) return;
+      const frame = viewport.getBoundingClientRect();
+      const item = tab.getBoundingClientRect();
+      const max = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      const rtl = getComputedStyle(viewport).direction === "rtl";
+      const fromLeft = Math.max(
+        0,
+        Math.min(max, rtl ? max + viewport.scrollLeft : viewport.scrollLeft),
+      );
+      // Keep the selected/focused label clear of the arrows over the faded edges.
+      const left = frame.left + (fromLeft > 1 ? 36 : 0);
+      const right = frame.right - (fromLeft < max - 1 ? 36 : 0);
+      const delta =
+        item.left < left
+          ? item.left - left
+          : item.right > right
+            ? item.right - right
+            : 0;
+      // Scroll only this viewport; scrollIntoView can also move the whole page.
+      if (delta)
+        viewport.scrollBy({
+          left: delta,
+          behavior: reduce ? "instant" : "smooth",
+        });
+    },
+    [reduce],
+  );
 
   useLayoutEffect(() => {
     const root = rootRef.current;
@@ -174,7 +246,9 @@ export function TabsList({
     if (!root || !viewport || !list) return;
     const update = () => {
       measure();
-      reveal(list.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]'));
+      reveal(
+        list.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]'),
+      );
     };
     const observer = new ResizeObserver(update);
     observer.observe(root);
@@ -194,7 +268,11 @@ export function TabsList({
     void value;
     void edges.overflow;
     measure();
-    reveal(listRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]') ?? null);
+    reveal(
+      listRef.current?.querySelector<HTMLElement>(
+        '[role="tab"][aria-selected="true"]',
+      ) ?? null,
+    );
   }, [children, value, edges.overflow, measure, reveal]);
 
   useLayoutEffect(() => {
@@ -207,14 +285,23 @@ export function TabsList({
     if (!list) return;
     void children;
     const place = () => {
-      const tabs = Array.from(list.querySelectorAll<HTMLElement>('[role="tab"]'));
-      const target = tabs.find((tab) => tab.dataset.tabsValue === value)?.parentElement;
+      const tabs = Array.from(
+        list.querySelectorAll<HTMLElement>('[role="tab"]'),
+      );
+      const target = tabs.find(
+        (tab) => tab.dataset.tabsValue === value,
+      )?.parentElement;
       if (!target) return;
       // Measure the settled layout: open the selected icon and fold the rest
       // for one synchronous read, then hand the styles back to Motion before
       // anything paints. Exact in any layout, from flex rows to grids.
-      const icons = Array.from(list.querySelectorAll<HTMLElement>('[role="tab"] > [data-tabs-icon]'));
-      const saved = icons.map((icon) => [icon.style.width, icon.style.marginRight]);
+      const icons = Array.from(
+        list.querySelectorAll<HTMLElement>('[role="tab"] > [data-tabs-icon]'),
+      );
+      const saved = icons.map((icon) => [
+        icon.style.width,
+        icon.style.marginRight,
+      ]);
       for (const icon of icons) {
         const open = icon.parentElement?.parentElement === target;
         icon.style.width = open ? "auto" : "0px";
@@ -241,7 +328,8 @@ export function TabsList({
     };
     place();
     const observer = new ResizeObserver(place);
-    for (const tab of list.querySelectorAll('[role="tab"]')) if (tab.parentElement) observer.observe(tab.parentElement);
+    for (const tab of list.querySelectorAll('[role="tab"]'))
+      if (tab.parentElement) observer.observe(tab.parentElement);
     return () => observer.disconnect();
   }, [tracked, value, children, reduce, track, setPlaced]);
 
@@ -252,9 +340,13 @@ export function TabsList({
     void children;
     // `placed` swaps the indicator element, so measure the new one.
     void placed;
-    const labels = Array.from(list.querySelectorAll<HTMLElement>("[data-tabs-label]"));
+    const labels = Array.from(
+      list.querySelectorAll<HTMLElement>("[data-tabs-label]"),
+    );
     const indicator = list.querySelector<HTMLElement>("[data-tabs-indicator]");
-    const target = list.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+    const target = list.querySelector<HTMLElement>(
+      '[role="tab"][aria-selected="true"]',
+    );
     if (!indicator || !target || target.dataset.tabsValue !== value) {
       for (const label of labels) label.style.clipPath = "inset(0 100% 0 0)";
       return;
@@ -268,15 +360,29 @@ export function TabsList({
       // reads and writes, forcing the browser to flush styles repeatedly.
       const clips = labels.map((label) => {
         const bounds = label.getBoundingClientRect();
-        const left = Math.max(0, Math.min(bounds.width, pill.left - bounds.left));
-        const right = Math.max(0, Math.min(bounds.width, bounds.right - pill.right));
-        return left + right >= bounds.width ? "inset(0 100% 0 0)" : `inset(0 ${right}px 0 ${left}px)`;
+        const left = Math.max(
+          0,
+          Math.min(bounds.width, pill.left - bounds.left),
+        );
+        const right = Math.max(
+          0,
+          Math.min(bounds.width, bounds.right - pill.right),
+        );
+        return left + right >= bounds.width
+          ? "inset(0 100% 0 0)"
+          : `inset(0 ${right}px 0 ${left}px)`;
       });
       labels.forEach((label, index) => {
-        if (label.style.clipPath !== clips[index]) label.style.clipPath = clips[index];
+        if (label.style.clipPath !== clips[index])
+          label.style.clipPath = clips[index];
       });
       frames += 1;
-      stillFrames = previous && Math.abs(pill.left - previous.left) < 0.01 && Math.abs(pill.right - previous.right) < 0.01 ? stillFrames + 1 : 0;
+      stillFrames =
+        previous &&
+        Math.abs(pill.left - previous.left) < 0.01 &&
+        Math.abs(pill.right - previous.right) < 0.01
+          ? stillFrames + 1
+          : 0;
       previous = { left: pill.left, right: pill.right };
       if (reduce || (frames > 2 && stillFrames >= 2)) cancelFrame(syncClips);
     };
@@ -303,15 +409,39 @@ export function TabsList({
 
   const scroll = (direction: number) => {
     const viewport = viewportRef.current;
-    if (viewport) viewport.scrollBy({ left: direction * viewport.clientWidth * 0.8, behavior: reduce ? "instant" : "smooth" });
+    if (viewport)
+      viewport.scrollBy({
+        left: direction * viewport.clientWidth * 0.8,
+        behavior: reduce ? "instant" : "smooth",
+      });
   };
-  const controlClass = "absolute inset-y-0 z-20 inline-flex w-9 items-center justify-center text-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-0";
-  const surfaceClass = variant === "pill" ? "rounded-full bg-card" : variant === "segment" ? "rounded-lg bg-card" : "";
+  const controlClass =
+    "absolute inset-y-0 z-20 inline-flex w-9 items-center justify-center text-foreground transition-opacity hover:opacity-70 focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-0";
+  const surfaceClass =
+    variant === "pill"
+      ? "rounded-full bg-card"
+      : variant === "segment"
+        ? "rounded-lg bg-card"
+        : "";
 
   return (
-    <div ref={rootRef} className={cn("relative isolate flex w-full max-w-full min-w-0 items-center", edges.overflow && surfaceClass, wrapperClassName)}>
+    <div
+      ref={rootRef}
+      className={cn(
+        "relative isolate flex w-full max-w-full min-w-0 items-center",
+        edges.overflow && surfaceClass,
+        wrapperClassName,
+      )}
+    >
       {edges.overflow && (
-        <button type="button" aria-label="Scroll tabs left" aria-controls={viewportId} disabled={!edges.left} onClick={() => scroll(-1)} className={cn(controlClass, "left-0 rounded-l-full")}>
+        <button
+          type="button"
+          aria-label="Scroll tabs left"
+          aria-controls={viewportId}
+          disabled={!edges.left}
+          onClick={() => scroll(-1)}
+          className={cn(controlClass, "left-0 rounded-l-full")}
+        >
           <ChevronLeft size={20} aria-hidden="true" />
         </button>
       )}
@@ -319,26 +449,60 @@ export function TabsList({
         ref={viewportRef}
         id={viewportId}
         layoutScroll
-        className={cn("w-full min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden", edges.overflow && "[border-radius:inherit]")}
-        style={edges.overflow ? {
-          maskImage: `linear-gradient(to right, ${edges.left ? "transparent, black 40px" : "black, black 0px"}, ${edges.right ? "black calc(100% - 40px), transparent" : "black 100%"})`,
-        } : undefined}
+        className={cn(
+          "w-full min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          edges.overflow && "[border-radius:inherit]",
+        )}
+        style={
+          edges.overflow
+            ? {
+                maskImage: `linear-gradient(to right, ${edges.left ? "transparent, black 40px" : "black, black 0px"}, ${edges.right ? "black calc(100% - 40px), transparent" : "black 100%"})`,
+              }
+            : undefined
+        }
         onFocusCapture={(event) => {
-          if (event.target instanceof HTMLElement && event.target.getAttribute("role") === "tab") reveal(event.target);
+          if (
+            event.target instanceof HTMLElement &&
+            event.target.getAttribute("role") === "tab"
+          )
+            reveal(event.target);
         }}
       >
-        <div {...props} ref={listRef} role="tablist" className={cn(listClasses[variant], "w-max", tracked && "relative", className)}>
+        <div
+          {...props}
+          ref={listRef}
+          role="tablist"
+          className={cn(
+            listClasses[variant],
+            "w-max",
+            tracked && "relative",
+            className,
+          )}
+        >
           {children}
         </div>
       </motion.div>
       {edges.overflow && edges.left && (
-        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 rounded-l-[inherit] backdrop-blur-[2px] [mask-image:linear-gradient(to_right,black,transparent)]" />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 left-0 z-10 w-10 rounded-l-[inherit] backdrop-blur-[2px] [mask-image:linear-gradient(to_right,black,transparent)]"
+        />
       )}
       {edges.overflow && edges.right && (
-        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 rounded-r-[inherit] backdrop-blur-[2px] [mask-image:linear-gradient(to_left,black,transparent)]" />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 rounded-r-[inherit] backdrop-blur-[2px] [mask-image:linear-gradient(to_left,black,transparent)]"
+        />
       )}
       {edges.overflow && (
-        <button type="button" aria-label="Scroll tabs right" aria-controls={viewportId} disabled={!edges.right} onClick={() => scroll(1)} className={cn(controlClass, "right-0 rounded-r-full")}>
+        <button
+          type="button"
+          aria-label="Scroll tabs right"
+          aria-controls={viewportId}
+          disabled={!edges.right}
+          onClick={() => scroll(1)}
+          className={cn(controlClass, "right-0 rounded-r-full")}
+        >
           <ChevronRight size={20} aria-hidden="true" />
         </button>
       )}
@@ -358,7 +522,10 @@ function TriggerIcon({ icon, active }: { icon: ReactNode; active: boolean }) {
   const reduce = useReducedMotion();
   if (icons === "always") {
     return (
-      <span aria-hidden="true" className="mr-1.5 inline-flex shrink-0 items-center">
+      <span
+        aria-hidden="true"
+        className="mr-1.5 inline-flex shrink-0 items-center"
+      >
         {icon}
       </span>
     );
@@ -396,7 +563,15 @@ export function TabsTrigger({
   icon?: ReactNode;
   indicatorClassName?: string;
 } & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "value">) {
-  const { value: current, setValue, layoutId, variant, icons, track, placed } = useTabs();
+  const {
+    value: current,
+    setValue,
+    layoutId,
+    variant,
+    icons,
+    track,
+    placed,
+  } = useTabs();
   const active = current === value;
   const content = icon ? (
     <>
@@ -407,13 +582,16 @@ export function TabsTrigger({
     children
   );
   // React owns the initial mask only; TabsList synchronizes subsequent masks.
-  const [initialClip] = useState(() => active ? "inset(0)" : "inset(0 100% 0 0)");
+  const [initialClip] = useState(() =>
+    active ? "inset(0)" : "inset(0 100% 0 0)",
+  );
 
   if (variant === "underline") {
     return (
       <button
         {...props}
         type="button"
+        data-tabs-value={value}
         role="tab"
         aria-selected={active}
         onClick={(event) => {
@@ -422,20 +600,22 @@ export function TabsTrigger({
         }}
         className={cn(
           "relative isolate px-3 pb-2.5 pt-1 -mb-px text-sm font-medium transition-colors min-h-[44px] inline-flex items-center whitespace-nowrap shrink-0",
-          active ? "text-foreground" : "text-muted-foreground hover:text-foreground",
+          active
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground",
           className,
         )}
       >
         {content}
         {active ? (
-        <motion.span
-          layoutId={layoutId}
-          layout
-          className={cn(
-            "absolute bottom-0 left-0 right-0 h-px bg-primary",
-            indicatorClassName,
-          )}
-        />
+          <motion.span
+            layoutId={layoutId}
+            layout
+            className={cn(
+              "absolute bottom-0 left-0 right-0 h-px bg-primary",
+              indicatorClassName,
+            )}
+          />
         ) : null}
       </button>
     );
@@ -457,7 +637,11 @@ export function TabsTrigger({
           key="tracked"
           data-tabs-indicator=""
           style={{ ...track, borderRadius: variant === "pill" ? 9999 : 8 }}
-          className={cn("absolute top-0 left-0 bg-primary", radius, indicatorClassName)}
+          className={cn(
+            "absolute top-0 left-0 bg-primary",
+            radius,
+            indicatorClassName,
+          )}
         />
       ) : active ? (
         <motion.span
@@ -505,7 +689,15 @@ export function TabsTrigger({
   );
 }
 
-export function TabsContent({ value, children, className }: { value: string; children: ReactNode; className?: string }) {
+export function TabsContent({
+  value,
+  children,
+  className,
+}: {
+  value: string;
+  children: ReactNode;
+  className?: string;
+}) {
   const { value: current } = useTabs();
   const reduce = useReducedMotion();
   const active = current === value;

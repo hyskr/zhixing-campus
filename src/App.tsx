@@ -1,3 +1,4 @@
+import { bindTabSwipe } from "./tabSwipe";
 import {
   needsRefresh,
   refreshScopes,
@@ -165,6 +166,32 @@ export default function App() {
     return () => window.removeEventListener("campus:open-updates", open);
   }, []);
   const setToast = useFeedback("success");
+  useEffect(() => {
+    if (!isAndroid) return;
+    const pages: Page[] = [
+      "overview",
+      "schedule",
+      "applications",
+      "homework",
+      "mail",
+    ];
+    if (!pages.includes(page)) return;
+    const surface = document.querySelector<HTMLElement>(".main-content");
+    if (!surface) return;
+    surface.dataset.tabSwipeSurface = "";
+    const unbind = bindTabSwipe(surface, (direction) => {
+      if (document.querySelector('[data-mobile-page],[role="dialog"]'))
+        return false;
+      const next = pages[pages.indexOf(page) + direction];
+      if (!next) return false;
+      navigate(next, true);
+      return true;
+    });
+    return () => {
+      unbind();
+      delete surface.dataset.tabSwipeSurface;
+    };
+  }, [page]);
   const notificationsTrigger = useRef<HTMLButtonElement>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);

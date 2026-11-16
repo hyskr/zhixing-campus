@@ -72,7 +72,7 @@ export default function FileSpace({ account }: { account: Account }) {
   }
   const values = files.filter((f) => selected.includes(f.id));
   return (
-    <>
+    <div data-tab-swipe-surface="" style={{ display: "contents" }}>
       <PageHeading
         eyebrow="FILES"
         title="文件空间"
@@ -287,6 +287,6 @@ export default function FileSpace({ account }: { account: Account }) {
           }
         />
       )}
-    </>
+    </div>
   );
 }
