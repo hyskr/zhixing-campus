@@ -198,7 +198,11 @@ pub struct UploadedFile {
     pub visit_name: String,
 }
 pub fn upload_item(file: &UploadedFile) -> Value {
-    let (stem, ext) = file.name.rsplit_once('.').unwrap_or((&file.name, ""));
+    let (stem, ext) = file
+        .name
+        .rsplit_once('.')
+        .filter(|(stem, ext)| !stem.is_empty() && !ext.is_empty())
+        .unwrap_or((&file.name, ""));
     json!({"fileNameNoExt":encode(stem),"fileExtName":ext,"fileSize":file.size.to_string(),"visitName":file.visit_name,"pid":"","ftype":"insert"})
 }
 #[tauri::command]
@@ -206,35 +210,28 @@ pub async fn upload_file(
     username: String,
     name: String,
     data: String,
-    note_id: Option<String>,
     state: tauri::State<'_, CampusState>,
 ) -> Result<Value, String> {
     let session = get_session(&state, &username)?;
-    let smart = smart_session(&session).await?;
-    let result = upload_data(&session, &smart, &name, &data, note_id.as_deref()).await?;
+    let result = upload_data(&session, &name, &data).await?;
     save_session(&state, &username, &session)?;
     Ok(result)
 }
-// 参考来源：参考学生上传入口、multipart 字段和上传结果中的 visitName。
-// https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/uploader/upload-common.js
-// https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/uploader/upload-manager.js
-async fn upload_data(
-    session: &Session,
-    smart: &SmartSession,
-    name: &str,
-    data: &str,
-    note_id: Option<&str>,
-) -> Result<Value, String> {
+// https://github.com/s1y4x1/BJTU-course-assistant/blob/84bf92733a9e13a45f9129b9a3a707a07cff2599/modules/ve/uploader/upload-common.js
+async fn upload_data(session: &Session, name: &str, data: &str) -> Result<Value, String> {
     let bytes = STANDARD.decode(data).map_err(|_| "无法读取所选文件")?;
-    upload_bytes(session, smart, name, bytes, note_id).await
+    upload_bytes(session, name, bytes).await
 }
+
 pub(super) async fn upload_bytes(
     session: &Session,
-    smart: &SmartSession,
     name: &str,
     bytes: Vec<u8>,
-    note_id: Option<&str>,
 ) -> Result<Value, String> {
+    {
+        let _gate = session.smart_gate.lock().await;
+        ensure_smart_account(session).await?;
+    }
     let size = bytes.len();
     let body = reqwest::multipart::Form::new().part(
         "file",
@@ -242,14 +239,22 @@ pub(super) async fn upload_bytes(
     );
     let response = session
         .client
-        .post(format!("{SMART}/rp/common/homeworkUpload.shtml"))
-        .query(&[("noteId", note_id.as_deref().unwrap_or("1"))])
-        .header("sessionid", &smart.id)
+        .post(format!("{SMART}/rp/common/homeworkUpload.shtml?noteId=1"))
+        .header("X-Requested-With", "XMLHttpRequest")
+        .header("Upgrade-Insecure-Requests", "1")
         .multipart(body)
         .timeout(Duration::from_secs(3600))
         .send()
         .await
         .map_err(network_error)?;
+    if is_login_url(response.url())
+        || matches!(
+            response.url().path().rsplit('/').next(),
+            Some("Timeout.jsp" | "Login_2.jsp")
+        )
+    {
+        return Err(AUTH_EXPIRED.into());
+    }
     let text = response
         .error_for_status()
         .map_err(network_error)?
@@ -259,19 +264,32 @@ pub(super) async fn upload_bytes(
     if parsers::expired_page(&text) {
         return Err(AUTH_EXPIRED.into());
     }
-    let root = parsers::smart_response(&text)?;
-    let visit = string(&root["visitName"]);
-    if visit.is_empty() {
-        return Err(if !string(&root["ERRMSG"]).is_empty() {
-            string(&root["ERRMSG"])
+    let root = parsers::smart_response(&text).map_err(|_| {
+        let message = text.trim();
+        if message.is_empty() || message.starts_with('<') {
+            "上传接口未返回有效结果".to_string()
         } else {
-            "学校未返回上传地址".into()
+            message.chars().take(300).collect()
+        }
+    })?;
+    let visit = string(&root["visitName"]).trim().to_owned();
+    if visit.is_empty() {
+        let message = ["ERRMSG", "message", "msg"]
+            .iter()
+            .map(|key| string(&root[*key]))
+            .find(|value| !value.is_empty())
+            .unwrap_or_else(|| "学校未返回上传地址".into());
+        return Err(if message.contains("登录") || message.contains("不合法") {
+            AUTH_EXPIRED.into()
+        } else {
+            message
         });
     }
-    let path = visit
-        .strip_prefix("W:\\Root")
-        .unwrap_or(&visit)
-        .replace('\\', "/");
+    let normalized = visit.replace('\\', "/");
+    let path = normalized
+        .get(..7)
+        .filter(|prefix| prefix.eq_ignore_ascii_case("W:/Root"))
+        .map_or(normalized.as_str(), |_| &normalized[7..]);
     Ok(
         json!({"id":format!("upload-{}",std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos()),"name":name,"size":size,"visitName":visit,"url":format!("http://123.121.147.7:8081/{}",path.trim_start_matches('/'))}),
     )
@@ -354,24 +372,23 @@ pub(super) async fn submit_data(
     Ok(())
 }
 #[tauri::command]
-// 参考来源：参考账号资源查询与资源链接获取流程。
-// https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/resource-download.js
+// https://github.com/s1y4x1/BJTU-course-assistant/blob/84bf92733a9e13a45f9129b9a3a707a07cff2599/modules/ve/platform.js#L162-L199
 pub async fn resource_space(
     username: String,
     query: String,
     state: tauri::State<'_, CampusState>,
 ) -> Result<Vec<Value>, String> {
     let session = get_session(&state, &username)?;
-    let smart = smart_session(&session).await?;
-    let result = space_data(&session, &smart, &query).await?;
+    let result = space_data(&session, &query).await?;
     save_session(&state, &username, &session)?;
     Ok(result)
 }
-pub(super) async fn space_data(
-    session: &Session,
-    smart: &SmartSession,
-    query: &str,
-) -> Result<Vec<Value>, String> {
+pub(super) async fn space_data(session: &Session, query: &str) -> Result<Vec<Value>, String> {
+    let session_id = {
+        let _gate = session.smart_gate.lock().await;
+        ensure_smart_account(session).await?;
+        quick_login::course_session_id(session).await?
+    };
     let mut root = json!({});
     for rows in [10usize, 0] {
         let rows = if rows == 0 {
@@ -387,15 +404,26 @@ pub(super) async fn space_data(
             .post(format!(
                 "{SMART}/resourceSpace.shtml?method=resourceSpaceList"
             ))
-            .header("sessionid", &smart.id)
+            .header("sessionid", &session_id)
+            .header("X-Requested-With", "XMLHttpRequest")
+            .header("Accept", "application/json, text/javascript, */*; q=0.01")
             .form(&[
                 ("type", "1"),
                 ("rows", rows.to_string().as_str()),
-                ("searchName", encode(&query).as_str()),
+                ("searchName", encode(query.trim()).as_str()),
             ])
             .send()
             .await
             .map_err(network_error)?;
+        if is_login_url(response.url())
+            || matches!(
+                response.url().path().rsplit('/').next(),
+                Some("Timeout.jsp" | "Login_2.jsp")
+            )
+            || response.status().as_u16() == 401
+        {
+            return Err(AUTH_EXPIRED.into());
+        }
         let body = response
             .error_for_status()
             .map_err(network_error)?
@@ -406,12 +434,40 @@ pub(super) async fn space_data(
             return Err(AUTH_EXPIRED.into());
         }
         root = parsers::smart_response(&body)?;
+        let message = format!("{} {}", string(&root["ERRMSG"]), string(&root["message"]));
+        if message.contains("登录") || message.contains("不合法") {
+            return Err(AUTH_EXPIRED.into());
+        }
         if string(&root["total"]).parse::<usize>().unwrap_or(0) <= rows {
             break;
         }
     }
-    let result=root["result"].as_array().unwrap_or(&Vec::new()).iter().map(|v|json!({"id":string(&v["rpId"]),"name":string(&v["rpName"]),"url":absolute_url(&string(&v["resUrl"])),"rpId":string(&v["rpId"]),"size":parsers::resource_size(&v["rpSize"]),"inputTime":string(&v["inputTime"])})).collect();
-    Ok(result)
+    if root.as_object().is_some_and(|object| object.is_empty()) {
+        return Ok(Vec::new());
+    }
+    if root["flag"] == false {
+        return Err("学校未能读取个人资源空间，请稍后刷新".into());
+    }
+    if root.get("result").is_none()
+        && string(&root["total"]) == "0"
+        && matches!(string(&root["STATUS"]).as_str(), "" | "0" | "2")
+    {
+        return Ok(Vec::new());
+    }
+    let rows = parsers::list(&root, "result")?;
+    Ok(rows.iter().enumerate().filter_map(|(index, row)| {
+        let field = |first: &str, second: &str| {
+            let value = string(&row[first]);
+            if value.trim().is_empty() { string(&row[second]) } else { value }
+        };
+        let url = absolute_url(&field("resUrl", "downloadUrl"));
+        if url.is_empty() { return None; }
+        let rp_id = field("rpId", "id");
+        let name = field("rpName", "name");
+        let id = if rp_id.is_empty() { format!("space-{index}") } else { rp_id.clone() };
+        Some(json!({"id":id,"rpId":rp_id,"name":if name.is_empty() {"未命名文件"} else {&name},
+            "url":url,"size":parsers::resource_size(&row["rpSize"]),"inputTime":field("inputTime","createTime")}))
+    }).collect())
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -601,10 +657,8 @@ mod tests {
         assert!(h["courseNoteList"].is_array());
         let uploaded = upload_data(
             &session,
-            &smart,
             "知行上传验证.txt",
             &STANDARD.encode("知行文件上传与下载验证。\n"),
-            Some(&string(&item["sourceId"])),
         )
         .await
         .unwrap();

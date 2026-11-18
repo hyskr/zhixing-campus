@@ -1212,7 +1212,7 @@ export default function App() {
                   onLoginRequired={() => setLogin({ studentId: account.id })}
                 />
               )}
-              {page === "files" && <FileSpace account={account} />}
+              {page === "files" && <FileSpace key={account.id} account={account} />}
 
               {page === "accounts" && (
                 <Accounts

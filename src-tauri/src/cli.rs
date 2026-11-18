@@ -598,6 +598,7 @@ async fn query(args: &Args, session: &Session, id: &str) -> Result<Value> {
                 building,
             )?)
         }
+        "resource space" => Ok(json!(learning::space_data(session, args.value("query")).await?)),
         _ => smart_query(args, session).await,
     }
 }
@@ -683,9 +684,6 @@ async fn smart_query(args: &Args, session: &Session) -> Result<Value> {
                 ))
             }
         }
-        "resource space" => Ok(json!(
-            learning::space_data(session, &smart, args.value("query")).await?
-        )),
         "replay list" => Ok(json!(
             media::replay_data(session, &smart, args.need("course")?).await?
         )),
@@ -850,13 +848,7 @@ async fn submit_homework(args: &Args, session: &Session, smart: &SmartSession) -
             .and_then(|name| name.to_str())
             .ok_or_else(|| fail("INVALID_ARGUMENT", "附件名称不可用", 2))?;
         progress(args, "attachment.upload", json!({"name":name}));
-        let uploaded = learning::upload_bytes(
-            session,
-            smart,
-            name,
-            tokio::fs::read(path).await.map_err(local)?,
-            Some(source),
-        )
+        let uploaded = learning::upload_bytes(session, name, tokio::fs::read(path).await.map_err(local)?)
         .await?;
         files.push(serde_json::from_value::<learning::UploadedFile>(uploaded).map_err(local)?);
     }

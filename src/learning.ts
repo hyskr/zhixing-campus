@@ -202,7 +202,6 @@ export async function uploadFile(
       username: account.id,
       name: file.name,
       data,
-      noteId: noteId ?? null,
     }),
   );
   return {

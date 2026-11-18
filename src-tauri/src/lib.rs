@@ -520,17 +520,21 @@ async fn smart_json(
     }
     Ok(value)
 }
+async fn ensure_smart_account(session: &Session) -> Result<(), String> {
+    if !quick_login::current_user(session).await.unwrap_or(false)
+        && !quick_login::restore(session).await.unwrap_or(false)
+    {
+        quick_login::enter_from_mis(session).await?;
+    }
+    Ok(())
+}
 // 参考来源：参考 MIS 模块 28、sessionid、学期及课程列表的请求顺序。
 // https://github.com/fish2lab/bjtu-cli/blob/8a39d48d326ac195360c3564c9576d8a067aad03/Sources/bjtu/Services/SmartCurriculumService.swift
 // https://github.com/HFDLYS/BJTUselfService/blob/7d94f740efa99152456f5a2e72bb0948de4a2e7a/app/src/main/java/team/bjtuss/bjtuselfservice/repository/SmartCurriculumPlatformRepository.kt
 async fn prepare_smart(session: &Session) -> Result<SmartSession, String> {
     let _login = session.smart_gate.lock().await;
     *session.smart.lock().map_err(|e| e.to_string())? = None;
-    if !quick_login::current_user(&session).await.unwrap_or(false)
-        && !quick_login::restore(&session).await.unwrap_or(false)
-    {
-        quick_login::enter_from_mis(&session).await?;
-    }
+    ensure_smart_account(session).await?;
     let mut id = quick_login::course_session_id(session).await?;
     let semester = smart_json(
         session,

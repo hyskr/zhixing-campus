@@ -412,7 +412,7 @@ async fn learning_checks(session: &Session, id: &str, report: &mut Report, all_i
         id,
         "learning.personalSpace",
         started,
-        learning::space_data(session, &smart, "").await,
+        learning::space_data(session, "").await,
         |v| format!("{} 个资源", v.len()),
     );
     if let Some(file) = space.as_ref().and_then(|rows| rows.first()) {
