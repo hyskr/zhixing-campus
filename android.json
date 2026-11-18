@@ -1,9 +1,9 @@
 {
-  "version": "0.21.0",
-  "versionCode": 21000,
-  "notes": "# 知行 Campus Android 0.21.0\n\n- 作业类型、作业详情、课程文件／回放、上传／个人资源支持左右滑动切换。\n- 底部导航支持左右滑动；邮箱可在文件夹标签区域切换，邮件行保留左滑已读操作。\n- 课表网格保留滑动切周，输入框、横向滚动内容、视频和系统返回边缘区域分别处理自身手势。\n- 更新智慧课程会话初始化与完整课程列表加载。\n- 修正单双周识别，作业时间按北京时间解析。\n- 发布与更新继续使用 GitHub，移除七牛备份。\n\n支持 Android 10 及以上、arm64，可覆盖安装并保留账号与缓存。\n",
-  "date": "2026-11-16T09:20:59.802Z",
-  "size": 30810317,
-  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.21.0",
-  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.21.0/zhixing-campus_0.21.0_android-arm64.apk"
+  "version": "0.22.0",
+  "versionCode": 22000,
+  "notes": "# 知行 Campus Android 0.22.0\n\n- 作业列表兼容两种学校响应，按实际作业数检查完整性。按账号和模块增量保存数据，支持读取旧缓存。\n- 作业支持按截止日期筛选、本地忽略和撤销。勾选已交作业，可将正文与附件批量导出为 ZIP。\n- 教室占用按楼宇缓存整周数据。课表可按实际教学周导出为日历文件（.ics），保留单双周与不连续周次。\n- 教师、学生和课件视角分别读取对应回放流。回放文件支持暂停，服务器支持分段请求时可继续上次下载。\n- 修复学生文件空间的上传与资源列表读取。修正中文输入法回车确认候选词时误触搜索或筛选的问题。\n",
+  "date": "2026-11-18T11:21:35.959Z",
+  "size": 30945113,
+  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.22.0",
+  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.22.0/zhixing-campus_0.22.0_android-arm64.apk"
 }
