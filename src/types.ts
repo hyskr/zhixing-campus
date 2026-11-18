@@ -95,6 +95,7 @@ export interface CourseError {
   message: string;
 }
 export interface Replay {
+  lessonId?: string;
   id: string;
   videoId: string;
   courseId: string;
@@ -107,6 +108,8 @@ export interface Replay {
   content: string;
 }
 export interface ReplayLink {
+  playbackUrl?: string;
+  streamOnly?: boolean;
   view: string;
   label: string;
   url: string;
@@ -127,7 +130,8 @@ export interface DownloadTask {
   id: string;
   accountId: string;
   name: string;
-  state: "queued" | "downloading" | "completed" | "failed" | "cancelled";
+  item?: DownloadItem;
+  state: "paused" | "queued" | "downloading" | "completed" | "failed" | "cancelled";
   loaded: number;
   total: number;
   error?: string;
@@ -150,6 +154,8 @@ export interface Change {
   time: string;
 }
 export interface CampusData {
+  ignoredHomework?: string[];
+  classroomCache?: { monday: string; pages: Record<string, ClassroomPage> };
   grades: Grade[];
   courses: Course[];
   homework: Homework[];

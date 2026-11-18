@@ -1,3 +1,5 @@
+import { teachingMonday } from "./CalendarExport";
+import type { CampusData } from "./types";
 import { usePageRefresh } from "./MobileRefreshSurface";
 import { useCompactLayout } from "./platform";
 import { useEffect, useState } from "react";
@@ -90,10 +92,14 @@ function demo(week: number, building: string): ClassroomPage {
 export default function Classrooms({
   account,
   currentWeek,
+  cache,
+  onCache,
   onLoginRequired,
 }: {
   account: Account;
   currentWeek: number;
+  cache: CampusData["classroomCache"];
+  onCache: (monday: string, key: string, page: ClassroomPage) => void;
   onLoginRequired: () => void;
 }) {
   const compactLayout = useCompactLayout();
@@ -110,7 +116,12 @@ export default function Classrooms({
     [revision, setRevision] = useState(0),
     [selected, setSelected] = useState<Classroom | null>(null);
   const [, setError] = useErrorState();
+  const monday = teachingMonday(Date.now());
+  const key = JSON.stringify([semester, week, building]);
+  const cached = cache?.monday === monday ? cache.pages[key] : undefined;
   useEffect(() => {
+    setPage(cached ?? null);
+    setSelected(null);
     let active = true;
     setBusy(true);
     const load = account.demo
@@ -125,7 +136,10 @@ export default function Classrooms({
         );
     void load
       .then((result) => {
-        if (active) setPage(result);
+        if (active) {
+          setPage(result);
+          onCache(monday, key, result);
+        }
       })
       .catch((error) => {
         if (active) {
@@ -143,27 +157,9 @@ export default function Classrooms({
     return () => {
       active = false;
     };
-  }, [account.id, week, building, semester, revision]);
+  }, [account.id, week, building, semester, revision, monday]);
   usePageRefresh(async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const result = account.demo
-        ? demo(Number(week), building)
-        : await withCampusSession(account.id, () =>
-            invoke<ClassroomPage>("classroom_occupancy", {
-              username: account.id,
-              week: Number(week),
-              building,
-              semester: semester === "current" ? null : semester,
-            }),
-          );
-      setPage(result);
-    } catch (error) {
-      setError(String(error));
-    } finally {
-      setBusy(false);
-    }
+    setRevision((v) => v + 1);
   });
   const periods =
     period === "all" ? [0, 1, 2, 3, 4, 5, 6] : [Number(period) - 1];

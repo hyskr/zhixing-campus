@@ -216,6 +216,7 @@ export default function Downloads({ account }: { account?: Account }) {
       (filter === "全部" ||
         (filter === "进行中" && activeTask(t)) ||
         (filter === "已完成" && t.state === "completed") ||
+        (filter === "已暂停" && t.state === "paused") ||
         (filter === "失败 / 已取消" &&
           (t.state === "failed" || t.state === "cancelled"))),
   );
@@ -265,11 +266,13 @@ export default function Downloads({ account }: { account?: Account }) {
             className=""
           >
             <TabsList>
-              {["全部", "进行中", "已完成", "失败 / 已取消"].map((value) => (
-                <TabsTrigger key={value} value={value}>
-                  {value}
-                </TabsTrigger>
-              ))}
+              {["全部", "进行中", "已暂停", "已完成", "失败 / 已取消"].map(
+                (value) => (
+                  <TabsTrigger key={value} value={value}>
+                    {value}
+                  </TabsTrigger>
+                ),
+              )}
             </TabsList>
           </Tabs>
           <label className="download-search">
@@ -333,9 +336,11 @@ export default function Downloads({ account }: { account?: Account }) {
                           ? "下载中"
                           : t.state === "completed"
                             ? "已完成"
-                            : t.state === "cancelled"
-                              ? "已取消"
-                              : "失败"}
+                            : t.state === "paused"
+                              ? "已暂停"
+                              : t.state === "cancelled"
+                                ? "已取消"
+                                : "失败"}
                     </AnimatedBadge>
                   </div>
                   <progress
@@ -410,15 +415,28 @@ export default function Downloads({ account }: { account?: Account }) {
                   )}
                 </div>
                 {activeTask(t) ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      action(() => invoke("cancel_download", { id: t.id }))
-                    }
-                  >
-                    取消
-                  </Button>
+                  <>
+                    {t.item?.kind === "replay" && (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          action(() => invoke("pause_download", { id: t.id }))
+                        }
+                      >
+                        暂停
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        action(() => invoke("cancel_download", { id: t.id }))
+                      }
+                    >
+                      取消
+                    </Button>
+                  </>
                 ) : t.state === "completed" ? (
                   <div className="download-android-actions">
                     <Button
@@ -453,7 +471,7 @@ export default function Downloads({ account }: { account?: Account }) {
                       </Button>
                     )}
                   </div>
-                ) : t.state === "failed" ? (
+                ) : t.state === "failed" || t.state === "paused" ? (
                   <Button
                     size="sm"
                     variant="secondary"
@@ -472,7 +490,7 @@ export default function Downloads({ account }: { account?: Account }) {
                     }
                   >
                     <RefreshCw size={14} />
-                    重试
+                    {t.item?.kind === "replay" ? "继续下载" : "重试"}
                   </Button>
                 ) : null}
               </article>

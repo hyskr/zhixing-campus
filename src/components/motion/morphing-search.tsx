@@ -319,6 +319,7 @@ export function MorphingSearch({
 		}
 
 		if (event.key === "Enter") {
+      if (event.nativeEvent.isComposing || event.keyCode === 229) return;
 			event.preventDefault();
 			const item = filteredItems[activeIndex];
 			if (item) selectItem(item);

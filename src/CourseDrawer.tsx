@@ -1,5 +1,10 @@
 import { sameCourseName } from "./courseMatching";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/motion/tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/motion/tabs";
 // 参考来源：参考将同一课程的作业、资源、回放放在一起的组织方式；以 React 右侧面板实现。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/modules/ve/platform.js
 import { useState } from "react";
@@ -13,6 +18,7 @@ export default function CourseDrawer({
   name,
   account,
   data,
+  onIgnore,
   onClose,
   onLoad,
   onRetry,
@@ -22,6 +28,7 @@ export default function CourseDrawer({
   name: string;
   account: Account;
   data: CampusData;
+  onIgnore: (id: string, ignored: boolean) => void;
   onClose: () => void;
   onLoad: (node: Resource) => Promise<Resource[]>;
   onRefreshResources: () => Promise<void>;
@@ -33,7 +40,10 @@ export default function CourseDrawer({
   const sessions = data.courses.filter((c) => same(c.name));
   const grades = data.grades.filter((g) => same(g.name));
   const assignments = data.homework.filter((h) => same(h.course));
-  const pending = assignments.filter((h) => homeworkState(h) === "pending");
+  const pending = assignments.filter(
+    (h) =>
+      homeworkState(h) === "pending" && !data.ignoredHomework?.includes(h.id),
+  );
   const panels = [
     {
       id: "课程信息",
@@ -74,6 +84,7 @@ export default function CourseDrawer({
       icon: <NotebookPen size={16} />,
       content: (
         <Assignments
+          onIgnore={onIgnore}
           account={account}
           data={data}
           query=""
@@ -122,9 +133,19 @@ export default function CourseDrawer({
           </p>
         </div>
       </div>
-      <Tabs value={tab} onValueChange={setTab} variant="underline" className="course-space-tabs">
+      <Tabs
+        value={tab}
+        onValueChange={setTab}
+        variant="underline"
+        className="course-space-tabs"
+      >
         <TabsList aria-label="课程空间导航">
-          {panels.map((panel) => <TabsTrigger key={panel.id} value={panel.id}>{panel.icon}{panel.label}</TabsTrigger>)}
+          {panels.map((panel) => (
+            <TabsTrigger key={panel.id} value={panel.id}>
+              {panel.icon}
+              {panel.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
         <TabsContent value={tab} className="course-space-content">
           {panels.find((panel) => panel.id === tab)?.content}

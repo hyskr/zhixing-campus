@@ -32,35 +32,47 @@ export default function ReplayViewer({
   const videos = useRef(new Map<string, HTMLVideoElement>());
   const position = useRef({ time: 0, paused: true });
   const [, setError] = useErrorState();
-  const visible = multiple
-    ? [...links].sort(
-        (a, b) => Number(b.view === view) - Number(a.view === view),
-      )
-    : links.filter((link) => link.view === view);
+  const visible = multiple ? links : links.filter((link) => link.view === view);
   const primaryLabel =
     links.find((link) => link.view === view)?.label ?? "所选画面";
+  const switchView = (next: string) => {
+    const video = master();
+    if (video?.readyState)
+      position.current = { time: video.currentTime, paused: video.paused };
+    onViewChange(next);
+  };
   const master = () => videos.current.get(view);
+  const blockedFollowers = useRef(new Set<string>());
   function synchronize(force = false) {
     const leader = master();
     if (!leader?.readyState) return;
     position.current = { time: leader.currentTime, paused: leader.paused };
     for (const [key, follower] of videos.current) {
       if (key === view || !follower.readyState) continue;
-      if (force || Math.abs(follower.currentTime - leader.currentTime) > 0.4)
+      if (
+        Math.abs(follower.currentTime - leader.currentTime) >
+        (force ? 0.15 : 0.4)
+      )
         follower.currentTime = leader.currentTime;
       follower.playbackRate = leader.playbackRate;
       if (leader.paused) follower.pause();
-      else if (follower.paused)
-        void follower
-          .play()
-          .catch(() => setError("副视角播放失败，请重新播放或切换单视角。"));
+      else if (follower.paused && !blockedFollowers.current.has(key))
+        void follower.play().catch(() => {
+          if (!blockedFollowers.current.has(key))
+            setError("副视角未能自动播放，可将它设为主画面播放。");
+          blockedFollowers.current.add(key);
+        });
     }
   }
   useEffect(() => {
     const video = master();
     if (video) {
       video.playbackRate = Number(rate);
-      synchronize(true);
+      if (video.readyState) {
+        video.currentTime = position.current.time;
+        if (!position.current.paused)
+          void video.play().catch(() => setError("请点击主画面继续播放"));
+      }
     }
   }, [rate, view, multiple]);
   useEffect(() => {
@@ -85,7 +97,7 @@ export default function ReplayViewer({
         </Tabs>
         <label className="replay-master-picker">
           <span>{multiple ? "主画面与声音" : "选择画面"}</span>
-          <Select value={view} onValueChange={onViewChange}>
+          <Select value={view} onValueChange={switchView}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
@@ -108,6 +120,7 @@ export default function ReplayViewer({
       <div className={`replay-streams ${multiple ? "multiple" : ""}`}>
         {visible.map((link) => (
           <div
+            style={{ order: link.view === view ? -1 : 0 }}
             key={link.view}
             className={
               link.view === view
@@ -124,7 +137,7 @@ export default function ReplayViewer({
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => onViewChange(link.view)}
+                    onClick={() => switchView(link.view)}
                   >
                     设为主画面
                   </Button>
@@ -144,9 +157,12 @@ export default function ReplayViewer({
                   void video
                     .play()
                     .catch(() => setError("请点击播放继续回放。"));
+                if (link.view !== view) synchronize(true);
+              }}
+              onChange={() => {
+                blockedFollowers.current.clear();
                 synchronize(true);
               }}
-              onChange={() => synchronize(true)}
               onTime={() => {
                 if (link.view === view) {
                   const video = master();
@@ -214,35 +230,44 @@ function Stream({
 }) {
   const ref = useRef<HTMLVideoElement>(null);
   const [failure, setFailure] = useState("");
+  const [failedSource, setFailedSource] = useState("");
+  const source =
+    link.playbackUrl && failedSource !== link.playbackUrl
+      ? link.playbackUrl
+      : link.url;
+  function playbackError(message: string) {
+    if (source !== link.url) setFailedSource(source);
+    else setFailure(message);
+  }
   useEffect(() => {
     const video = ref.current!;
     setFailure("");
     let active = true;
     let hls: import("hls.js").default | undefined;
     if (
-      /\.m3u8(?:$|[?#])/i.test(link.url) &&
+      /\.m3u8(?:$|[?#])/i.test(source) &&
       !video.canPlayType("application/vnd.apple.mpegurl")
     ) {
       void import("hls.js")
         .then(({ default: Hls }) => {
           if (!active) return;
           if (!Hls.isSupported()) {
-            setFailure("当前系统无法解码此 HLS 回放，可在下方外部打开。");
+            playbackError("当前系统无法解码此 HLS 回放，可在下方外部打开。");
             return;
           }
           hls = new Hls();
-          hls.loadSource(link.url);
+          hls.loadSource(source);
           hls.attachMedia(video);
           hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal)
-              setFailure("视频流读取失败，请刷新播放地址后重试。");
+            if (active && data.fatal)
+              playbackError("视频流读取失败，请刷新播放地址后重试。");
           });
         })
         .catch(() => {
           if (active) setFailure("播放器未能加载，请重新打开回放。");
         });
     } else {
-      video.src = link.url;
+      video.src = source;
       video.load();
     }
     return () => {
@@ -251,7 +276,7 @@ function Stream({
       video.removeAttribute("src");
       video.load();
     };
-  }, [link.url]);
+  }, [source]);
   return (
     <div className="replay-stream-surface">
       <video
@@ -275,7 +300,7 @@ function Stream({
         onTimeUpdate={onTime}
         onError={() => {
           const code = ref.current?.error?.code;
-          setFailure(
+          playbackError(
             code === 3
               ? "视频格式无法解码，可尝试切换视角或在外部打开。"
               : code === 2

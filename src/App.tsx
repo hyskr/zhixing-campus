@@ -201,6 +201,13 @@ export default function App() {
   const account =
     store.accounts.find((a) => a.id === store.activeId) ?? store.accounts[0];
   const data = store.data[account?.id] ?? emptyData();
+  function updateAccountData(fn: (value: typeof data) => typeof data) {
+    const id = account?.id;
+    if (id) setStore(store => store.data[id] ? {...store,data:{...store.data,[id]:fn(store.data[id])}} : store);
+  }
+  function ignoreHomework(id: string, ignored: boolean) {
+    updateAccountData(value => ({...value,ignoredHomework:[...(value.ignoredHomework ?? []).filter(item=>item!==id), ...(ignored ? [id] : [])]}));
+  }
   useEffect(() => {
     try {
       saveStore(store);
@@ -859,7 +866,7 @@ export default function App() {
           onSwitch={switchAccount}
           onAdd={() => setLogin({})}
           pending={
-            data.homework.filter((h) => homeworkState(h, now) === "pending")
+            data.homework.filter((h) => homeworkState(h, now) === "pending" && !data.ignoredHomework?.includes(h.id))
               .length
           }
           downloading={
@@ -1111,7 +1118,7 @@ export default function App() {
                 <Grades data={data} query={query} onCourse={setCourseName} />
               )}
               {page === "homework" && (
-                <Assignments
+                <Assignments onIgnore={ignoreHomework}
                   account={account}
                   data={data}
                   query={query}
@@ -1205,7 +1212,9 @@ export default function App() {
                 />
               )}
               {page === "classrooms" && (
-                <Classrooms
+                <Classrooms cache={data.classroomCache} onCache={(monday, key, page) => updateAccountData(value => ({
+                  ...value, classroomCache:{monday,pages:{...(value.classroomCache?.monday === monday ? value.classroomCache.pages : {}),[key]:page}}
+                }))}
                   key={account.id}
                   account={account}
                   currentWeek={data.currentWeek}
@@ -1237,7 +1246,7 @@ export default function App() {
         </MobileRefreshSurface>
       </div>
       {courseName && account && (
-        <CourseDrawer
+        <CourseDrawer onIgnore={ignoreHomework}
           key={`${account.id}-${courseName}`}
           name={courseName}
           account={account}

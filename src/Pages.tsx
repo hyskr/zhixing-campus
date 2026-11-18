@@ -1,3 +1,4 @@
+import { CalendarExport } from "./CalendarExport";
 import MobileWeekSchedule from "./MobileWeekSchedule";
 import { useCompactLayout } from "./platform";
 import { currentCourseSlot } from "./currentCourse";
@@ -104,6 +105,7 @@ export function Schedule({
         description="按教学周查看课程，点击课程进入它的学习空间。"
       />
       <div className="page-toolbar">
+        <div className="schedule-export-row">
         <Tabs
           value={selection ? "selection" : "current"}
           onValueChange={(v) => setSelection(v === "selection")}
@@ -119,6 +121,8 @@ export function Schedule({
             </TabsTrigger>
           </TabsList>
         </Tabs>
+        <CalendarExport courses={data.courses.filter(c => c.selection === selection)} week={data.currentWeek} anchor={data.syncedAt?.currentWeek ?? data.lastSync}/>
+        </div>
         <div className="week-controls">
           <Button
             size="icon"

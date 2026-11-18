@@ -90,7 +90,7 @@ async fn raw_homework(
         .parse::<usize>()
         .unwrap_or(0)
         .max(100);
-    let mut found = parsers::list(&root, "courseNoteList")?
+    let mut found = parsers::homework_rows(&root)?
         .iter()
         .find(|h| string(&h["id"]) == source_id)
         .cloned();
@@ -108,7 +108,7 @@ async fn raw_homework(
             Some(&smart.id),
         )
         .await?;
-        found = parsers::list(&root, "courseNoteList")?
+        found = parsers::homework_rows(&root)?
             .iter()
             .find(|h| string(&h["id"]) == source_id)
             .cloned();

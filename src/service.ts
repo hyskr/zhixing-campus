@@ -278,6 +278,7 @@ export const loadReplayLinks = (username: string, replay: Replay) =>
       username,
       courseId: replay.courseId,
       videoId: replay.videoId,
+      lessonId: replay.lessonId ?? null,
       teacherId: replay.teacherId,
     }),
   );

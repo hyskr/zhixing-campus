@@ -295,9 +295,20 @@ pub fn smart_courses(root: &Value) -> Result<Vec<Value>, String> {
     }
     Ok(result)
 }
+pub fn homework_rows(root: &Value) -> Result<&[Value], String> {
+    let field = if root["courseNoteList"].is_array() {
+        "courseNoteList"
+    } else {
+        "list"
+    };
+    if !root[field].is_array() && string(&root["total"]) == "0" && string(&root["STATUS"]) == "0" {
+        return Ok(&[]);
+    }
+    list(root, field)
+}
 pub fn homework(root: &Value, kind: usize, fallback_course: &Value) -> Result<Vec<Value>, String> {
     let mut result = Vec::new();
-    for item in list(root, "courseNoteList")? {
+    for item in homework_rows(root)? {
         let raw_id = required(item, "id")?;
         let course = string(&item["course_name"]);
         let title = required(item, "title")?;
@@ -384,67 +395,78 @@ pub fn current_term(rows: &[Value]) -> String {
 pub fn replay_list(root: &Value, course_id: &str) -> Result<Vec<Value>, String> {
     let items = list(root, "courseSchedList")?;
     Ok(items.iter().enumerate().map(|(i,item)|{
-        let video=string(&item["videoId"]);let title=string(&item["courseBetween"]);
-        json!({"id":format!("replay-{course_id}-{}",if video.is_empty(){i.to_string()}else{video.clone()}),"videoId":video,"courseId":course_id,"name":if title.is_empty(){format!("第 {} 次课程",i+1)}else{title},"startTime":string(&item["classBeginTime"]),"endTime":string(&item["classEndTime"]),"room":string(&item["classRoom"]),"teacher":string(&item["teacherName"]),"teacherId":string(&item["teacherId"]),"content":multiline(&string(&item["content"]))})
+        let mut video=string(&item["videoId"]); if video.is_empty() || video=="null" {video=string(&item["params"]["videoId"]);}let title=string(&item["courseBetween"]);
+        json!({"id":format!("replay-{course_id}-{}",if video.is_empty(){i.to_string()}else{video.clone()}),"lessonId":string(&item["id"]),"videoId":video,"courseId":course_id,"name":if title.is_empty(){format!("第 {} 次课程",i+1)}else{title},"startTime":string(&item["classBeginTime"]),"endTime":string(&item["classEndTime"]),"room":string(&item["classRoom"]),"teacher":string(&item["teacherName"]),"teacherId":string(&item["teacherId"]),"content":multiline(&string(&item["content"]))})
     }).collect())
 }
 pub fn replay_links(root: &Value) -> Result<Vec<Value>, String> {
-    let mut result = Vec::new();
     let views = [
         ("student", "学生视角"),
         ("teacher", "教师视角"),
         ("courseware", "课件视角"),
     ];
-    let source = string(&root["html"]);
-    let doc = Html::parse_fragment(&source);
-    for (i, anchor) in doc.select(&selector("a[href]")).enumerate() {
-        let href = anchor.value().attr("href").unwrap_or("");
-        let Ok(url) = reqwest::Url::parse("http://123.121.147.7:88/ve/")
-            .unwrap()
-            .join(href)
-        else {
-            continue;
-        };
-        if !matches!(url.scheme(), "http" | "https") {
-            continue;
+    let base = reqwest::Url::parse("http://123.121.147.7:88/ve/").unwrap();
+    let resolve = |raw: &str| {
+        let raw = raw.trim();
+        if raw.is_empty() || raw.starts_with('#') {
+            return None;
         }
-        let label = format!(
-            "{} {} {}",
-            text(anchor),
-            anchor.value().attr("title").unwrap_or(""),
-            anchor.value().attr("data-view").unwrap_or("")
-        );
-        let index = if label.contains("学生") || label.contains("student") {
-            0
-        } else if label.contains("教师") || label.contains("老师") || label.contains("teacher")
-        {
-            1
-        } else if label.contains("课件") || label.contains("courseware") {
-            2
-        } else {
-            i.min(2)
+        base.join(raw)
+            .ok()
+            .filter(|url| matches!(url.scheme(), "http" | "https"))
+    };
+    let html = string(&root["html"]);
+    let doc = Html::parse_fragment(&html);
+    let mut urls = [None, None, None];
+    let mut positional = Vec::new();
+    for (index, anchor) in doc.select(&selector("a[href]")).enumerate() {
+        let Some(url) = resolve(anchor.value().attr("href").unwrap_or("")) else {
+            continue;
         };
-        if !result.iter().any(|v: &Value| v["view"] == views[index].0) {
-            result
-                .push(json!({"view":views[index].0,"label":views[index].1,"url":url.to_string()}));
+        let mut label = text(anchor);
+        for attr in ["title", "class", "data-view", "data-type"] {
+            label.push(' ');
+            label.push_str(anchor.value().attr(attr).unwrap_or(""));
+        }
+        let label = label.to_lowercase();
+        let view = [
+            ["学生", "student"].as_slice(),
+            &["教师", "老师", "teacher"],
+            &["课件", "courseware", "slide", "ppt"],
+        ]
+        .iter()
+        .position(|words| words.iter().any(|word| label.contains(*word)));
+        if let Some(view) = view {
+            urls[view].get_or_insert(url);
+        } else if index < views.len() {
+            positional.push((index, url));
         }
     }
-    for ((view, label), keys) in views.into_iter().zip([
-        ["studentUrl", "stuUrl", "student_url"],
-        ["teacherUrl", "teaUrl", "teacher_url"],
-        ["coursewareUrl", "courseUrl", "pptUrl"],
-    ]) {
-        if result.iter().any(|v| v["view"] == view) {
-            continue;
-        }
+    for (i, keys) in [
+        ["studentUrl", "stuUrl", "student_url"].as_slice(),
+        &["teacherUrl", "teaUrl", "teacher_url"],
+        &["coursewareUrl", "courseUrl", "pptUrl", "courseware_url"],
+    ]
+    .iter()
+    .enumerate()
+    {
         if let Some(url) = keys
             .iter()
-            .filter_map(|key| root[key].as_str())
-            .find(|url| url.starts_with("https://") || url.starts_with("http://"))
+            .find_map(|k| root[*k].as_str().and_then(&resolve))
         {
-            result.push(json!({"view":view,"label":label,"url":url}));
+            urls[i].get_or_insert(url);
         }
     }
+    for (i, url) in positional {
+        urls[i].get_or_insert(url);
+    }
+    let result: Vec<Value> = views
+        .into_iter()
+        .zip(urls)
+        .filter_map(|((view, label), url)| {
+            url.map(|u| json!({"view":view,"label":label,"url":u.as_str()}))
+        })
+        .collect();
     if result.is_empty() {
         return Err("此回放尚未提供可用的视频链接".into());
     }

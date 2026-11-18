@@ -10,7 +10,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::watch;
 #[derive(Default)]
 pub struct DownloadState {
-    active: Mutex<HashMap<String, watch::Sender<bool>>>,
+    active: Mutex<HashMap<String, watch::Sender<Option<&'static str>>>>,
     history: Mutex<HashMap<String, Value>>,
     history_file: Mutex<PathBuf>,
     completed: Mutex<HashMap<String, PathBuf>>,
@@ -133,27 +133,118 @@ pub(crate) async fn ticket(
     }
     Ok(root)
 }
+async fn playback_streams(
+    session: &Session,
+    smart: &SmartSession,
+    course_id: &str,
+    lesson_id: &str,
+    teacher_id: &str,
+) -> Result<Value, String> {
+    let course = course(smart, course_id)?;
+    let response = session
+        .client
+        .get(format!("{SMART}/coursePlatform/coursePlatform.shtml"))
+        .query(&[
+            ("method", "toCoursePlatform"),
+            ("courseToPage", "10480"),
+            ("courseId", &string(&course["course_num"])),
+            ("dataSource", "1"),
+            ("cId", course_id),
+            ("xkhId", &string(&course["fz_id"])),
+            ("xqCode", smart.term.as_str()),
+            ("teacherId", teacher_id),
+        ])
+        .header("sessionid", &smart.id)
+        .send()
+        .await
+        .map_err(network_error)?;
+    let html = response
+        .error_for_status()
+        .map_err(network_error)?
+        .text()
+        .await
+        .map_err(network_error)?;
+    let pattern = regex::Regex::new(r#"var\s+uId\s*=\s*["'](\d{1,18})["']"#).unwrap();
+    let user = pattern.captures(&html).ok_or("课程回放未返回用户信息")?;
+    let detail = smart_json(
+        session,
+        "rp/common/teachCalendar.shtml",
+        &[
+            ("method", "toDisplyCourseSchedDetail".into()),
+            ("courseSchedId", lesson_id.into()),
+            ("userLevel", "1".into()),
+            ("userId", user[1].into()),
+        ],
+        Some(&smart.id),
+    )
+    .await?;
+    Ok(detail["res"]["streamMap"].clone())
+}
 #[tauri::command]
 pub async fn replay_links(
     username: String,
     course_id: String,
     video_id: String,
+    lesson_id: Option<String>,
     teacher_id: String,
     state: tauri::State<'_, CampusState>,
 ) -> Result<Vec<Value>, String> {
     let session = get_session(&state, &username)?;
-    let smart = smart_session(&session).await?;
+    let mut smart = smart_session(&session).await?;
     let root = match ticket(&session, &smart, &course_id, &video_id, &teacher_id).await {
         Err(e) if e.contains("登录状态已失效") => {
-            let smart = prepare_smart(&session).await?;
+            smart = prepare_smart(&session).await?;
             ticket(&session, &smart, &course_id, &video_id, &teacher_id).await?
         }
         r => r?,
     };
     save_session(&state, &username, &session)?;
-    parsers::replay_links(&root)
+    let mut links = parsers::replay_links(&root).unwrap_or_default();
+    // 已缓存的旧课节只有 videoId，先从当前课程表中找回课节 ID。
+    let lesson_id = match lesson_id.filter(|id| !id.is_empty()) {
+        Some(id) => Some(id),
+        None => replay_data(&session, &smart, &course_id)
+            .await
+            .ok()
+            .and_then(|rows| rows.into_iter().find(|row| row["videoId"] == video_id))
+            .and_then(|row| row["lessonId"].as_str().map(str::to_owned)),
+    };
+    if let Some(id) = lesson_id {
+        if let Ok(streams) = playback_streams(&session, &smart, &course_id, &id, &teacher_id).await
+        {
+            if string(&streams["haveStream"]) != "0" {
+                for (view, label, field) in [
+                    ("student", "学生视角", "stuStreamHlsUrl"),
+                    ("teacher", "教师视角", "teaStreamHlsUrl"),
+                    ("courseware", "课件视角", "vgaStreamHlsUrl"),
+                ] {
+                    let Some(url) = streams[field]
+                        .as_str()
+                        .and_then(|s| Url::parse(s.trim()).ok())
+                    else {
+                        continue;
+                    };
+                    if url.scheme() != "https"
+                        || !url.host_str().is_some_and(|h| h.ends_with(".bjtu.edu.cn"))
+                    {
+                        continue;
+                    }
+                    if let Some(link) = links.iter_mut().find(|v| v["view"] == view) {
+                        link["playbackUrl"] = json!(url.as_str());
+                    } else {
+                        links.push(json!({"view":view,"label":label,"url":url.as_str(),"playbackUrl":url.as_str(),"streamOnly":true}));
+                    }
+                }
+            }
+        }
+    }
+    if links.is_empty() {
+        Err("此回放尚未提供可用的视频链接".into())
+    } else {
+        Ok(links)
+    }
 }
-fn safe_name(raw: &str) -> String {
+pub(super) fn safe_name(raw: &str) -> String {
     let cleaned = raw
         .chars()
         .map(|c| {
@@ -242,7 +333,10 @@ async fn stream_file(
     .await
 }
 
-async fn download_response(session: &Session, url: &str) -> Result<reqwest::Response, String> {
+pub(super) async fn download_response(
+    session: &Session,
+    url: &str,
+) -> Result<reqwest::Response, String> {
     let referer = if Url::parse(url).is_ok_and(|u| u.host_str() == Some("mail.bjtu.edu.cn")) {
         format!(
             "https://mail.bjtu.edu.cn/coremail/main.jsp?sid={}",
@@ -507,6 +601,22 @@ async fn run_downloads(
 ) -> Result<bool, String> {
     let session = get_session(&state, &username)?;
     let downloads = app.state::<DownloadState>();
+    let mut receivers = Vec::with_capacity(items.len());
+    {
+        let mut active = downloads.active.lock().map_err(|e| e.to_string())?;
+        let mut ids = std::collections::HashSet::new();
+        if items
+            .iter()
+            .any(|item| active.contains_key(&item.id) || !ids.insert(&item.id))
+        {
+            return Err("任务正在下载".into());
+        }
+        for item in &items {
+            let (tx, rx) = watch::channel(None);
+            active.insert(item.id.clone(), tx);
+            receivers.push(rx);
+        }
+    }
     // 保存下载参数与目标目录，供失败后直接重试。
     {
         let mut history = downloads.history.lock().map_err(|e| e.to_string())?;
@@ -519,16 +629,15 @@ async fn run_downloads(
         }
         persist_history(&downloads, &history);
     }
-    let mut receivers = Vec::new();
     for item in &items {
-        let (tx, rx) = watch::channel(false);
-        downloads
-            .active
-            .lock()
-            .map_err(|e| e.to_string())?
-            .insert(item.id.clone(), tx);
-        receivers.push(rx);
-        emit(&app, &username, item, "queued", 0, 0, None, None);
+        let loaded = if item.kind == "replay" {
+            fs::metadata(replay_partial(&folder, &item.id))
+                .map(|m| m.len())
+                .unwrap_or(0)
+        } else {
+            0
+        };
+        emit(&app, &username, item, "queued", loaded, 0, None, None);
     }
     let slots = {
         let mut slots = downloads.slots.lock().map_err(|e| e.to_string())?;
@@ -555,15 +664,20 @@ async fn run_downloads(
         let slots = slots.clone();
         let folder = folder.clone();
         tauri::async_runtime::spawn(async move {
-            let outcome: Result<(PathBuf, DownloadItem), String> = if *cancelled.borrow() {
-                Err("已取消".into())
+            let initial = *cancelled.borrow_and_update();
+            let outcome: Result<(PathBuf, DownloadItem), String> = if let Some(reason) = initial {
+                Err(reason.to_string())
             } else {
                 tokio::select! {
-                    _ = cancelled.changed() => Err("已取消".into()),
+                    _ = cancelled.changed() => Err(cancelled.borrow().unwrap_or("已取消").to_string()),
                     result = download_one(&session, &app, &username, &slots, &folder, &item) => result,
                 }
             };
-            let result_kind = match &outcome { Ok(_) => 0, Err(error) if error == "已取消" => 2, Err(_) => 1 };
+            let result_kind = match &outcome {
+                Ok(_) => 0,
+                Err(error) if error == "已取消" || error == "已暂停" => 2,
+                Err(_) => 1,
+            };
             let downloads = app.state::<DownloadState>();
             match outcome {
                 Ok((final_path, display)) => {
@@ -583,11 +697,16 @@ async fn run_downloads(
                     );
                 }
                 Err(error) => {
+                    if error == "已取消" && item.kind == "replay" {
+                        discard_partial(&folder, &item.id);
+                    }
                     emit(
                         &app,
                         &username,
                         &item,
-                        if error == "已取消" {
+                        if error == "已暂停" {
+                            "paused"
+                        } else if error == "已取消" {
                             "cancelled"
                         } else {
                             "failed"
@@ -623,6 +742,153 @@ async fn run_downloads(
     Ok(true)
 }
 
+fn replay_partial(folder: &Path, id: &str) -> PathBuf {
+    folder.join(format!(".zhixing-{}.part", safe_name(id)))
+}
+fn discard_partial(folder: &Path, id: &str) {
+    let partial = replay_partial(folder, id);
+    let _ = fs::remove_file(&partial);
+    let _ = fs::remove_file(partial.with_extension("validator"));
+}
+
+async fn replay_download(
+    session: &Session,
+    app: &tauri::AppHandle,
+    username: &str,
+    folder: &Path,
+    item: &DownloadItem,
+    url: &str,
+) -> Result<PathBuf, String> {
+    use std::io::Write;
+    let partial = replay_partial(folder, &item.id);
+    let validator_path = partial.with_extension("validator");
+    let offset = fs::metadata(&partial).map(|m| m.len()).unwrap_or(0);
+    let request = || {
+        session
+            .client
+            .get(url)
+            .header("Referer", "http://123.121.147.7:88/ve/")
+            .header("Accept-Encoding", "identity")
+            .timeout(Duration::from_secs(3600))
+    };
+    let mut get = request();
+    if offset > 0 {
+        get = get.header("Range", format!("bytes={offset}-"));
+        if let Ok(tag) = fs::read_to_string(&validator_path) {
+            get = get.header("If-Range", tag);
+        }
+    }
+    let mut response = get.send().await.map_err(network_error)?;
+    if response.status().as_u16() == 416 {
+        response = request().send().await.map_err(network_error)?;
+    }
+    let mut response = response.error_for_status().map_err(network_error)?;
+    if is_login_url(response.url())
+        || response
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.contains("text/html"))
+    {
+        return Err("回放地址已失效，请刷新登录后继续下载".into());
+    }
+    let append = response.status().as_u16() == 206;
+    let total = if append {
+        let range = response
+            .headers()
+            .get("content-range")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        let parts = range.strip_prefix("bytes ").and_then(|s| s.split_once('/'));
+        let (span, length) = parts.ok_or("回放服务器缺少续传范围")?;
+        let (start, end) = span.split_once('-').ok_or("回放续传范围无效")?;
+        let length = length.parse::<u64>().map_err(|_| "回放总大小无效")?;
+        if start.parse::<u64>().ok() != Some(offset)
+            || end.parse::<u64>().ok() != length.checked_sub(1)
+            || offset >= length
+        {
+            return Err("服务器返回的回放范围不匹配".into());
+        }
+        length
+    } else {
+        response.content_length().unwrap_or(0)
+    };
+    let mut file = fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(append)
+        .truncate(!append)
+        .open(&partial)
+        .map_err(|e| e.to_string())?;
+    if !append {
+        let validator = response
+            .headers()
+            .get("etag")
+            .and_then(|v| v.to_str().ok())
+            .filter(|v| !v.starts_with("W/"))
+            .or_else(|| {
+                response
+                    .headers()
+                    .get("last-modified")
+                    .and_then(|v| v.to_str().ok())
+            });
+        if let Some(tag) = validator {
+            fs::write(&validator_path, tag).map_err(|e| e.to_string())?;
+        } else {
+            let _ = fs::remove_file(&validator_path);
+        }
+    }
+    let mut loaded = if append { offset } else { 0 };
+    emit(
+        app,
+        username,
+        item,
+        "downloading",
+        loaded,
+        total,
+        None,
+        None,
+    );
+    let mut last = std::time::Instant::now();
+    let mut previous = loaded;
+    while let Some(chunk) = response.chunk().await.map_err(network_error)? {
+        file.write_all(&chunk).map_err(|e| e.to_string())?;
+        loaded += chunk.len() as u64;
+        if last.elapsed() >= Duration::from_millis(250) {
+            let speed = (loaded - previous) as f64 / last.elapsed().as_secs_f64();
+            publish(
+                app,
+                json!({"id":item.id,"accountId":username,"name":item.name,"state":"downloading","loaded":loaded,"total":total,"speed":speed,"eta":if speed>0.0 && total>=loaded {Some((total-loaded) as f64/speed)}else{None}}),
+            );
+            previous = loaded;
+            last = std::time::Instant::now();
+        }
+    }
+    if total > 0 && loaded != total {
+        return Err("回放未下载完整，请继续下载".into());
+    }
+    drop(file);
+    let state = app.state::<DownloadState>();
+    let reserved = state.reserved.lock().map_err(|e| e.to_string())?;
+    let name = safe_name(&item.name);
+    let mut target = folder.join(&name);
+    let stem = Path::new(&name)
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy();
+    let extension = Path::new(&name)
+        .extension()
+        .map(|s| format!(".{}", s.to_string_lossy()))
+        .unwrap_or_default();
+    let mut number = 2;
+    while reserved.contains(&target) || target.exists() {
+        target = folder.join(format!("{stem} ({number}){extension}"));
+        number += 1;
+    }
+    fs::rename(&partial, &target).map_err(|e| e.to_string())?;
+    let _ = fs::remove_file(validator_path);
+    Ok(target)
+}
 async fn download_one(
     session: &Session,
     app: &tauri::AppHandle,
@@ -633,6 +899,10 @@ async fn download_one(
 ) -> Result<(PathBuf, DownloadItem), String> {
     let _permit = slots.acquire().await.map_err(|e| e.to_string())?;
     let resolved = resolve_download(session, item).await?;
+    if item.kind == "replay" {
+        let path = replay_download(session, app, username, folder, item, &resolved.url).await?;
+        return Ok((path, item.clone()));
+    }
     let mut display = item.clone();
     if resolved.pdf {
         display.name = pdf_name(&item.name);
@@ -717,9 +987,16 @@ pub async fn retry_download(
     run_downloads(username, vec![item], folder, app, state).await
 }
 #[tauri::command]
+pub fn pause_download(id: String, state: tauri::State<'_, DownloadState>) -> Result<(), String> {
+    if let Some(tx) = state.active.lock().map_err(|e| e.to_string())?.get(&id) {
+        let _ = tx.send(Some("已暂停"));
+    }
+    Ok(())
+}
+#[tauri::command]
 pub fn cancel_download(id: String, state: tauri::State<'_, DownloadState>) -> Result<(), String> {
     if let Some(tx) = state.active.lock().map_err(|e| e.to_string())?.get(&id) {
-        let _ = tx.send(true);
+        let _ = tx.send(Some("已取消"));
     }
     Ok(())
 }
@@ -896,7 +1173,11 @@ fn restore_history(bytes: &[u8]) -> HashMap<String, Value> {
     let mut items: HashMap<String, Value> = serde_json::from_slice(bytes).unwrap_or_default();
     for item in items.values_mut() {
         if matches!(item["state"].as_str(), Some("queued" | "downloading")) {
-            item["state"] = json!("failed");
+            item["state"] = json!(if item["item"]["kind"] == "replay" {
+                "paused"
+            } else {
+                "failed"
+            });
             item["error"] = json!("应用关闭，下载已中断");
             item["speed"] = json!(0);
             item["eta"] = Value::Null;
@@ -947,7 +1228,7 @@ fn merge_download_progress(mut item: Value, previous: Option<&Value>, now: u64) 
     } else {
         Value::Null
     };
-    if matches!(state.as_str(), "failed" | "cancelled") {
+    if matches!(state.as_str(), "failed" | "cancelled" | "paused") {
         if let Some(previous) = previous {
             item["loaded"] = previous["loaded"].clone();
             item["total"] = previous["total"].clone();
@@ -982,8 +1263,14 @@ pub fn download_history(state: tauri::State<'_, DownloadState>) -> Vec<Value> {
 pub fn clear_download_history(username: String, state: tauri::State<'_, DownloadState>) {
     let mut history = state.history.lock().unwrap();
     history.retain(|_, item| {
-        string(&item["accountId"]) != username
-            || matches!(item["state"].as_str(), Some("queued" | "downloading"))
+        let keep = string(&item["accountId"]) != username
+            || matches!(item["state"].as_str(), Some("queued" | "downloading"));
+        if !keep && item["item"]["kind"] == "replay" {
+            if let Some(folder) = item["folder"].as_str() {
+                discard_partial(Path::new(folder), &string(&item["id"]));
+            }
+        }
+        keep
     });
     persist_history(&state, &history);
 }

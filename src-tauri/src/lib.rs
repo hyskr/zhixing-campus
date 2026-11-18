@@ -7,6 +7,7 @@ mod campus;
 mod classrooms;
 mod credentials;
 mod devices;
+mod exports;
 mod files;
 mod learning;
 #[cfg(test)]
@@ -586,6 +587,7 @@ async fn fetch_homework_type(
 ) -> Result<Vec<Value>, String> {
     let mut page = 1usize;
     let page_size = 100usize;
+    let mut seen = std::collections::HashSet::new();
     let mut all = Vec::new();
     loop {
         let object = smart_json(
@@ -602,16 +604,19 @@ async fn fetch_homework_type(
         )
         .await?;
         let items = parsers::homework(&object, kind, course)?;
-        let total = string(&object["total"])
-            .parse::<usize>()
-            .unwrap_or(items.len());
-        if items.is_empty() && all.len() < total {
-            return Err("学校作业列表不完整，请重试该课程".into());
-        }
-        let count = items.len();
-        all.extend(items);
-        if all.len() >= total || count == 0 {
+        let total = string(&object["total"]).parse::<usize>().ok();
+        let received = items.len();
+        let before = all.len();
+        all.extend(
+            items
+                .into_iter()
+                .filter(|row| seen.insert(string(&row["sourceId"]))),
+        );
+        if total.is_some_and(|n| all.len() >= n) || (total.is_none() && received < page_size) {
             break;
+        }
+        if before == all.len() {
+            return Err("学校作业列表不完整，保留上次数据，请重试该课程".into());
         }
         page += 1;
     }
@@ -1116,6 +1121,8 @@ pub fn run() {
             campus::environment_diagnostics,
             files::download_resource_tree,
             files::teaching_calendar,
+            exports::export_calendar,
+            exports::archive_homework,
             files::file_bytes,
             sso::begin_sso,
             sso::finish_sso,
@@ -1132,6 +1139,7 @@ pub fn run() {
             media::course_replays,
             media::replay_links,
             media::download_items,
+            media::pause_download,
             media::retry_download,
             learning::homework_detail,
             learning::submit_homework,

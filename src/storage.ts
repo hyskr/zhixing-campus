@@ -1,6 +1,7 @@
+import { emptyData } from "./types";
 import type { AppStore, CampusData, Change, SyncResult } from "./types";
 const key = "zhixing.campus.v1";
-export function loadStore(): AppStore {
+function loadLegacy(): AppStore {
   const saved = localStorage.getItem(key);
   if (saved) {
     try {
@@ -50,8 +51,75 @@ export function loadStore(): AppStore {
   }
   return { accounts: [], activeId: "", data: {} };
 }
+const indexKey = "zhixing.campus.v2";
+type Index = Pick<AppStore, "accounts" | "activeId"> & {
+  modules: Record<string, Record<string, number>>;
+};
+const moduleKey = (id: string, field: string, slot: number) =>
+  `${indexKey}/${encodeURIComponent(id)}/${field}/${slot}`;
+let savedIndex: Index | undefined;
+let savedData: AppStore["data"] = {};
+
+export function loadStore(): AppStore {
+  const raw = localStorage.getItem(indexKey);
+  if (!raw) return loadLegacy();
+  let index: Index;
+  try {
+    index = JSON.parse(raw);
+  } catch {
+    return loadLegacy();
+  }
+  if (!index?.modules || !Array.isArray(index.accounts)) return loadLegacy();
+  const data: AppStore["data"] = {};
+  for (const [id, fields] of Object.entries(index.modules)) {
+    const values: Record<string, unknown> = {};
+    for (const [field, slot] of Object.entries(fields)) {
+      const stored = localStorage.getItem(moduleKey(id,field,slot));
+      if (stored !== null) {
+        try { values[field] = JSON.parse(stored); } catch { /* Refresh this module from school. */ }
+      }
+    }
+    data[id] = { ...emptyData(), ...values };
+
+  }
+  savedIndex = index;
+  savedData = data;
+  return { accounts: index.accounts, activeId: index.activeId, data };
+}
+
 export function saveStore(store: AppStore) {
-  localStorage.setItem(key, JSON.stringify(store));
+  const modules: Index["modules"] = {};
+  for (const [id, data] of Object.entries(store.data)) {
+    const slots: Record<string, number> = {};
+    for (const [field, value] of Object.entries(data)) {
+      if (value === undefined) continue;
+      const previous = savedIndex?.modules[id]?.[field];
+      if (
+        previous !== undefined &&
+        savedData[id]?.[field as keyof CampusData] === value
+      ) {
+        slots[field] = previous;
+      } else {
+        slots[field] = previous === 0 ? 1 : 0;
+        localStorage.setItem(
+          moduleKey(id, field, slots[field]),
+          JSON.stringify(value),
+        );
+      }
+    }
+    modules[id] = slots;
+  }
+  const next = { accounts: store.accounts, activeId: store.activeId, modules };
+  localStorage.setItem(indexKey, JSON.stringify(next));
+  for (const [id, fields] of Object.entries(savedIndex?.modules ?? {})) {
+    for (const [field, slot] of Object.entries(fields)) {
+      if (modules[id]?.[field] !== slot)
+        localStorage.removeItem(moduleKey(id, field, slot));
+    }
+  }
+  savedIndex = next;
+  savedData = store.data;
+  localStorage.removeItem(key);
 }
 export function applySync(old: CampusData, result: SyncResult): CampusData {
   const time = new Date().toISOString();

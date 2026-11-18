@@ -694,9 +694,9 @@ function ReplayPlayer({
             <RefreshCw size={16} className={refreshing ? "spin" : ""} />
             {refreshing ? "正在获取" : "刷新播放地址"}
           </Button>
-          <Button disabled={picking || !link} onClick={() => void download()}>
+          <Button disabled={picking || !link || link.streamOnly} onClick={() => void download()}>
             <Download size={16} />
-            {picking ? "正在加入" : "下载此视角"}
+            {picking ? "正在加入" : link?.streamOnly ? "此视角仅供播放" : "下载此视角"}
           </Button>
         </div>
         {replay.content && (

@@ -1,3 +1,7 @@
+import { invoke } from "@tauri-apps/api/core";
+import { homeworkIds } from "./learning";
+import { withCampusSession } from "./service";
+import { useFeedback } from "./ui";
 import { schoolTime } from "./schoolTime";
 import { useErrorState } from "./ui";
 import { sameCourseName } from "./courseMatching";
@@ -47,6 +51,7 @@ export default function Assignments({
   account,
   data,
   query,
+  onIgnore,
   onRetry,
   onCourse,
   compact = false,
@@ -55,6 +60,7 @@ export default function Assignments({
   account: Account;
   data: CampusData;
   query: string;
+  onIgnore: (id: string, ignored: boolean) => void;
   onRetry: (id: string) => Promise<void>;
   onCourse: (name: string) => void;
   compact?: boolean;
@@ -68,9 +74,26 @@ export default function Assignments({
   const [retrying, setRetrying] = useState("");
   const [error, setError] = useErrorState();
   const now = useNow();
+  const [dateMode, setDateMode] = useState("全部日期");
+  const [customDate, setCustomDate] = useState("");
+  const [archiveMode, setArchiveMode] = useState(false);
+  const [checked, setChecked] = useState<string[]>([]);
+  const [archiving, setArchiving] = useState(false);
+  const feedback = useFeedback();
+  function localDay(ms: number) {
+    const date = new Date(ms);
+    return Number.isFinite(ms)
+      ? new Date(ms - date.getTimezoneOffset() * 60000)
+          .toISOString()
+          .slice(0, 10)
+      : "";
+  }
+  const deadlineDay = dateMode === "今天" ? localDay(now) : customDate;
   const courses = [...new Set(data.homework.map((h) => h.course))];
   const rows = data.homework.filter(
     (h) =>
+      (dateMode === "全部日期" ||
+        (!!deadlineDay && localDay(schoolTime(h.deadline)) === deadlineDay)) &&
       (!courseName || sameCourseName(h.course, courseName)) &&
       (type === "全部任务" || h.type === type) &&
       (!chosenCourses.length || chosenCourses.includes(h.course)) &&
@@ -79,8 +102,33 @@ export default function Assignments({
   const groups = [
     { id: "pending", label: "待完成", color: "orange" },
     { id: "submitted", label: "已提交", color: "teal" },
+    { id: "ignored", label: "已忽略", color: "gray" },
     { id: "overdue", label: "已逾期", color: "rose" },
   ] as const;
+  const submitted = rows.filter((h) => homeworkState(h, now) === "submitted");
+  const archiveItems = submitted.filter((h) => checked.includes(h.id));
+  async function archive() {
+    setArchiving(true);
+    try {
+      const items = archiveItems.map((h) => ({
+        ...homeworkIds(h),
+        title: h.title,
+        course: h.course,
+      }));
+      const saved = await withCampusSession(account.id, () =>
+        invoke<boolean>("archive_homework", { username: account.id, items }),
+      );
+      if (saved) {
+        feedback(`已归档 ${items.length} 项作业`);
+        setArchiveMode(false);
+        setChecked([]);
+      }
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setArchiving(false);
+    }
+  }
   async function retry(id: string) {
     setRetrying(id);
     setError("");
@@ -155,13 +203,73 @@ export default function Assignments({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["全部状态", "待完成", "已提交", "已逾期"].map((s) => (
+              {["全部状态", "待完成", "已提交", "已逾期", "已忽略"].map((s) => (
                 <SelectItem value={s} key={s}>
                   {s}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Select value={dateMode} onValueChange={setDateMode}>
+            <SelectTrigger aria-label="按截止日期筛选">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {["全部日期", "今天", "指定日期"].map((d) => (
+                <SelectItem key={d} value={d}>
+                  {d}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {dateMode === "指定日期" && (
+            <input
+              type="date"
+              aria-label="截止日期"
+              value={customDate}
+              onChange={(e) => setCustomDate(e.target.value)}
+            />
+          )}
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={archiving}
+            onClick={() => {
+              setArchiveMode(!archiveMode);
+              setChecked([]);
+              if (!archiveMode) {
+                setFilter("已提交");
+                setOpened((v) => ({ ...v, submitted: true }));
+              }
+            }}
+          >
+            {archiveMode ? "退出归档" : "归档已交作业"}
+          </Button>
+          {archiveMode && (
+            <>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={archiving}
+                onClick={() =>
+                  setChecked(
+                    archiveItems.length === submitted.length
+                      ? []
+                      : submitted.map((h) => h.id),
+                  )
+                }
+              >
+                全选当前结果
+              </Button>
+              <Button
+                size="sm"
+                disabled={archiving || !archiveItems.length}
+                onClick={() => void archive()}
+              >
+                {archiving ? "正在归档…" : `导出 ZIP（${archiveItems.length}）`}
+              </Button>
+            </>
+          )}
         </div>
       </div>
       {!!data.homeworkErrors?.length && (
@@ -206,7 +314,13 @@ export default function Assignments({
         .filter((group) => filter === "全部状态" || filter === group.label)
         .map((group) => {
           const items = rows
-            .filter((h) => homeworkState(h, now) === group.id)
+            .filter(
+              (h) =>
+                (data.ignoredHomework?.includes(h.id) &&
+                homeworkState(h, now) !== "submitted"
+                  ? "ignored"
+                  : homeworkState(h, now)) === group.id,
+            )
             .sort(byDeadline);
           const expanded =
             opened[group.id] ??
@@ -241,6 +355,20 @@ export default function Assignments({
                   {items.map((h) => (
                     <article className="surface homework-card" key={h.id}>
                       <div className="homework-card-top">
+                        {group.id === "submitted" && archiveMode && (
+                          <input
+                            type="checkbox"
+                            aria-label={`选择 ${h.title}`}
+                            checked={checked.includes(h.id)}
+                            onChange={(e) =>
+                              setChecked(
+                                e.target.checked
+                                  ? [...checked, h.id]
+                                  : checked.filter((id) => id !== h.id),
+                              )
+                            }
+                          />
+                        )}
                         <span className="homework-type blue">
                           <FileText size={16} />
                           {h.type}
@@ -299,6 +427,23 @@ export default function Assignments({
                             ? timeRemaining(h.deadline, now)
                             : group.label}
                         </span>
+                        {group.id !== "submitted" && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              const ignored = group.id !== "ignored";
+                              onIgnore(h.id, ignored);
+                              if (ignored)
+                                feedback("已从待办中忽略", "info", {
+                                  label: "撤销",
+                                  onClick: () => onIgnore(h.id, false),
+                                });
+                            }}
+                          >
+                            {group.id === "ignored" ? "恢复到列表" : "忽略"}
+                          </Button>
+                        )}
                       </div>
                     </article>
                   ))}

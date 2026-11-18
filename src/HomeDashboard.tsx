@@ -68,7 +68,7 @@ export default function HomeDashboard({
     day = new Date(now).getDay() || 7;
   const [selected, setSelected] = useState<Homework | null>(null);
   const pending = data.homework
-    .filter((item) => homeworkState(item, now) === "pending")
+    .filter((item) => homeworkState(item, now) === "pending" && !data.ignoredHomework?.includes(item.id))
     .sort(byDeadline);
   const courses = data.courses.filter(
     (item) => !item.selection && isInWeek(item.weeks, data.currentWeek),
