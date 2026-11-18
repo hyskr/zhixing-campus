@@ -35,3 +35,4 @@
 - [2026-11-16 上游维护与 Android 标签手势](research/upstream-20261116.md)
 
 - [0.21.0：上游维护与标签滑动](releases/0.21.0.md) · [Android 0.21.0](releases/android-0.21.0.md)
+- [0.22.0：作业归档、课表导出与回放续传](releases/0.22.0.md) · [Android 0.22.0](releases/android-0.22.0.md)
