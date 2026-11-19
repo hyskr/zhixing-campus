@@ -230,23 +230,30 @@ pub(super) async fn upload_bytes(
 ) -> Result<Value, String> {
     {
         let _gate = session.smart_gate.lock().await;
-        ensure_smart_account(session).await?;
+        ensure_smart_account(session).await.map_err(|e| {
+            format!("上传前未能连接当前账号的智慧课程平台，文件尚未发送：{e}")
+        })?;
     }
     let size = bytes.len();
     let body = reqwest::multipart::Form::new().part(
         "file",
-        reqwest::multipart::Part::bytes(bytes).file_name(name.to_string()),
+        reqwest::multipart::Part::bytes(bytes)
+            .file_name(name.to_string())
+            .mime_str(mime_guess::from_path(name).first_or_octet_stream().essence_str())
+            .map_err(|_| "无法设置上传文件类型")?,
     );
     let response = session
         .client
         .post(format!("{SMART}/rp/common/homeworkUpload.shtml?noteId=1"))
+        .header("Origin", "http://123.121.147.7:88")
+        .header("Referer", "http://123.121.147.7:88/ve/")
         .header("X-Requested-With", "XMLHttpRequest")
         .header("Upgrade-Insecure-Requests", "1")
         .multipart(body)
         .timeout(Duration::from_secs(3600))
         .send()
         .await
-        .map_err(network_error)?;
+        .map_err(|e| format!("文件已发起上传，未收到学校确认：{}", network_error(e)))?;
     if is_login_url(response.url())
         || matches!(
             response.url().path().rsplit('/').next(),

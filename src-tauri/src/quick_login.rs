@@ -1,11 +1,13 @@
 use super::*;
 pub async fn current_user(session: &Session) -> Result<bool, String> {
-    let response = get(
-        session,
-        &format!("{SMART}/coursePlatform/coursePlatform.shtml?method=getUserInfo"),
-        None,
-    )
-    .await?;
+    let response = session.client
+        .get(format!("{SMART}/coursePlatform/coursePlatform.shtml?method=getUserInfo"))
+        .header("Accept", "application/json, text/javascript, */*; q=0.01")
+        .header("X-Requested-With", "XMLHttpRequest")
+        .header("Referer", "http://123.121.147.7:88/ve/")
+        .timeout(Duration::from_secs(30))
+        .send().await.map_err(network_error)?
+        .error_for_status().map_err(network_error)?;
     #[cfg(test)]
     if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("learning") {
         eprintln!(
@@ -18,7 +20,10 @@ pub async fn current_user(session: &Session) -> Result<bool, String> {
     let Ok(root) = parsers::smart_response(&body) else {
         return Ok(false);
     };
-    let matches = string(&root["result"]["loginName"]) == session.username;
+    let info = &root["result"];
+    let login = string(&info["loginName"]);
+    let identity = if login.trim().is_empty() { string(&info["userId"]) } else { login };
+    let matches = identity.trim() == session.username;
     #[cfg(test)]
     if std::env::var("CAMPUS_PROBE_MODULE").as_deref() == Ok("learning") {
         eprintln!(

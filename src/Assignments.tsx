@@ -34,6 +34,9 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/motion/button";
 import {
+  Archive,
+  Download,
+  X,
   Check,
   ChevronDown,
   ChevronRight,
@@ -150,20 +153,74 @@ export default function Assignments({
         />
       )}
       <div className="assignment-toolbar">
-        <Tabs
-          value={type}
-          onValueChange={(next) => setType(next)}
-          variant="underline"
-          className=""
-        >
-          <TabsList>
-            {["全部任务", "作业", "实验", "课程设计"].map((t) => (
-              <TabsTrigger key={t} value={t}>
-                {t}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="assignment-tab-actions">
+          <Tabs
+            value={type}
+            onValueChange={(next) => setType(next)}
+            variant="underline"
+            className=""
+          >
+            <TabsList>
+              {["全部任务", "作业", "实验", "课程设计"].map((t) => (
+                <TabsTrigger key={t} value={t}>
+                  {t}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <div
+            className="assignment-archive-actions"
+            role="group"
+            aria-label="作业归档"
+          >
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={archiving}
+              onClick={() => {
+                setArchiveMode(!archiveMode);
+                setChecked([]);
+                if (!archiveMode) {
+                  setFilter("已提交");
+                  setOpened((v) => ({ ...v, submitted: true }));
+                }
+              }}
+            >
+              {archiveMode ? <X size={15} /> : <Archive size={15} />}
+              {archiveMode ? "退出归档" : "归档已交作业"}
+            </Button>
+            {archiveMode && (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={archiving}
+                  onClick={() =>
+                    setChecked(
+                      archiveItems.length === submitted.length
+                        ? []
+                        : submitted.map((h) => h.id),
+                    )
+                  }
+                >
+                  {submitted.length && archiveItems.length === submitted.length
+                    ? "取消全选"
+                    : "全选"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={archiving || !archiveItems.length}
+                  onClick={() => void archive()}
+                >
+                  <Download size={15} />
+                  {archiving
+                    ? "正在归档…"
+                    : `导出 ZIP（${archiveItems.length}）`}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
         <div className="assignment-filters">
           {!courseName && (
             <MultiSelect
@@ -229,46 +286,6 @@ export default function Assignments({
               value={customDate}
               onChange={(e) => setCustomDate(e.target.value)}
             />
-          )}
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={archiving}
-            onClick={() => {
-              setArchiveMode(!archiveMode);
-              setChecked([]);
-              if (!archiveMode) {
-                setFilter("已提交");
-                setOpened((v) => ({ ...v, submitted: true }));
-              }
-            }}
-          >
-            {archiveMode ? "退出归档" : "归档已交作业"}
-          </Button>
-          {archiveMode && (
-            <>
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={archiving}
-                onClick={() =>
-                  setChecked(
-                    archiveItems.length === submitted.length
-                      ? []
-                      : submitted.map((h) => h.id),
-                  )
-                }
-              >
-                全选当前结果
-              </Button>
-              <Button
-                size="sm"
-                disabled={archiving || !archiveItems.length}
-                onClick={() => void archive()}
-              >
-                {archiving ? "正在归档…" : `导出 ZIP（${archiveItems.length}）`}
-              </Button>
-            </>
           )}
         </div>
       </div>

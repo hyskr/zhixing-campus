@@ -1,3 +1,4 @@
+import { CalendarArrowDown } from "lucide-react";
 import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/motion/button";
@@ -108,7 +109,10 @@ export function CalendarExport({
     <>
       <Button
         size="sm"
-        variant="secondary"
+        variant="ghost"
+        title="导出整学期课表"
+        aria-label="导出整学期课表"
+        className="calendar-export-trigger"
         disabled={!courses.length}
         onClick={() => {
           setMonday(
@@ -117,7 +121,8 @@ export function CalendarExport({
           setOpen(true);
         }}
       >
-        导出课表
+        <CalendarArrowDown size={16} aria-hidden="true" />
+        <span>导出课表</span>
       </Button>
       {open && (
         <Modal

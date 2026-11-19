@@ -948,3 +948,33 @@ async fn saved_account_read_suite() {
         "真实接口巡检有失败或需要人工处理的项目，请查看汇总报告"
     );
 }
+
+#[tokio::test]
+#[ignore = "仅对显式指定的测试账号上传一个 TXT 并回读内容"]
+async fn file_space_roundtrip() -> Result<(), String> {
+    let id = std::env::var("CAMPUS_UPLOAD_TEST_ACCOUNT").map_err(|_| "请指定测试账号")?;
+    valid_username(&id)?;
+    let data = cli_install::default_data_directory()?;
+    let saved = credentials::Store::load(data.join("credentials.json"));
+    let temp = tempfile::tempdir().map_err(|e|e.to_string())?;
+    let password = saved.password(&id).ok_or("该账号无已保存密码")?;
+    let credentials = Arc::new(credentials::Store::default());
+    credentials.records.lock().unwrap().insert(id.clone(), credentials::Record {
+        mode: "session".into(), login_method: "sso".into(), password: None, quick: saved.quick(&id)
+    });
+    let filename = format!("{id}.cookies.json");
+    if data.join("sessions").join(&filename).is_file() {
+        fs::copy(data.join("sessions").join(&filename), temp.path().join(&filename)).map_err(|e|e.to_string())?;
+    }
+    let state = CampusState { directory: temp.path().into(), credentials, preferences: Arc::new(Mutex::new(settings::read(&data.join("sessions")))), sessions: Mutex::default(), pending: Mutex::default() };
+    let session = login(&state,&id,&password,true,temp.path()).await?;
+    eprintln!("文件空间测试：MIS 登录完成");
+    let bytes = b"Zhixing file space upload check\n";
+    let uploaded = learning::upload_bytes(&session,"zhixing-upload-check.txt",bytes.to_vec()).await?;
+    let response = session.client.get(string(&uploaded["url"])).send().await.map_err(network_error)?.error_for_status().map_err(network_error)?;
+    if response.bytes().await.map_err(network_error)?.as_ref()!=bytes { return Err("回读内容与上传文件不同".into()); }
+    eprintln!("文件空间测试：上传并回读成功");
+    let rows = learning::space_data(&session,"").await?;
+    eprintln!("个人资源空间：返回 {} 条",rows.len());
+    Ok(())
+}

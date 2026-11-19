@@ -7339,6 +7339,7 @@ dependencies = [
  "comfy-table",
  "cookie_store",
  "keyring",
+ "mime_guess",
  "rand 0.10.3",
  "regex",
  "reqwest 0.12.28",
