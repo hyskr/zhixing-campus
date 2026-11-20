@@ -1,9 +1,9 @@
 {
-  "version": "0.22.0",
-  "versionCode": 22000,
-  "notes": "# 知行 Campus Android 0.22.0\n\n- 作业列表兼容两种学校响应，按实际作业数检查完整性。按账号和模块增量保存数据，支持读取旧缓存。\n- 作业支持按截止日期筛选、本地忽略和撤销。勾选已交作业，可将正文与附件批量导出为 ZIP。\n- 教室占用按楼宇缓存整周数据。课表可按实际教学周导出为日历文件（.ics），保留单双周与不连续周次。\n- 教师、学生和课件视角分别读取对应回放流。回放文件支持暂停，服务器支持分段请求时可继续上次下载。\n- 修复学生文件空间的上传与资源列表读取。修正中文输入法回车确认候选词时误触搜索或筛选的问题。\n",
-  "date": "2026-11-18T11:21:35.959Z",
-  "size": 30945113,
-  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.22.0",
-  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.22.0/zhixing-campus_0.22.0_android-arm64.apk"
+  "version": "0.22.1",
+  "versionCode": 22001,
+  "notes": "# 知行 Campus Android 0.22.1\n\n- 修复学生文件空间上传时误报登录失效的问题。已用测试账号上传 115 KiB 的 PPTX 并逐字节核对下载内容。\n- 课程详情加入课程通知，为学校允许下载的课件补齐下载链接。\n- 通知按日期分组。下载管理将正在下载的任务与历史记录分开，显示速度、剩余时间和失败原因。\n- 首页、设置和教室筛选按可用宽度排版。作业归档、课表导出和文件批量操作在窄屏更易使用。\n",
+  "date": "2026-11-20T07:10:44.447Z",
+  "size": 31169181,
+  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.22.1",
+  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.22.1/zhixing-campus_0.22.1_android-arm64.apk"
 }
