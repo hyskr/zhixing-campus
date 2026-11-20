@@ -107,8 +107,8 @@ export default function FileSpace({ account }: { account: Account }) {
                 setVersion((v) => v + 1);
               }}
             >
-              <Search size={15} />
               <Input
+                leftIcon={<Search size={15} aria-hidden="true" />}
                 type="search"
                 enterKeyHint="search"
                 aria-label="搜索个人资源"
@@ -130,44 +130,51 @@ export default function FileSpace({ account }: { account: Account }) {
               刷新
             </Button>
           </div>
-          <div className="file-selection-toolbar">
-            <Checkbox
-              className="file-select-all"
-              label={`全选 · ${files.length} 个文件`}
-              aria-label="全选个人资源"
-              disabled={!files.length || loading || busy}
-              checked={
-                !!files.length && files.every((f) => selected.includes(f.id))
-              }
-              indeterminate={
-                files.some((f) => selected.includes(f.id)) &&
-                !files.every((f) => selected.includes(f.id))
-              }
-              onCheckedChange={(checked) =>
-                setSelected(checked ? files.map((f) => f.id) : [])
-              }
-            />
-            <span />
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={!values.length || busy}
-              onClick={() =>
-                action(() => copyLinks(account, values), "选中链接已复制")
-              }
-            >
-              <Copy size={14} />
-              复制选中链接
-            </Button>
-            <Button
-              size="sm"
-              disabled={!values.length || busy}
-              onClick={() => action(() => downloadFiles(account, values), "")}
-            >
-              <Download size={14} />
-              下载选中
-            </Button>
-          </div>
+          {files.length > 0 && (
+            <div className="file-selection-toolbar">
+              <Checkbox
+                className="file-select-all"
+                label={`全选 · ${files.length} 个文件`}
+                aria-label="全选个人资源"
+                disabled={!files.length || loading || busy}
+                checked={
+                  !!files.length && files.every((f) => selected.includes(f.id))
+                }
+                indeterminate={
+                  files.some((f) => selected.includes(f.id)) &&
+                  !files.every((f) => selected.includes(f.id))
+                }
+                onCheckedChange={(checked) =>
+                  setSelected(checked ? files.map((f) => f.id) : [])
+                }
+              />
+              {values.length > 0 && (
+                <div className="file-batch-actions">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    disabled={!values.length || busy}
+                    onClick={() =>
+                      action(() => copyLinks(account, values), "选中链接已复制")
+                    }
+                  >
+                    <Copy size={14} />
+                    复制选中链接
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!values.length || busy}
+                    onClick={() =>
+                      action(() => downloadFiles(account, values), "")
+                    }
+                  >
+                    <Download size={14} />
+                    下载选中
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           {loading ? (
             <div className="inline-loading">
               <LoaderCircle className="spin" size={18} />

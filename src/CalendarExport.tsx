@@ -3,6 +3,7 @@ import { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/motion/button";
 import { Modal, periodTimes, useFeedback } from "./ui";
+import { Input } from "@/components/motion/input";
 import { isInWeek } from "./courseWeeks";
 import type { Course } from "./types";
 
@@ -109,10 +110,10 @@ export function CalendarExport({
     <>
       <Button
         size="sm"
-        variant="ghost"
+        variant="secondary"
         title="导出整学期课表"
         aria-label="导出整学期课表"
-        className="calendar-export-trigger"
+        className="calendar-export-trigger campus-toolbar-action"
         disabled={!courses.length}
         onClick={() => {
           setMonday(
@@ -122,7 +123,7 @@ export function CalendarExport({
         }}
       >
         <CalendarArrowDown size={16} aria-hidden="true" />
-        <span>导出课表</span>
+        <span>导出</span>
       </Button>
       {open && (
         <Modal
@@ -131,41 +132,54 @@ export function CalendarExport({
             if (!busy) setOpen(false);
           }}
         >
-          <label>
-            第一教学周的周一{" "}
-            <input
-              type="date"
-              value={monday}
-              onChange={(e) => setMonday(e.target.value)}
-            />
-          </label>
-          <Button
+          <Input
+            type="date"
+            label="第一教学周的周一"
+            value={monday}
             disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              try {
-                const result = calendar(courses, monday);
-                if (
-                  await invoke<boolean>("export_calendar", {
-                    calendar: result.text,
-                  })
-                ) {
-                  feedback(
-                    result.skipped
-                      ? `课表已导出，跳过 ${result.skipped} 条周次或节次不明的记录`
-                      : "课表已导出",
-                  );
-                  setOpen(false);
+            onChange={setMonday}
+          />
+          <div className="modal-actions">
+            <Button
+              size="sm"
+              className="campus-toolbar-action"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => setOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              size="sm"
+              className="campus-toolbar-action"
+              disabled={busy || !monday}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  const result = calendar(courses, monday);
+                  if (
+                    await invoke<boolean>("export_calendar", {
+                      calendar: result.text,
+                    })
+                  ) {
+                    feedback(
+                      result.skipped
+                        ? `课表已导出，跳过 ${result.skipped} 条周次或节次不明的记录`
+                        : "课表已导出",
+                    );
+                    setOpen(false);
+                  }
+                } catch (e) {
+                  feedback(String(e), "error");
+                } finally {
+                  setBusy(false);
                 }
-              } catch (e) {
-                feedback(String(e), "error");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            保存 .ics 文件
-          </Button>
+              }}
+            >
+              <CalendarArrowDown size={16} />
+              {busy ? "保存中…" : "保存 .ics 文件"}
+            </Button>
+          </div>
         </Modal>
       )}
     </>

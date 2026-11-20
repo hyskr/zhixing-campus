@@ -95,6 +95,7 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
       completed?: number;
       failed?: number;
       cancelled?: number;
+      paused?: number;
     }>("campus-download-batch", ({ payload: b }) => {
       if (!active) return;
       if (b.phase === "queued") {
@@ -114,15 +115,16 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
         dismissFeedback("download-request");
         const completed = b.completed ?? 0,
           failed = b.failed ?? 0,
-          cancelled = b.cancelled ?? 0;
+          cancelled = b.cancelled ?? 0,
+          paused = b.paused ?? 0;
         const message =
           b.count === 1
             ? completed
               ? `下载完成：${b.name}`
               : failed
                 ? `下载失败：${b.name}`
-                : `已取消下载：${b.name}`
-            : `下载结束：完成 ${completed} 个${failed ? `，失败 ${failed} 个` : ""}${cancelled ? `，取消 ${cancelled} 个` : ""}`;
+                : paused ? `已暂停下载：${b.name}` : `已取消下载：${b.name}`
+            : `下载结束：完成 ${completed} 个${failed ? `，失败 ${failed} 个` : ""}${cancelled ? `，取消 ${cancelled} 个` : ""}${paused ? `，暂停 ${paused} 个` : ""}`;
         const action =
           b.count === 1 && completed === 1
             ? {
@@ -151,7 +153,7 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
                 ? isAndroid
                   ? "文件已保存在应用内，可打开或导出到系统下载目录。"
                   : "文件已保存到选定目录。"
-                : "此批下载已取消。",
+                : paused ? "可在下载管理中继续下载。" : "此批下载已取消。",
           },
         );
       }
@@ -415,7 +417,7 @@ export default function Downloads({ account }: { account?: Account }) {
                   )}
                 </div>
                 {activeTask(t) ? (
-                  <>
+                  <div className="download-row-actions">
                     {t.item?.kind === "replay" && (
                       <Button
                         size="sm"
@@ -429,16 +431,16 @@ export default function Downloads({ account }: { account?: Account }) {
                     )}
                     <Button
                       size="sm"
-                      variant="secondary"
+                      variant="ghost"
                       onClick={() =>
                         action(() => invoke("cancel_download", { id: t.id }))
                       }
                     >
                       取消
                     </Button>
-                  </>
+                  </div>
                 ) : t.state === "completed" ? (
-                  <div className="download-android-actions">
+                  <div className="download-android-actions download-row-actions">
                     <Button
                       size="sm"
                       variant="secondary"

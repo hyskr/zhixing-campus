@@ -32,6 +32,8 @@ import {
 // 参考来源：参考课程级加载进度及已加载内容先展示的交互；单课重试由本项目实现。
 // https://github.com/s1y4x1/BJTU-course-assistant/blob/3a7748fb558667b7d2e27ce4e502e1c350b5a553/app/app.js
 import { useState } from "react";
+import { Checkbox } from "@/components/motion/checkbox";
+import { Input } from "@/components/motion/input";
 import { Button } from "@/components/motion/button";
 import {
   Archive,
@@ -153,74 +155,20 @@ export default function Assignments({
         />
       )}
       <div className="assignment-toolbar">
-        <div className="assignment-tab-actions">
-          <Tabs
-            value={type}
-            onValueChange={(next) => setType(next)}
-            variant="underline"
-            className=""
-          >
-            <TabsList>
-              {["全部任务", "作业", "实验", "课程设计"].map((t) => (
-                <TabsTrigger key={t} value={t}>
-                  {t}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
-          <div
-            className="assignment-archive-actions"
-            role="group"
-            aria-label="作业归档"
-          >
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={archiving}
-              onClick={() => {
-                setArchiveMode(!archiveMode);
-                setChecked([]);
-                if (!archiveMode) {
-                  setFilter("已提交");
-                  setOpened((v) => ({ ...v, submitted: true }));
-                }
-              }}
-            >
-              {archiveMode ? <X size={15} /> : <Archive size={15} />}
-              {archiveMode ? "退出归档" : "归档已交作业"}
-            </Button>
-            {archiveMode && (
-              <>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={archiving}
-                  onClick={() =>
-                    setChecked(
-                      archiveItems.length === submitted.length
-                        ? []
-                        : submitted.map((h) => h.id),
-                    )
-                  }
-                >
-                  {submitted.length && archiveItems.length === submitted.length
-                    ? "取消全选"
-                    : "全选"}
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={archiving || !archiveItems.length}
-                  onClick={() => void archive()}
-                >
-                  <Download size={15} />
-                  {archiving
-                    ? "正在归档…"
-                    : `导出 ZIP（${archiveItems.length}）`}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
+        <Tabs
+          value={type}
+          onValueChange={(next) => setType(next)}
+          variant="underline"
+          className=""
+        >
+          <TabsList>
+            {["全部任务", "作业", "实验", "课程设计"].map((t) => (
+              <TabsTrigger key={t} value={t}>
+                {t}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
         <div className="assignment-filters">
           {!courseName && (
             <MultiSelect
@@ -253,7 +201,11 @@ export default function Assignments({
           <Select
             className="assignment-status-select"
             value={String(filter)}
-            onValueChange={(e) => setFilter(e)}
+            onValueChange={(value) => {
+              setFilter(value);
+              setArchiveMode(false);
+              setChecked([]);
+            }}
           >
             <SelectTrigger>
               <span className="sr-only">{"按状态筛选作业"}：</span>
@@ -280,11 +232,12 @@ export default function Assignments({
             </SelectContent>
           </Select>
           {dateMode === "指定日期" && (
-            <input
+            <Input
+              className="assignment-date-input"
               type="date"
               aria-label="截止日期"
               value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
+              onChange={setCustomDate}
             />
           )}
         </div>
@@ -351,37 +304,92 @@ export default function Assignments({
                 setOpened((current) => ({ ...current, [group.id]: open }))
               }
             >
-              <CollapsibleTrigger className="assignment-group-heading">
-                {expanded ? (
-                  <ChevronDown size={16} />
-                ) : (
-                  <ChevronRight size={16} />
-                )}
-                <strong>{group.label}</strong>
-                <span className="count-pill">{items.length}</span>
-                <small>
-                  {group.id === "pending"
-                    ? "按截止时间排列"
-                    : expanded
-                      ? "点击收起"
-                      : "点击展开"}
-                </small>
-              </CollapsibleTrigger>
+              <div className="assignment-group-titlebar">
+                <CollapsibleTrigger className="assignment-group-heading">
+                  {expanded ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                  <strong>{group.label}</strong>
+                  <span className="count-pill">{items.length}</span>
+                  <small>
+                    {group.id === "pending"
+                      ? "按截止时间排列"
+                      : expanded
+                        ? "点击收起"
+                        : "点击展开"}
+                  </small>
+                </CollapsibleTrigger>
+                {group.id === "submitted" &&
+                  (items.length > 0 || archiveMode) && (
+                    <Button
+                      className="campus-toolbar-action"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={archiveMode ? "退出归档" : "归档已交作业"}
+                      disabled={archiving}
+                      onClick={() => {
+                        setArchiveMode(!archiveMode);
+                        setChecked([]);
+                        if (!archiveMode)
+                          setOpened((v) => ({ ...v, submitted: true }));
+                      }}
+                    >
+                      {archiveMode ? <X size={15} /> : <Archive size={15} />}
+                      {archiveMode ? "取消" : "归档"}
+                    </Button>
+                  )}
+              </div>
               <CollapsibleContent>
+                {group.id === "submitted" && archiveMode && (
+                  <div
+                    className="assignment-selection-bar"
+                    role="group"
+                    aria-label="作业归档"
+                  >
+                    <Checkbox
+                      label="全选"
+                      disabled={!items.length || archiving}
+                      checked={
+                        !!items.length && archiveItems.length === items.length
+                      }
+                      indeterminate={
+                        archiveItems.length > 0 &&
+                        archiveItems.length < items.length
+                      }
+                      onCheckedChange={(select) =>
+                        setChecked(select ? items.map((h) => h.id) : [])
+                      }
+                    />
+                    <span className="selection-status" role="status">
+                      已选 {archiveItems.length} 项
+                    </span>
+                    <Button
+                      className="campus-toolbar-action"
+                      size="sm"
+                      disabled={!archiveItems.length || archiving}
+                      onClick={() => void archive()}
+                    >
+                      <Download size={15} />
+                      {archiving ? "导出中…" : "导出 ZIP"}
+                    </Button>
+                  </div>
+                )}
                 <div className="homework-grid">
                   {items.map((h) => (
                     <article className="surface homework-card" key={h.id}>
                       <div className="homework-card-top">
                         {group.id === "submitted" && archiveMode && (
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             aria-label={`选择 ${h.title}`}
+                            disabled={archiving}
                             checked={checked.includes(h.id)}
-                            onChange={(e) =>
-                              setChecked(
-                                e.target.checked
-                                  ? [...checked, h.id]
-                                  : checked.filter((id) => id !== h.id),
+                            onCheckedChange={(select) =>
+                              setChecked((previous) =>
+                                select
+                                  ? [...previous, h.id]
+                                  : previous.filter((id) => id !== h.id),
                               )
                             }
                           />
