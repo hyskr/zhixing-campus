@@ -346,21 +346,21 @@ export function PageHeading({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
 }) {
   return (
     <div className="page-heading">
       <h1>{title}</h1>
-      <p>{description}</p>
-      <Tooltip content={description}>
-        <button
-          type="button"
-          className="page-heading-help"
-          aria-label="页面说明"
-        >
-          <Info size={15} />
-        </button>
-      </Tooltip>
+      {description && (
+        <>
+          <p>{description}</p>
+          <Tooltip content={description}>
+            <button type="button" className="page-heading-help" aria-label="页面说明">
+              <Info size={15} />
+            </button>
+          </Tooltip>
+        </>
+      )}
     </div>
   );
 }

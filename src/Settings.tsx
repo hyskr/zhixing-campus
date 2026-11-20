@@ -71,7 +71,6 @@ export default function Settings({
       <PageHeading
         eyebrow="PREFERENCES"
         title="设置"
-        description="按自己的习惯，让校园日常更顺手。"
       />
       <SettingsGroups updatesRequest={updatesRequest}>
         <AppUpdateSettings />

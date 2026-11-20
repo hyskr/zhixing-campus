@@ -54,9 +54,10 @@ export default function MobileHome({
   });
   return (
     <div className="mobile-home">
-      <Card className="mobile-next-course">
+      <Card className={next ? "mobile-next-course" : "mobile-next-course is-quiet"}>
         <Button
           variant="ghost"
+          aria-label={next ? undefined : "查看完整课表"}
           onClick={() => (next ? onCourse(next.name) : navigate("schedule"))}
         >
           <span className="mobile-next-icon">
@@ -70,13 +71,7 @@ export default function MobileHome({
               {next?.name ??
                 (today.length ? "今天的课程已结束" : "今天没有课程")}
             </strong>
-            <em>
-              {next
-                ? [next.place, next.teacher].filter(Boolean).join(" · ")
-                : today.length
-                  ? "查看完整课表，安排接下来的学习"
-                  : "今天没有课程，查看本周安排"}
-            </em>
+            {next && <em>{[next.place, next.teacher].filter(Boolean).join(" · ")}</em>}
           </span>
           <ChevronRight size={19} />
         </Button>

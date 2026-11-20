@@ -19,6 +19,7 @@ import "./grades.css";
 import "./mobile-surfaces.css";
 import "./desktop-surfaces.css";
 import "./theme-tokens.css";
+import "./workspace-layout.css";
 if (isAndroid) document.documentElement.dataset.platform = "android";
 syncAndroidInsets();
 

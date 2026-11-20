@@ -20,6 +20,7 @@ export default function MobileNavigation({
   navigate: (page: Page, root?: boolean) => void;
   unread: number;
 }) {
+  const insideApps = !primary.some(item => item.id === page);
   const root = useRef<HTMLElement>(null);
   useEffect(() => {
     if (!root.current) return;
@@ -44,7 +45,7 @@ export default function MobileNavigation({
           variant="ghost"
           className={`mobile-nav-item ${id === "applications" ? "mobile-nav-apps" : ""}`}
           aria-label={label}
-          aria-current={page === id ? "page" : undefined}
+          aria-current={page === id ? "page" : insideApps && id === "applications" ? "location" : undefined}
           onClick={() => {
             if (page !== id) haptic();
             if (page === id)

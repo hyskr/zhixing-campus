@@ -151,7 +151,6 @@ export default function Assignments({
         <PageHeading
           eyebrow="ASSIGNMENTS"
           title="课程作业"
-          description="先做眼前最重要的事，已完成的安心收好。"
         />
       )}
       <div className="assignment-toolbar">

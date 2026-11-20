@@ -76,7 +76,6 @@ export default function FileSpace({ account }: { account: Account }) {
       <PageHeading
         eyebrow="FILES"
         title="文件空间"
-        description="课程资源与自己的文件，随取随用。"
       />
       <Tabs
         value={tab}
