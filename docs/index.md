@@ -36,3 +36,4 @@
 
 - [0.21.0：上游维护与标签滑动](releases/0.21.0.md) · [Android 0.21.0](releases/android-0.21.0.md)
 - [0.22.0：作业归档、课表导出与回放续传](releases/0.22.0.md) · [Android 0.22.0](releases/android-0.22.0.md)
+- [0.22.1 上传修复与界面调整](releases/0.22.1.md) · [Android 0.22.1](releases/android-0.22.1.md) · [界面 0.22.2](releases/frontend/0.22.2.md)
