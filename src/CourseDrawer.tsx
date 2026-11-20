@@ -13,6 +13,7 @@ import type { Account, CampusData, Course, Replay, Resource } from "./types";
 import { DetailRow, Modal, periodTimes } from "./ui";
 import { homeworkState } from "./homework";
 import Assignments from "./Assignments";
+import CourseNotices from "./CourseNotices";
 import LearningResources from "./LearningResources";
 export default function CourseDrawer({
   name,
@@ -40,6 +41,10 @@ export default function CourseDrawer({
   const sessions = data.courses.filter((c) => same(c.name));
   const grades = data.grades.filter((g) => same(g.name));
   const assignments = data.homework.filter((h) => same(h.course));
+  const noticeCourses = new Set([
+    ...data.resources.filter(root => same(root.course)).map(root => root.courseId),
+    ...assignments.map(item => item.courseId),
+  ].filter((id): id is string => !!id));
   const pending = assignments.filter(
     (h) =>
       homeworkState(h) === "pending" && !data.ignoredHomework?.includes(h.id),
@@ -70,6 +75,9 @@ export default function CourseDrawer({
           {!sessions.length && (
             <p className="quiet-empty">当前课表中没有这门课的上课安排。</p>
           )}
+          {Array.from(noticeCourses).map(id => (
+            <CourseNotices key={id} account={account} courseId={id} showGroup={noticeCourses.size > 1} />
+          ))}
           {grades.map((g) => (
             <DetailRow label="课程成绩" key={g.id}>
               {g.score} · {g.credits} 学分 · {g.term}

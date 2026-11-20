@@ -68,6 +68,91 @@ pub async fn download_resource_tree(
     )
     .await
 }
+// 学生课程空间内的通知，按接口给出的 total 取全。
+// https://github.com/s1y4x1/BJTU-course-assistant/commit/2fb99b0ccb9b6fe2a7391204839f2b0bff77612a
+#[tauri::command]
+pub async fn course_notices(
+    username: String,
+    course_id: String,
+    state: tauri::State<'_, CampusState>,
+) -> Result<Vec<Value>, String> {
+    let session = get_session(&state, &username)?;
+    let smart = smart_session(&session).await?;
+    if !smart.courses.iter().any(|c| string(&c["id"]) == course_id) {
+        return Err("该课程不在当前账号的课程列表中，请同步课程列表".into());
+    }
+    let mut requested_size = None::<usize>;
+    loop {
+        let root = notice_page(&session, &smart, &course_id, requested_size).await?;
+        let error = format!("{} {}", string(&root["message"]), string(&root["ERRMSG"]));
+        if error.contains("未登录") || error.contains("重新登录") || error.contains("不合法")
+        {
+            return Err(AUTH_EXPIRED.into());
+        }
+        // 无通知时可能返回非零 STATUS 和空字符串 result。
+        if root["result"].as_str() == Some("") {
+            return Ok(Vec::new());
+        }
+        let total = string(&root["total"]).parse::<usize>().unwrap_or(0);
+        let rows = parsers::list(&root, "result")?;
+        if rows.len() < total {
+            if requested_size.is_none() {
+                requested_size = Some(total);
+                continue;
+            }
+            return Err("课程通知列表不完整，请刷新重试".into());
+        }
+        save_session(&state, &username, &session)?;
+        return Ok(rows
+            .iter()
+            .map(|row| {
+                json!({
+                    "title": string(&row["name"]),
+                    "author": string(&row["user_name"]),
+                    "date": string(&row["createDate"]),
+                    "content": string(&row["content"]),
+                })
+            })
+            .collect());
+    }
+}
+
+async fn notice_page(
+    session: &Session,
+    smart: &SmartSession,
+    course_id: &str,
+    requested_size: Option<usize>,
+) -> Result<Value, String> {
+    let mut form = vec![("cIds", course_id.to_owned())];
+    if let Some(size) = requested_size {
+        form.push(("pageSize", size.to_string()));
+    }
+    let response = session
+        .client
+        .post(format!(
+            "{SMART}/course/courseInfo.shtml?method=queryAnnounceForCourseList"
+        ))
+        .header("sessionid", &smart.id)
+        .header("X-Requested-With", "XMLHttpRequest")
+        .form(&form)
+        .send()
+        .await
+        .map_err(network_error)?;
+    if is_login_url(response.url()) || response.status().as_u16() == 401 {
+        return Err(AUTH_EXPIRED.into());
+    }
+    let raw = response
+        .error_for_status()
+        .map_err(network_error)?
+        .text()
+        .await
+        .map_err(network_error)?;
+    if parsers::expired_page(&raw) {
+        return Err(AUTH_EXPIRED.into());
+    }
+    parsers::smart_response(&raw)
+}
+
 #[tauri::command]
 // 参考来源：参考课程上下文、iframe#pdfIframe 和静态 PDF 地址解析。
 // https://github.com/fish2lab/bjtu-cli/blob/8a39d48d326ac195360c3564c9576d8a067aad03/Sources/bjtu/Services/SmartCurriculumService.swift

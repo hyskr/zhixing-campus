@@ -700,22 +700,30 @@ async fn fetch_children(
     let number = parsers::required(course, "course_num")?;
     let group = parsers::required(course, "fz_id")?;
     let term = parsers::required(course, "xq_code")?;
-    let root = smart_json(
-        session,
-        "coursePlatform/courseResource.shtml",
-        &[
-            ("method", "stuQueryUploadResourceForCourseList".into()),
-            ("courseId", number.clone()),
-            ("cId", number),
-            ("xkhId", group),
-            ("xqCode", term),
-            ("docType", doc_type.into()),
-            ("up_id", parent_id.into()),
-            ("searchName", "".into()),
-        ],
-        Some(&smart.id),
-    )
-    .await?;
+    let scope = [
+        ("courseId", number.clone()), ("cId", number), ("xkhId", group),
+        ("xqCode", term), ("docType", doc_type.into()),
+    ];
+    let mut query = scope.to_vec();
+    query.extend([
+        ("method", "stuQueryUploadResourceForCourseList".into()),
+        ("up_id", parent_id.into()),
+        ("searchName", String::new()),
+    ]);
+    let path = "coursePlatform/courseResource.shtml";
+    let mut root = smart_json(session, path, &query, Some(&smart.id)).await?;
+    let needs_links = parsers::list(&root, "resList")?.iter().any(|row| {
+        string(&row["stu_download"]) == "2"
+            && string(&row["res_url"]).is_empty()
+            && string(&row["resUrl"]).is_empty()
+    });
+    if needs_links {
+        let mut direct_query = scope.to_vec();
+        direct_query.push(("method", "queryMyUploadResourceForCourseList".into()));
+        if let Ok(direct) = smart_json(session, path, &direct_query, Some(&smart.id)).await {
+            parsers::fill_course_resource_links(&mut root, &direct);
+        }
+    }
     let mut children = parsers::resource_children(&root, course)?;
     for item in &mut children {
         item["docType"] = json!(doc_type);
@@ -1120,6 +1128,7 @@ pub fn run() {
             campus::refresh_mailbox,
             campus::environment_diagnostics,
             files::download_resource_tree,
+            files::course_notices,
             files::teaching_calendar,
             exports::export_calendar,
             exports::archive_homework,

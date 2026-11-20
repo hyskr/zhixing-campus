@@ -319,6 +319,37 @@ pub fn homework(root: &Value, kind: usize, fallback_course: &Value) -> Result<Ve
 pub fn resource_roots(courses: &[Value]) -> Vec<Value> {
     courses.iter().map(|c| json!({"id":format!("course-{}",string(&c["id"])),"courseId":string(&c["id"]),"sourceId":"0","name":string(&c["name"]),"course":string(&c["name"]),"kind":"course","term":string(&c["xq_code"]),"loaded":false,"children":[]})).collect()
 }
+// 学生目录决定可见文件与目录层级。第二个接口的 rpSize 使用字节。
+pub fn fill_course_resource_links(student: &mut Value, direct: &Value) {
+    let Ok(rows) = list(direct, "resList") else { return };
+    let allowed: HashMap<String, &Value> = rows.iter()
+        .filter(|row| string(&row["stu_download"]) == "2")
+        .map(|row| (string(&row["rpId"]), row))
+        .filter(|(id, _)| !id.is_empty())
+        .collect();
+    let Some(files) = student["resList"].as_array_mut() else { return };
+    for file in files {
+        if string(&file["stu_download"]) != "2"
+            || !string(&file["res_url"]).is_empty() || !string(&file["resUrl"]).is_empty() {
+            continue;
+        }
+        let id = string(&file["rpId"]);
+        let Some(row) = allowed.get(id.as_str()) else { continue };
+        let Some(url) = ["res_url", "resUrl"].iter().find_map(|key|
+            row[*key].as_str().map(str::trim).filter(|s| !s.is_empty())) else { continue };
+        file["resUrl"] = json!(crate::learning::absolute_url(url));
+        if let Ok(bytes) = string(&row["rpSize"]).parse::<u64>() {
+            let size = if bytes >= 1024 * 1024 {
+                format!("{:.2} MiB", bytes as f64 / (1024.0 * 1024.0))
+            } else if bytes >= 1024 {
+                format!("{:.1} KiB", bytes as f64 / 1024.0)
+            } else {
+                format!("{bytes} B")
+            };
+            file["rpSize"] = json!(size);
+        }
+    }
+}
 pub fn resource_children(root: &Value, course: &Value) -> Result<Vec<Value>, String> {
     let mut result = Vec::new();
     let course_id = required(course, "id")?;

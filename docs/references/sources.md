@@ -174,3 +174,8 @@ Claude App 风格参考 [Anthropic 的桌面应用界面资料](https://academy.
 ## Android
 
 Android 平台桥接为本项目实现，依照 Tauri 移动插件和 Android Keystore、MediaStore、WebView 官方接口；对应 `src-tauri/src/mobile.rs` 与 `src-tauri/gen/android/app/src/main/java/cn/zhixing/bjtu/`。手机底部抽屉使用 BeUI `bottom-sheet`，其余课程、邮箱、教务等业务继续复用本文已有来源标注。
+
+## 2026-11-20 课程接口
+
+- [课程通知与课件列表](https://github.com/s1y4x1/BJTU-course-assistant/commit/2fb99b0ccb9b6fe2a7391204839f2b0bff77612a)、[空通知处理](https://github.com/s1y4x1/BJTU-course-assistant/commit/340beca)、[通知正文换行](https://github.com/s1y4x1/BJTU-course-assistant/commit/ee2cb668bb6d27aee4b92cccacde9062201af168)。课程详情按对应的智慧课程 ID 请求在读课程公告，展开后显示发布人、时间及正文。空字符串结果按暂无通知处理。
+- [课件大小以字节计](https://github.com/s1y4x1/BJTU-course-assistant/commit/23d7c110e662b4b33b2bc4b5a28cf1a6c9e32756)。课件树使用学生目录提供的文件和层级。目录内缺少下载地址时，用同课程、同资源分类的补充列表匹配 rpId。只给两侧均明确开放下载的既有文件补充地址和大小。

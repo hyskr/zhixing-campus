@@ -6686,3 +6686,14 @@ body,
 
 .schedule-export-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .schedule-export-row > .schedule-type-tabs { flex: 1; min-width: 0; }
+
+.course-notices,
+.course-notices-error {
+  margin-block: 12px;
+}
+.course-notices > summary { cursor: pointer; font-weight: 600; }
+.course-notices > article { padding-block: 12px; border-bottom: 1px solid var(--border); }
+.course-notices small { display: block; color: var(--muted-foreground); }
+.course-notices .homework-rich-content { margin-top: 6px; white-space: pre-wrap; }
+.course-notices .homework-rich-content :is(p, div, span) { white-space: pre-wrap !important; }
+.course-notices-error { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; color: var(--muted-foreground); }
