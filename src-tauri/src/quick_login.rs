@@ -1,7 +1,9 @@
 use super::*;
 pub async fn current_user(session: &Session) -> Result<bool, String> {
+    let id = course_session_id(session).await?;
     let response = session.client
         .get(format!("{SMART}/coursePlatform/coursePlatform.shtml?method=getUserInfo"))
+        .header("sessionid", id)
         .header("Accept", "application/json, text/javascript, */*; q=0.01")
         .header("X-Requested-With", "XMLHttpRequest")
         .header("Referer", "http://123.121.147.7:88/ve/")
@@ -111,6 +113,10 @@ fn next_url(
         }
         return Ok(Some(target));
     }
+    if url.host_str() == Some("123.121.147.7") && url.path() == "/ve/back/coursePlatform/coursePlatform.shtml" {
+        // 已到课程首页，页面中的退出按钮也含 location.href。
+        return Ok(None);
+    }
     if parsers::expired_page(body) {
         return Err(AUTH_EXPIRED.into());
     }
@@ -134,7 +140,7 @@ fn next_url(
         }
         return Ok(Some(target));
     }
-    if url.host_str() == Some("123.121.147.7") && url.path().starts_with("/ve/") {
+    if url.host_str() == Some("123.121.147.7") && matches!(url.path(), "/ve/s.shtml" | "/ve/back/core/main/index.shtml") {
         return script_redirect(url, body);
     }
     Ok(None)
@@ -277,6 +283,13 @@ pub async fn enter_from_mis(session: &Session) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn course_home_is_terminal_even_with_a_logout_handler() {
+        let page = Url::parse("http://123.121.147.7:88/ve/back/coursePlatform/coursePlatform.shtml?method=toCoursePlatformIndex").unwrap();
+        let body = r#"<button onclick="location.href='/ve/Exit_2.jsp'">退出</button>"#;
+        assert!(next_url(&page, None, body, false).unwrap().is_none());
+    }
+
     #[tokio::test]
     async fn handshake_follows_form_and_http_redirect_without_old_query() {
         use std::io::{Read, Write};

@@ -223,6 +223,14 @@ async fn upload_data(session: &Session, name: &str, data: &str) -> Result<Value,
     upload_bytes(session, name, bytes).await
 }
 
+fn upload_rejection(message: String) -> String {
+    if ["未登录", "请先登录", "请重新登录", "会话已过期", "登录已失效"].iter().any(|marker| message.contains(marker)) {
+        AUTH_EXPIRED.into()
+    } else {
+        message
+    }
+}
+
 pub(super) async fn upload_bytes(
     session: &Session,
     name: &str,
@@ -286,11 +294,7 @@ pub(super) async fn upload_bytes(
             .map(|key| string(&root[*key]))
             .find(|value| !value.is_empty())
             .unwrap_or_else(|| "学校未返回上传地址".into());
-        return Err(if message.contains("登录") || message.contains("不合法") {
-            AUTH_EXPIRED.into()
-        } else {
-            message
-        });
+        return Err(upload_rejection(message));
     }
     let normalized = visit.replace('\\', "/");
     let path = normalized
@@ -569,6 +573,11 @@ pub async fn inline_image(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn upload_preserves_school_file_errors() {
+        assert_eq!(upload_rejection("文件类型不合法".into()), "文件类型不合法");
+        assert_eq!(upload_rejection("请先登录智慧课程平台".into()), AUTH_EXPIRED);
+    }
     #[test]
     fn submitted_review_keeps_text_score_comment_and_download_filename() {
         let page = r#"<div class="markContentLeft"><p>我的实验结论</p></div><input id="oldScore" value="92"><textarea id="pigaiContent">分析完整</textarea><div class="homeworkContent" onclick="downloadFile('/rp/test.pdf','实验报告.pdf','17')"></div>"#;

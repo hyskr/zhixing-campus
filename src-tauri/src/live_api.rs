@@ -950,7 +950,7 @@ async fn saved_account_read_suite() {
 }
 
 #[tokio::test]
-#[ignore = "仅对显式指定的测试账号上传一个 TXT 并回读内容"]
+#[ignore = "仅对显式指定的测试账号上传测试文件并回读内容"]
 async fn file_space_roundtrip() -> Result<(), String> {
     let id = std::env::var("CAMPUS_UPLOAD_TEST_ACCOUNT").map_err(|_| "请指定测试账号")?;
     valid_username(&id)?;
@@ -969,11 +969,19 @@ async fn file_space_roundtrip() -> Result<(), String> {
     let state = CampusState { directory: temp.path().into(), credentials, preferences: Arc::new(Mutex::new(settings::read(&data.join("sessions")))), sessions: Mutex::default(), pending: Mutex::default() };
     let session = login(&state,&id,&password,true,temp.path()).await?;
     eprintln!("文件空间测试：MIS 登录完成");
-    let bytes = b"Zhixing file space upload check\n";
-    let uploaded = learning::upload_bytes(&session,"zhixing-upload-check.txt",bytes.to_vec()).await?;
+    let (name, bytes) = match std::env::var_os("CAMPUS_UPLOAD_TEST_FILE") {
+        Some(path) => {
+            let path = PathBuf::from(path);
+            let name = path.file_name().and_then(|v|v.to_str()).ok_or("无效的测试文件名")?;
+            (name.to_owned(), fs::read(&path).map_err(|e|e.to_string())?)
+        }
+        None => ("zhixing-upload-check.txt".to_owned(), b"Zhixing file space upload check\n".to_vec()),
+    };
+    let uploaded = learning::upload_bytes(&session,&name,bytes.clone()).await?;
+    eprintln!("文件空间测试：学校确认上传，开始回读");
     let response = session.client.get(string(&uploaded["url"])).send().await.map_err(network_error)?.error_for_status().map_err(network_error)?;
-    if response.bytes().await.map_err(network_error)?.as_ref()!=bytes { return Err("回读内容与上传文件不同".into()); }
-    eprintln!("文件空间测试：上传并回读成功");
+    if response.bytes().await.map_err(network_error)?.as_ref()!=bytes.as_slice() { return Err("回读内容与上传文件不同".into()); }
+    eprintln!("文件空间测试：逐字节回读一致，共 {} 字节", bytes.len());
     let rows = learning::space_data(&session,"").await?;
     eprintln!("个人资源空间：返回 {} 条",rows.len());
     Ok(())

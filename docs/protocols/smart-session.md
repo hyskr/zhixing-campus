@@ -52,3 +52,9 @@ mise run test:live -- --module learning --report output/live-api/learning.json
 - 47 项 Rust 单元测试通过，6 项外部环境测试默认忽略。授权测试覆盖 SSO authorize 放行、OAuth 回调、实际登录地址与密码表单识别。
 
 专项报告：`output/live-api/learning-oauth.json`。报告内容为脱敏检查结果，不纳入版本控制。
+
+## 学生文件空间会话
+
+MIS 模块 28 完成 OAuth 回调后进入智慧课程首页。到达 `/ve/back/coursePlatform/coursePlatform.shtml` 即结束登录导航。首页同时包含退出操作的脚本，不能将其作为登录跳转执行。确认账号时，使用当前业务会话的 Cookie 和首页提供的 `sessionid` 请求头读取 `getUserInfo`，确认账号匹配后才上传。
+
+2026-11-20 使用学生测试号上传 117,760 字节的 PPTX。学校确认上传后，从返回的 `visitName` 生成的文件地址下载，回读结果与源文件逐字节一致。同次个人资源查询成功返回空列表。
