@@ -4,12 +4,13 @@ import {
   useLayoutEffect,
   useState,
   useRef,
+  type CSSProperties,
   type RefObject,
 } from "react";
-import { Bell, ArrowRight, X } from "lucide-react";
+import { ArrowUpRight, X } from "lucide-react";
 import { Card } from "@/components/motion/card";
 import { Button } from "@/components/motion/button";
-import { AnimatedBadge } from "@/components/motion/animated-badge";
+import ActivityFeed from "./ActivityFeed";
 import type { Change } from "./types";
 
 export default function UpdatesPopover({
@@ -44,26 +45,27 @@ export default function UpdatesPopover({
       window.removeEventListener("scroll", position, true);
     };
   }, [trigger]);
-  const recent = [...changes]
-    .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
-    .slice(0, 6);
   useEffect(() => {
     window.dispatchEvent(new Event("campus:close-page-menus"));
     close.current?.focus();
     return () => trigger.current?.focus({ preventScroll: true });
   }, [trigger]);
   return createPortal(
-    <div className="updates-popover-wrap" style={anchor}>
+    <div
+      className="campus-activity-anchor"
+      style={{ ...anchor, "--activity-anchor-top": `${anchor.top}px` } as CSSProperties}
+    >
       <button
-        className="updates-backdrop"
+        className="campus-activity-dismiss"
         tabIndex={-1}
         aria-label="关闭通知面板"
+        type="button"
         onClick={onClose}
       />
       <Card
         role="dialog"
         aria-label="最近更新"
-        className="updates-popover"
+        className="campus-activity-panel"
         onKeyDown={(event) => {
           if (event.key === "Escape") {
             event.stopPropagation();
@@ -71,12 +73,8 @@ export default function UpdatesPopover({
           }
         }}
       >
-        <header className="updates-heading">
-          <div>
-            <Bell size={16} />
-            <h2>最近更新</h2>
-            <span>{changes.length}</span>
-          </div>
+        <header className="campus-activity-heading">
+          <h2>最近更新</h2>
           <Button
             ref={close}
             size="icon"
@@ -87,56 +85,14 @@ export default function UpdatesPopover({
             <X size={16} />
           </Button>
         </header>
-        <div className="updates-list">
-          {recent.length ? (
-            recent.map((change) => (
-              <button
-                className="update-item"
-                key={change.id}
-                onClick={() => onSelect(change)}
-              >
-                <span
-                  className={`update-kind-dot ${change.kind === "删除" ? "removed" : ""}`}
-                />
-                <span className="update-item-content">
-                  <strong>{change.title}</strong>
-                  <span className="update-item-meta">
-                    <AnimatedBadge size="sm" status="neutral" showIcon={false}>
-                      {change.category}
-                    </AnimatedBadge>
-                    <span>{change.kind}</span>
-                    <time
-                      dateTime={change.time}
-                      title={new Date(change.time).toLocaleString("zh-CN", {
-                        hour12: false,
-                      })}
-                    >
-                      {new Intl.DateTimeFormat("zh-CN", {
-                        month: "numeric",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        hour12: false,
-                      }).format(new Date(change.time))}
-                    </time>
-                  </span>
-                </span>
-                <ArrowRight size={14} className="update-open-icon" />
-              </button>
-            ))
-          ) : (
-            <div className="updates-empty">
-              <Bell size={22} />
-              <strong>暂无更新</strong>
-              <p>同步后，数据变化会显示在这里。</p>
-            </div>
-          )}
+        <div className="campus-activity-content">
+          <ActivityFeed changes={changes} limit={6} onSelect={onSelect} />
         </div>
         {changes.length > 0 && (
-          <footer>
+          <footer className="campus-activity-footer">
             <Button variant="ghost" size="sm" onClick={onViewAll}>
-              查看全部 {changes.length} 条变更
-              <ArrowRight size={14} />
+              查看全部动态
+              <ArrowUpRight size={14} aria-hidden="true" />
             </Button>
           </footer>
         )}

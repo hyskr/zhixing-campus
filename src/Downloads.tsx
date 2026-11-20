@@ -5,10 +5,9 @@ import {
   showDownloads,
 } from "./downloadFeedback";
 import { showFeedback, dismissFeedback } from "./ui";
-import { isAndroid } from "./platform";
-import { useFeedback } from "./ui";
+import { isAndroid, useCompactLayout } from "./platform";
+import "./downloads.css";
 import { useErrorState } from "./ui";
-import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import { Input } from "@/components/motion/input";
 import {
@@ -21,10 +20,25 @@ import {
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/motion/button";
-import { Download, FolderOpen, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  Check,
+  ChevronDown,
+  Clock,
+  Download,
+  FileText,
+  Film,
+  FolderOpen,
+  Pause,
+  Play,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import type { Account, DownloadTask } from "./types";
-import { Empty } from "./ui";
-import { PageHeading } from "./Pages";
+import { Empty, Modal } from "./ui";
 export function formatBytes(value: number) {
   if (value < 1024) return `${value} B`;
   if (value < 1048576) return `${(value / 1024).toFixed(1)} KB`;
@@ -39,11 +53,9 @@ function downloadDuration(task: DownloadTask): string {
   const end = task.finishedAt ?? task.updatedAt;
   if (!end) return "";
   const seconds = Math.max(0, Math.floor((end - task.startedAt) / 1000));
-  if (!seconds) return "耗时不足 1 秒";
+  if (!seconds) return "不足 1 秒";
   const minutes = Math.floor(seconds / 60);
-  return minutes
-    ? `耗时 ${minutes} 分 ${seconds % 60} 秒`
-    : `耗时 ${seconds} 秒`;
+  return minutes ? `${minutes} 分 ${seconds % 60} 秒` : `${seconds} 秒`;
 }
 const activeTask = (t: DownloadTask) =>
   t.state === "queued" || t.state === "downloading";
@@ -123,7 +135,9 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
               ? `下载完成：${b.name}`
               : failed
                 ? `下载失败：${b.name}`
-                : paused ? `已暂停下载：${b.name}` : `已取消下载：${b.name}`
+                : paused
+                  ? `已暂停下载：${b.name}`
+                  : `已取消下载：${b.name}`
             : `下载结束：完成 ${completed} 个${failed ? `，失败 ${failed} 个` : ""}${cancelled ? `，取消 ${cancelled} 个` : ""}${paused ? `，暂停 ${paused} 个` : ""}`;
         const action =
           b.count === 1 && completed === 1
@@ -153,7 +167,9 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
                 ? isAndroid
                   ? "文件已保存在应用内，可打开或导出到系统下载目录。"
                   : "文件已保存到选定目录。"
-                : paused ? "可在下载管理中继续下载。" : "此批下载已取消。",
+                : paused
+                  ? "可在下载管理中继续下载。"
+                  : "此批下载已取消。",
           },
         );
       }
@@ -196,310 +212,397 @@ export function DownloadsProvider({ children }: { children: ReactNode }) {
   );
 }
 export const useDownloads = () => useContext(Context);
-export default function Downloads({ account }: { account?: Account }) {
-  const showDownloadError = useFeedback("error");
+
+const filters = [
+  { value: "all", label: "全部" },
+  { value: "active", label: "进行中" },
+  { value: "paused", label: "已暂停" },
+  { value: "completed", label: "已完成" },
+  { value: "unsuccessful", label: "失败／取消" },
+] as const;
+
+const taskStatus = {
+  queued: { label: "排队中", icon: Clock },
+  downloading: { label: "下载中", icon: Download },
+  paused: { label: "已暂停", icon: Pause },
+  completed: { label: "已完成", icon: Check },
+  failed: { label: "下载失败", icon: AlertCircle },
+  cancelled: { label: "已取消", icon: X },
+} satisfies Record<
+  DownloadTask["state"],
+  { label: string; icon: typeof Clock }
+>;
+
+function DownloadRow({
+  task,
+  run,
+}: {
+  task: DownloadTask;
+  run: (fn: () => Promise<unknown>) => Promise<void>;
+}) {
+  const { label, icon: StatusIcon } = taskStatus[task.state];
+  const FileIcon = task.item?.kind === "replay" ? Film : FileText;
+  const resume = task.item?.kind === "replay" || task.state === "paused";
+  const showProgress = activeTask(task) || task.state === "paused";
+  const knownSize = task.total > 0;
+  const percent = knownSize
+    ? Math.min(100, Math.floor((task.loaded / task.total) * 100))
+    : undefined;
+  const time =
+    task.finishedAt ?? task.startedAt ?? task.createdAt ?? task.updatedAt;
+  const location = task.path || task.folder;
+  const duration = downloadDuration(task);
+  const hasDetails = !!(location || time || duration);
+
+  async function exportFile() {
+    await invoke("export_download", { id: task.id });
+    showFeedback("已导出到系统下载目录 · 知行Campus");
+  }
+
+  return (
+    <article
+      className="transfer-row"
+      data-state={task.state}
+      aria-label={task.name}
+    >
+      <div className="transfer-file-icon">
+        <FileIcon size={20} aria-hidden="true" />
+      </div>
+      <div className="transfer-info">
+        <div className="transfer-title">
+          <h3>{task.name}</h3>
+          <span className="transfer-state">
+            <StatusIcon size={13} aria-hidden="true" /> {label}
+          </span>
+        </div>
+        {showProgress && (
+          <div className="transfer-progress">
+            <progress
+              aria-label={`${task.name} 下载进度`}
+              max={knownSize ? task.total : 1}
+              value={
+                knownSize
+                  ? Math.min(task.loaded, task.total)
+                  : task.state === "downloading"
+                    ? undefined
+                    : 0
+              }
+            />
+            {percent !== undefined && <span>{percent}%</span>}
+          </div>
+        )}
+        <div className="transfer-meta">
+          {showProgress && (task.loaded > 0 || knownSize) && (
+            <span>
+              {formatBytes(task.loaded)}
+              {knownSize ? ` / ${formatBytes(task.total)}` : ""}
+            </span>
+          )}
+          {task.state === "completed" && (
+            <span>{formatBytes(task.total || task.loaded)}</span>
+          )}
+          {task.state === "downloading" && (task.speed ?? 0) > 0 && (
+            <span>{formatBytes(task.speed!)}/s</span>
+          )}
+          {task.state === "downloading" && task.eta && task.eta > 0 ? (
+            <span>
+              约剩{" "}
+              {task.eta >= 60
+                ? `${Math.ceil(task.eta / 60)} 分钟`
+                : `${Math.ceil(task.eta)} 秒`}
+            </span>
+          ) : null}
+          {task.state === "completed" && time !== undefined && (
+            <time dateTime={new Date(time).toISOString()}>
+              {formatDownloadTime(time)}
+            </time>
+          )}
+        </div>
+        {task.error && <p className="transfer-error">{task.error}</p>}
+        {hasDetails && (
+          <details className="transfer-details">
+            <summary>
+              <ChevronDown size={14} aria-hidden="true" /> 文件详情
+            </summary>
+            <dl>
+              {location && (
+                <div>
+                  <dt>保存位置</dt>
+                  <dd>{location}</dd>
+                </div>
+              )}
+              {task.createdAt && (
+                <div>
+                  <dt>加入时间</dt>
+                  <dd>{formatDownloadTime(task.createdAt)}</dd>
+                </div>
+              )}
+              {task.startedAt && (
+                <div>
+                  <dt>开始时间</dt>
+                  <dd>{formatDownloadTime(task.startedAt)}</dd>
+                </div>
+              )}
+              {task.finishedAt && (
+                <div>
+                  <dt>结束时间</dt>
+                  <dd>{formatDownloadTime(task.finishedAt)}</dd>
+                </div>
+              )}
+              {duration && (
+                <div>
+                  <dt>耗时</dt>
+                  <dd>{duration}</dd>
+                </div>
+              )}
+            </dl>
+          </details>
+        )}
+      </div>
+      {task.state !== "cancelled" && (
+        <div className="transfer-actions">
+          {activeTask(task) ? (
+            <>
+              {task.item?.kind === "replay" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() =>
+                    void run(() => invoke("pause_download", { id: task.id }))
+                  }
+                >
+                  <Pause size={14} aria-hidden="true" /> 暂停
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  void run(() => invoke("cancel_download", { id: task.id }))
+                }
+              >
+                取消
+              </Button>
+            </>
+          ) : task.state === "completed" ? (
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  void run(() => invoke("open_download", { id: task.id }))
+                }
+              >
+                <FolderOpen size={14} aria-hidden="true" />{" "}
+                {isAndroid ? "打开文件" : "显示文件"}
+              </Button>
+              {isAndroid && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => void run(exportFile)}
+                >
+                  导出
+                </Button>
+              )}
+            </>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() =>
+                void run(() =>
+                  requestDownload(
+                    () =>
+                      invoke("retry_download", {
+                        username: task.accountId,
+                        id: task.id,
+                      }),
+                    task.accountId,
+                    `正在${resume ? "恢复下载" : "重试"}：${task.name}`,
+                  ),
+                )
+              }
+            >
+              {resume ? (
+                <Play size={14} aria-hidden="true" />
+              ) : (
+                <RefreshCw size={14} aria-hidden="true" />
+              )}
+              {resume ? "继续下载" : "重试"}
+            </Button>
+          )}
+        </div>
+      )}
+    </article>
+  );
+}
+
+export default function Downloads({
+  account,
+  embedded = false,
+}: {
+  account?: Account;
+  embedded?: boolean;
+}) {
+  const compact = useCompactLayout();
   const { tasks, error: loadError, clear } = useDownloads();
-  const [filter, setFilter] = useState("全部"),
-    [query, setQuery] = useState(""),
-    [error, setError] = useErrorState();
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [, setError] = useErrorState();
   const all = tasks
-    .filter((t) => !account || t.accountId === account.id)
+    .filter((task) => !account || task.accountId === account.id)
     .sort(
       (a, b) =>
-        Number(activeTask(b)) - Number(activeTask(a)) ||
-        (b.createdAt ?? 0) - (a.createdAt ?? 0),
+        (b.createdAt ?? b.updatedAt ?? 0) - (a.createdAt ?? a.updatedAt ?? 0),
     );
-  const active = all.filter(activeTask),
-    completed = all.filter((t) => t.state === "completed"),
-    failed = all.filter((t) => t.state === "failed");
+  const active = all.filter(activeTask);
+  const speed = active.reduce((sum, task) => sum + (task.speed ?? 0), 0);
+  const removable = all.filter((task) => !activeTask(task));
+  const keyword = query.trim().toLowerCase();
   const rows = all.filter(
-    (t) =>
-      t.name.includes(query) &&
-      (filter === "全部" ||
-        (filter === "进行中" && activeTask(t)) ||
-        (filter === "已完成" && t.state === "completed") ||
-        (filter === "已暂停" && t.state === "paused") ||
-        (filter === "失败 / 已取消" &&
-          (t.state === "failed" || t.state === "cancelled"))),
+    (task) =>
+      task.name.toLowerCase().includes(keyword) &&
+      (filter === "all" ||
+        (filter === "active" && activeTask(task)) ||
+        (filter === "unsuccessful" &&
+          (task.state === "failed" || task.state === "cancelled")) ||
+        task.state === filter),
   );
-  const loaded = active.reduce((sum, t) => sum + t.loaded, 0),
-    speed = active.reduce((sum, t) => sum + (t.speed ?? 0), 0);
-  async function action(fn: () => Promise<unknown>) {
+  const current = rows.filter(activeTask);
+  const history = rows.filter((task) => !activeTask(task));
+  async function run(fn: () => Promise<unknown>) {
     setError("");
     try {
       await fn();
-    } catch (e) {
-      setError(String(e));
+    } catch (error) {
+      setError(String(error));
     }
   }
+
+  function list(items: DownloadTask[]) {
+    return items.map((task) => (
+      <DownloadRow key={task.id} task={task} run={run} />
+    ));
+  }
+
   return (
-    <>
-      <PageHeading
-        eyebrow="DOWNLOADS"
-        title="下载管理"
-        description="查看下载进度，找回已经保存的资料。"
-      />
-      <div className="download-stats">
-        <section className="surface">
-          <Download size={21} />
-          <strong>{active.length}</strong>
-          <span>进行中</span>
-        </section>
-        <section className="surface">
-          <FolderOpen size={21} />
-          <strong>{completed.length}</strong>
-          <span>已完成</span>
-        </section>
-        <section className="surface">
-          <strong>{formatBytes(speed)}/s</strong>
-          <span>当前总速度</span>
-        </section>
-        <section className="surface">
-          <strong>{failed.length}</strong>
-          <span>失败记录</span>
-        </section>
-      </div>
-      <section className="surface downloads-page">
-        <div className="download-toolbar">
-          <Tabs
-            value={filter}
-            onValueChange={(next) => setFilter(next)}
-            variant="underline"
-            className=""
-          >
-            <TabsList>
-              {["全部", "进行中", "已暂停", "已完成", "失败 / 已取消"].map(
-                (value) => (
-                  <TabsTrigger key={value} value={value}>
-                    {value}
-                  </TabsTrigger>
-                ),
-              )}
+    <div className="transfer-workspace">
+      {!embedded && !compact && <h1>下载管理</h1>}
+      {active.length > 0 && (
+        <div className="transfer-overview">
+          <Activity size={17} aria-hidden="true" />
+          <strong>{active.length} 个任务进行中</strong>
+          {speed > 0 && <span>{formatBytes(speed)}/s</span>}
+        </div>
+      )}
+      <section className="transfer-panel" aria-label="下载任务">
+        <div className="transfer-toolbar">
+          <Tabs value={filter} onValueChange={setFilter} variant="underline">
+            <TabsList aria-label="下载状态">
+              {filters.map(({ value, label }) => (
+                <TabsTrigger key={value} value={value}>
+                  {label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </Tabs>
-          <label className="download-search">
-            <Search size={15} />
+          <div className="transfer-tools">
             <Input
               aria-label="搜索下载记录"
-              value={String(query)}
-              onChange={(e) => setQuery(e)}
+              value={query}
+              onChange={setQuery}
               type="search"
               enterKeyHint="search"
               placeholder="搜索文件名"
+              leftIcon={<Search size={16} aria-hidden="true" />}
             />
-          </label>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={!all.some((t) => !activeTask(t))}
-            onClick={() => action(() => clear(account?.id ?? ""))}
-          >
-            <Trash2 size={14} />
-            清除已结束记录
-          </Button>
-        </div>
-        {active.length > 0 && (
-          <div className="download-running-summary">
-            {active.length} 个任务 · 当前已接收 {formatBytes(loaded)}
-            <span>下载会在切换页面后继续</span>
+            {removable.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmClear(true)}
+              >
+                <Trash2 size={15} aria-hidden="true" /> 清除记录
+              </Button>
+            )}
           </div>
+        </div>
+        {loadError && (
+          <p className="transfer-load-error" role="status">
+            无法读取下载记录。{loadError}
+          </p>
         )}
         {!rows.length ? (
           <Empty
             title={all.length ? "没有匹配的下载记录" : "还没有下载记录"}
-            detail="下载课程资料、作业附件或回放后，记录会保存在这里。"
+            detail={
+              all.length
+                ? "试试其他文件名或状态。"
+                : "从课程资料、邮件或回放发起下载后，任务会显示在这里。"
+            }
           />
+        ) : filter === "all" ? (
+          <>
+            {current.length > 0 && (
+              <div className="transfer-group">
+                <h2>正在下载</h2>
+                {list(current)}
+              </div>
+            )}
+            {history.length > 0 && (
+              <div className="transfer-group">
+                <h2>下载记录</h2>
+                {list(history)}
+              </div>
+            )}
+          </>
         ) : (
-          <div className="download-history">
-            {rows.map((t) => (
-              <article className="download-history-row" key={t.id}>
-                <div className="download-file-icon">
-                  <Download size={22} />
-                </div>
-                <div className="download-file-body">
-                  <div className="download-file-title">
-                    <strong title={t.name}>{t.name}</strong>
-                    <AnimatedBadge
-                      status={
-                        t.state === "completed"
-                          ? "success"
-                          : t.state === "failed"
-                            ? "danger"
-                            : t.state === "downloading"
-                              ? "loading"
-                              : "neutral"
-                      }
-                      size="sm"
-                      showIcon={false}
-                    >
-                      {t.state === "queued"
-                        ? "等待下载"
-                        : t.state === "downloading"
-                          ? "下载中"
-                          : t.state === "completed"
-                            ? "已完成"
-                            : t.state === "paused"
-                              ? "已暂停"
-                              : t.state === "cancelled"
-                                ? "已取消"
-                                : "失败"}
-                    </AnimatedBadge>
-                  </div>
-                  <progress
-                    aria-label={`${t.name} 下载进度`}
-                    max={t.total || 1}
-                    value={
-                      t.state === "completed"
-                        ? t.total || 1
-                        : t.total
-                          ? t.loaded
-                          : t.state === "downloading"
-                            ? undefined
-                            : 0
-                    }
-                  />
-                  <div className="download-file-meta">
-                    <span>
-                      {formatBytes(t.loaded)}
-                      {t.total ? ` / ${formatBytes(t.total)}` : ""}
-                    </span>
-                    {t.state === "downloading" && (
-                      <>
-                        <span>{formatBytes(t.speed ?? 0)}/s</span>
-                        {t.eta && t.eta > 0 ? (
-                          <span>剩余 {Math.ceil(t.eta)} 秒</span>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                  <div className="download-time">
-                    {t.startedAt || t.createdAt || t.updatedAt ? (
-                      <time
-                        dateTime={new Date(
-                          (t.startedAt ?? t.createdAt ?? t.updatedAt)!,
-                        ).toISOString()}
-                      >
-                        {t.startedAt
-                          ? "开始"
-                          : t.createdAt
-                            ? "加入"
-                            : "记录更新"}
-                        ：
-                        {formatDownloadTime(
-                          (t.startedAt ?? t.createdAt ?? t.updatedAt)!,
-                        )}
-                      </time>
-                    ) : (
-                      <span>下载时间未记录</span>
-                    )}
-                    {t.finishedAt && (
-                      <time dateTime={new Date(t.finishedAt).toISOString()}>
-                        {t.state === "completed" ? "完成" : "结束"}：
-                        {formatDownloadTime(t.finishedAt)}
-                      </time>
-                    )}
-                    {t.startedAt && <span>{downloadDuration(t)}</span>}
-                  </div>
-                  {t.error ? (
-                    <button
-                      className="download-task-error"
-                      onClick={() => showDownloadError(t.error!)}
-                    >
-                      查看失败原因
-                    </button>
-                  ) : (
-                    <p
-                      className="download-path"
-                      title={t.path ?? t.folder ?? ""}
-                    >
-                      {t.path ?? t.folder ?? "保存位置将在下载完成后显示"}
-                    </p>
-                  )}
-                </div>
-                {activeTask(t) ? (
-                  <div className="download-row-actions">
-                    {t.item?.kind === "replay" && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          action(() => invoke("pause_download", { id: t.id }))
-                        }
-                      >
-                        暂停
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() =>
-                        action(() => invoke("cancel_download", { id: t.id }))
-                      }
-                    >
-                      取消
-                    </Button>
-                  </div>
-                ) : t.state === "completed" ? (
-                  <div className="download-android-actions download-row-actions">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() =>
-                        action(() => invoke("open_download", { id: t.id }))
-                      }
-                    >
-                      <FolderOpen size={14} />
-                      {isAndroid ? "打开" : "显示文件"}
-                    </Button>
-                    {isAndroid && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() =>
-                          action(async () => {
-                            await invoke("export_download", { id: t.id });
-                            window.dispatchEvent(
-                              new CustomEvent("campus:feedback", {
-                                detail: {
-                                  message: "已导出到系统下载目录 · 知行Campus",
-                                  variant: "success",
-                                },
-                              }),
-                            );
-                          })
-                        }
-                      >
-                        导出
-                      </Button>
-                    )}
-                  </div>
-                ) : t.state === "failed" || t.state === "paused" ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() =>
-                      action(() =>
-                        requestDownload(
-                          () =>
-                            invoke("retry_download", {
-                              username: t.accountId,
-                              id: t.id,
-                            }),
-                          t.accountId,
-                          `正在重试：${t.name}`,
-                        ),
-                      )
-                    }
-                  >
-                    <RefreshCw size={14} />
-                    {t.item?.kind === "replay" ? "继续下载" : "重试"}
-                  </Button>
-                ) : null}
-              </article>
-            ))}
-          </div>
+          <div className="transfer-group">{list(rows)}</div>
         )}
       </section>
-    </>
+      {confirmClear && (
+        <Modal
+          title="清除下载记录？"
+          presentation="dialog"
+          onClose={() => !clearing && setConfirmClear(false)}
+        >
+          <p>
+            将清除不在进行中的下载记录，以及这些任务保留的续传文件。已下载的文件会保留。
+          </p>
+          <div className="modal-actions">
+            <Button
+              variant="secondary"
+              disabled={clearing}
+              onClick={() => setConfirmClear(false)}
+            >
+              取消
+            </Button>
+            <Button
+              disabled={clearing}
+              onClick={() =>
+                void run(async () => {
+                  setClearing(true);
+                  try {
+                    for (const id of new Set(
+                      removable.map((task) => task.accountId),
+                    ))
+                      await clear(id);
+                    setConfirmClear(false);
+                    showFeedback("已清除下载记录");
+                  } finally {
+                    setClearing(false);
+                  }
+                })
+              }
+            >
+              {clearing ? "正在清除…" : "清除记录"}
+            </Button>
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }

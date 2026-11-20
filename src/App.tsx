@@ -18,6 +18,7 @@ import ReminderBridge from "./ReminderBridge";
 import { makeDemoMail } from "./demo";
 import Classrooms from "./Classrooms";
 import UpdatesPopover from "./UpdatesPopover";
+import ActivityFeed from "./ActivityFeed";
 import { FeedbackAlerts, useFeedback, showFeedback } from "./ui";
 import { TextReveal } from "@/components/motion/text-reveal";
 import {
@@ -63,7 +64,7 @@ import {
 } from "lucide-react";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { Accounts, Grades, Overview, Schedule } from "./Pages";
-import { icons, Modal, SyncButton, fullDate } from "./ui";
+import { icons, Modal, SyncButton } from "./ui";
 import { applySync, loadStore, saveStore } from "./storage";
 import {
   syncCampus,
@@ -1286,36 +1287,8 @@ export default function App() {
         </Modal>
       )}
       {dialog === "changes" && (
-        <Modal
-          title="校园动态"
-          subtitle="最近同步发现的数据变化"
-          onClose={() => setDialog(null)}
-        >
-          <div className="changes-modal">
-            {data.changes.length ? (
-              data.changes.map((c) => (
-                <button
-                  className="change-row"
-                  key={c.id}
-                  onClick={() => openChange(c)}
-                >
-                  <span
-                    className={`soft-tag ${c.kind === "删除" ? "orange" : "blue"}`}
-                  >
-                    {c.kind}
-                  </span>
-                  <div>
-                    <h3>{c.title}</h3>
-                    <p>
-                      {c.category} · {fullDate(c.time)}
-                    </p>
-                  </div>
-                </button>
-              ))
-            ) : (
-              <p className="quiet-empty">目前没有新的数据变化。</p>
-            )}
-          </div>
+        <Modal title="校园动态" onClose={() => setDialog(null)}>
+          <ActivityFeed changes={data.changes} onSelect={openChange} />
         </Modal>
       )}
       {dialog === "mail" && (
@@ -1373,6 +1346,7 @@ export default function App() {
       {downloadPanel && (
         <Modal title="下载管理" onClose={() => setDownloadPanel(null)} wide>
           <Downloads
+            embedded
             account={store.accounts.find(
               (item) => item.id === (downloadPanel.accountId ?? account?.id),
             )}
