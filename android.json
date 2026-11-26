@@ -1,9 +1,9 @@
 {
-  "version": "0.22.1",
-  "versionCode": 22001,
-  "notes": "# 知行 Campus Android 0.22.1\n\n- 修复学生文件空间上传时误报登录失效的问题。已用测试账号上传 115 KiB 的 PPTX 并逐字节核对下载内容。\n- 课程详情加入课程通知，为学校允许下载的课件补齐下载链接。\n- 通知按日期分组。下载管理将正在下载的任务与历史记录分开，显示速度、剩余时间和失败原因。\n- 首页、设置和教室筛选按可用宽度排版。作业归档、课表导出和文件批量操作在窄屏更易使用。\n",
-  "date": "2026-11-20T07:10:44.447Z",
-  "size": 31169181,
-  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.22.1",
-  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.22.1/zhixing-campus_0.22.1_android-arm64.apk"
+  "version": "0.23.0",
+  "versionCode": 23000,
+  "notes": "# 知行 Campus Android 0.23.0\n\n- 全面优化移动端页面布局与紧凑密度，修复主视图区高度折叠导致各页面内容显示不全的问题。\n- 统一全应用下划线标签栏、徽章/状态标签/计数胶囊与四套界面风格（含移动端夜间模式适配）。\n- 重构移动端课表顶部控制栏、单列通栏作业卡片与固定底栏详情页、校园网设备堆叠卡片，并在学业成绩总览中恢复加权均分与绩点展示。\n- 优化校园邮箱移动端文件夹标签、吸顶阅读工具栏与正文附件操作触控体验。\n",
+  "date": "2026-11-26T05:56:59.088Z",
+  "size": 31172701,
+  "url": "https://github.com/hyskr/zhixing-campus/releases/tag/android-v0.23.0",
+  "apkUrl": "https://github.com/hyskr/zhixing-campus/releases/download/android-v0.23.0/zhixing-campus_0.23.0_android-arm64.apk"
 }
