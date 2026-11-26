@@ -58,17 +58,13 @@ export default function Services({
     }
   }
   return (
-    <>
-      <PageHeading
-        eyebrow="CAMPUS SERVICES"
-        title="校园服务"
-        description="余额、校园网络与常用入口，集中在这里。"
-      />
+    <div className="services-page">
+      <PageHeading eyebrow="CAMPUS SERVICES" title="校园服务" />
       <Tabs
         value={tab}
         onValueChange={(next) => setTab(next)}
         variant="underline"
-        className="services-tabs"
+        className="services-subnav"
       >
         <TabsList>
           {["余额与入口", "校园网设备"].map((v) => (
@@ -85,63 +81,82 @@ export default function Services({
           <div className="campus-balances">
             <Card className="p-0 campus-balance-card">
               <CardContent className="campus-balance-content">
-                <Wallet size={25} />
-                <p>校园卡余额</p>
-                <strong>
+                <div className="campus-balance-head">
+                  <span className="campus-balance-icon" aria-hidden="true">
+                    <Wallet size={18} />
+                  </span>
+                  <span className="campus-balance-label">校园卡余额</span>
+                </div>
+                <strong className="campus-balance-amount">
                   ¥ {account.demo ? "128.50" : data.balances?.card || "—"}
                 </strong>
               </CardContent>
             </Card>
             <Card className="p-0 campus-balance-card">
               <CardContent className="campus-balance-content">
-                <Wifi size={25} />
-                <p>校园网余额</p>
-                <strong>
-                  ¥ {account.demo ? "35.00" : data.balances?.network || "—"}
-                </strong>
-                <div className="modal-actions">
-                  <Button
-                    size="sm"
-                    disabled={!!opening}
-                    onClick={() => open("recharge")}
-                  >
-                    {opening === "recharge" ? "更新登录状态…" : "校园网充值"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={async () => {
-                      await copyText(
-                        "https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html",
-                      );
-                      setMessage("充值链接已复制，可粘贴到微信发送或打开。");
-                    }}
-                  >
-                    <Link size={13} />
-                    分享到微信
-                  </Button>
+                <div className="campus-balance-head">
+                  <span className="campus-balance-icon" aria-hidden="true">
+                    <Wifi size={18} />
+                  </span>
+                  <span className="campus-balance-label">校园网余额</span>
+                </div>
+                <div className="campus-balance-bottom">
+                  <strong className="campus-balance-amount">
+                    ¥ {account.demo ? "35.00" : data.balances?.network || "—"}
+                  </strong>
+                  <div className="campus-balance-actions">
+                    <Button
+                      size="sm"
+                      disabled={!!opening}
+                      onClick={() => open("recharge")}
+                    >
+                      {opening === "recharge" ? "更新登录状态…" : "校园网充值"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={async () => {
+                        await copyText(
+                          "https://weixin.bjtu.edu.cn/pay/wap/network/recharge.html",
+                        );
+                        setMessage(
+                          "充值链接已复制，可粘贴到微信发送或打开。",
+                        );
+                      }}
+                    >
+                      <Link size={13} />
+                      分享到微信
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
           <section className="surface school-shortcuts">
-            <h2>学校网站快捷入口</h2>
-            <div>
+            <div className="school-shortcuts-header">
+              <h2>学校网站快捷入口</h2>
+            </div>
+            <div className="school-shortcuts-grid">
               {[
-                ["mis", "MIS 信息门户"],
-                ["academic", "教务 AA"],
-                ["courses", "智慧课程平台"],
-                ["mail", "校园邮箱"],
-                ["vpn", "WebVPN"],
-                ["sso", "新版统一身份认证"],
-              ].map(([id, name]) => (
+                ["mis", "MIS 信息门户", "综合门户与个人信息"],
+                ["academic", "教务 AA", "选课、课表与成绩"],
+                ["courses", "智慧课程平台", "作业、课件与回放"],
+                ["mail", "校园邮箱", "BJTU 校内邮件"],
+                ["vpn", "WebVPN", "校外访问内网"],
+                ["sso", "新版统一身份认证", "账号安全与密码"],
+              ].map(([id, name, desc]) => (
                 <button
                   key={id}
                   disabled={!!opening}
                   aria-busy={opening === id}
                   onClick={() => open(id)}
                 >
-                  <span>{opening === id ? "正在更新登录会话…" : name}</span>
+                  <span className="school-shortcut-copy">
+                    <strong>
+                      {opening === id ? "正在更新登录会话…" : name}
+                    </strong>
+                    <small>{desc}</small>
+                  </span>
                   <ExternalLink size={16} />
                 </button>
               ))}
@@ -149,6 +164,6 @@ export default function Services({
           </section>
         </>
       )}
-    </>
+    </div>
   );
 }

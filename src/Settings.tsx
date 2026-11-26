@@ -23,7 +23,7 @@ import MoreSettings from "./MoreSettings";
 import AppearanceSettings from "./AppearanceSettings";
 import NotificationSettings from "./NotificationSettings";
 import { usePreferences } from "./preferences";
-import type { Account, Preferences } from "./types";
+import type { Account, DetailPresentation, Preferences } from "./types";
 export default function Settings({
   account,
   updatesRequest,
@@ -71,6 +71,7 @@ export default function Settings({
       <PageHeading
         eyebrow="PREFERENCES"
         title="设置"
+        description="管理应用更新、界面风格、通知提醒与网络凭据。"
       />
       <SettingsGroups updatesRequest={updatesRequest}>
         <AppUpdateSettings />
@@ -81,6 +82,35 @@ export default function Settings({
           description="即时预览，选择适合自己的工作空间。"
         >
           <AppearanceSettings />
+          {!isAndroid && (
+            <label className="setting-row">
+              <span>
+                <strong>详情打开方式</strong>
+                <small>
+                  自适应模式下，课程空间、课堂回放与文件预览以新页面打开，作业详情按窗口宽度自动切换。
+                </small>
+              </span>
+              <Select
+                value={preferences.detailPresentation}
+                disabled={disabled}
+                onValueChange={(value) =>
+                  void update({
+                    detailPresentation: value as DetailPresentation,
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <span className="sr-only">详情打开方式：</span>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">自适应（推荐）</SelectItem>
+                  <SelectItem value="page">始终工作区新页面</SelectItem>
+                  <SelectItem value="overlay">始终弹窗与侧边抽屉</SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
+          )}
           {!isAndroid && (
             <label
               className={`setting-row ${isAndroid ? "android-hidden" : ""}`}

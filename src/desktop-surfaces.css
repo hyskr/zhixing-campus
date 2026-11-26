@@ -161,23 +161,22 @@
     font-size: 12px;
   }
   .replay-playback-setup {
-    grid-template-columns: minmax(240px, 310px) minmax(220px, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 10px 24px;
+    justify-content: space-between;
+    gap: 10px 20px;
     margin-bottom: 12px;
   }
   .replay-master-picker {
     justify-content: flex-end;
+    margin-left: auto;
   }
   .replay-master-picker > [data-slot="select"] {
     width: 170px;
   }
-  .replay-mode-tabs [role="tab"] {
-    min-height: 36px;
-    font-size: 12px;
-  }
   .replay-mode-help {
-    grid-column: 1 / -1;
+    flex-basis: 100%;
     padding: 8px 12px;
   }
   .replay-streams {
@@ -295,7 +294,7 @@
     min-height: 38px;
   }
   .settings-group-content .settings-form-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 176px), 1fr));
     align-items: start;
     gap: 16px;
   }

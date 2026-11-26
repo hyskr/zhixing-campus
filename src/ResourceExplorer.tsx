@@ -10,6 +10,7 @@ import {
   BookOpen,
   CalendarDays,
   Check,
+  ChevronRight,
   Copy,
   Download,
   Eye,
@@ -33,11 +34,41 @@ import {
 import type { Resource } from "./types";
 import { useFeedback } from "./ui";
 
-type Entry = { key: string; node: Resource; children: Entry[] };
-function entries(nodes: Resource[], parent = ""): Entry[] {
+type Entry = {
+  key: string;
+  node: Resource;
+  children: Entry[];
+  courseRoot?: Resource;
+};
+function isReplayNode(node: Resource): boolean {
+  return node.docType === "replay";
+}
+function entries(
+  nodes: Resource[],
+  parent = "",
+  includeReplay = false,
+): Entry[] {
   return nodes.map((node, index) => {
     const key = `${parent}/${index}-${node.id}`;
-    return { key, node, children: entries(node.children, key) };
+    const children = entries(node.children, key, includeReplay);
+    if (includeReplay && node.kind === "course") {
+      children.push({
+        key: `${key}/__replay`,
+        node: {
+          id: `__replay__:${node.id}`,
+          name: "课程回放",
+          course: node.name,
+          courseId: node.courseId ?? node.id,
+          kind: "folder",
+          docType: "replay",
+          loaded: true,
+          children: [],
+        },
+        courseRoot: node,
+        children: [],
+      });
+    }
+    return { key, node, children };
   });
 }
 function allEntries(nodes: Entry[]): Entry[] {
@@ -53,6 +84,7 @@ function hasMatch(entry: Entry, query: string): boolean {
 function icon(node: Resource) {
   if (node.kind === "course") return <BookOpen size={16} />;
   if (node.kind === "folder") {
+    if (node.docType === "replay") return <Video size={16} />;
     if (node.docType === "1") return <Presentation size={16} />;
     if (node.docType === "10") return <FileSpreadsheet size={16} />;
     return <Folder size={16} />;
@@ -68,6 +100,7 @@ function icon(node: Resource) {
   return <FileText size={16} />;
 }
 function fileCount(node: Resource): number {
+  if (isReplayNode(node)) return 0;
   return node.kind === "file"
     ? 1
     : node.children.reduce((sum, child) => sum + fileCount(child), 0);
@@ -85,6 +118,8 @@ export default function ResourceExplorer({
   onPreview,
   onTreeDownload,
   onCalendar,
+  renderReplay,
+  replayCounts,
   busy,
   compact = false,
 }: {
@@ -99,14 +134,20 @@ export default function ResourceExplorer({
   onPreview: (node: Resource) => void;
   onTreeDownload: (node: Resource) => Promise<void>;
   onCalendar: (node: Resource) => Promise<void>;
+  renderReplay?: (courseRoot: Resource) => React.ReactNode;
+  replayCounts?: Record<string, number>;
   busy: boolean;
   compact?: boolean;
 }) {
-  const tree = entries(roots);
+  const tree = entries(roots, "", Boolean(renderReplay));
   const nodes = allEntries(tree);
   const byKey = new Map(nodes.map((entry) => [entry.key, entry]));
-  const [currentKey, setCurrentKey] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<string[]>([]);
+  const [currentKey, setCurrentKey] = useState<string | null>(
+    () => tree[0]?.key ?? null,
+  );
+  const [expanded, setExpanded] = useState<string[]>(() =>
+    tree[0] ? [tree[0].key] : [],
+  );
   const [selectionMode, setSelectionMode] = useState(
     () => Object.keys(selected).length > 0,
   );
@@ -148,19 +189,22 @@ export default function ResourceExplorer({
   const phone = useCompactLayout();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const effectiveKey = currentKey && byKey.has(currentKey) ? currentKey : null;
-  const current = effectiveKey ? byKey.get(effectiveKey)?.node : undefined;
+  const currentEntry = effectiveKey ? byKey.get(effectiveKey) : undefined;
+  const current = currentEntry?.node;
   const files = nodes
     .filter((entry) => entry.node.kind === "file")
     .map((entry) => entry.node);
   const picked = Object.values(selected);
   const expandedIds = query
     ? nodes
-        .filter((entry) => entry.node.kind !== "file")
+        .filter(
+          (entry) => entry.node.kind !== "file" && !isReplayNode(entry.node),
+        )
         .map((entry) => entry.key)
     : expanded;
 
   async function load(entry: Entry): Promise<Resource[] | undefined> {
-    if (entry.node.kind === "file") return [];
+    if (entry.node.kind === "file" || isReplayNode(entry.node)) return [];
     const pending = requests.current.get(entry.key);
     if (pending) return pending;
     setErrors((current) => ({ ...current, [entry.key]: "" }));
@@ -189,13 +233,14 @@ export default function ResourceExplorer({
     setCurrentKey(key);
     const entry = byKey.get(key);
     if (!entry) return;
-    if (entry.node.kind === "file") {
+    if (entry.node.kind === "file" || isReplayNode(entry.node)) {
       setDetailsOpen(true);
       return;
     }
     if (entry.node.loaded === false) void load(entry);
   }
   function descendantFiles(node: Resource): Resource[] {
+    if (isReplayNode(node)) return [];
     return node.kind === "file"
       ? [node]
       : node.children.flatMap(descendantFiles);
@@ -227,6 +272,7 @@ export default function ResourceExplorer({
       }
       const files: Resource[] = [];
       for (const child of entries(children, directory.key)) {
+        if (isReplayNode(child.node)) continue;
         if (child.node.kind === "file") files.push(child.node);
         else files.push(...(await collect(child)));
       }
@@ -257,7 +303,7 @@ export default function ResourceExplorer({
   function render(entry: Entry): React.ReactNode {
     if (!hasMatch(entry, query)) return null;
     const node = entry.node;
-    if (node.kind === "file")
+    if (node.kind === "file" || isReplayNode(node))
       return (
         <FileTreeFile
           key={entry.key}
@@ -293,47 +339,41 @@ export default function ResourceExplorer({
       </FileTreeFolder>
     );
   }
+  const sortedChildren = currentEntry
+    ? [
+        ...currentEntry.children.filter((child) => child.node.kind !== "file"),
+        ...currentEntry.children.filter((child) => child.node.kind === "file"),
+      ]
+    : [];
   const detailView = (
     <article className="resource-explorer-detail">
-      {current ? (
+      {current &&
+      isReplayNode(current) &&
+      currentEntry?.courseRoot &&
+      renderReplay ? (
+        renderReplay(currentEntry.courseRoot)
+      ) : current ? (
         <>
-          <div className="resource-detail-icon">{icon(current)}</div>
-          <p className="resource-detail-kind">
-            {current.kind === "course"
-              ? "课程"
-              : current.kind === "folder"
-                ? "文件夹"
-                : "课程文件"}
-          </p>
-          <h2>{current.name}</h2>
-          <p className="resource-detail-course">
-            {current.kind === "course" ? "课程目录" : current.course}
-          </p>
-          <div className="resource-detail-facts">
+          <div className="resource-detail-header">
+            <div className="resource-detail-title">
+              <div className="resource-detail-icon">{icon(current)}</div>
+              <div>
+                <h2>{current.name}</h2>
+                <p className="resource-detail-sub">
+                  {current.kind === "file"
+                    ? [current.course, current.size || "未知大小"]
+                        .filter(Boolean)
+                        .join(" · ")
+                    : [
+                        current.kind === "course" ? null : current.course,
+                        `${fileCount(current)} 个文件`,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                </p>
+              </div>
+            </div>
             {current.kind === "file" ? (
-              <>
-                <span>文件大小</span>
-                <strong>{current.size || "未知"}</strong>
-              </>
-            ) : (
-              <>
-                <span>已加载文件</span>
-                <strong>{fileCount(current)} 个</strong>
-              </>
-            )}
-            {effectiveKey && loadingKeys.has(effectiveKey) ? (
-              <p role="status">
-                正在读取子目录
-                {current.children.length ? "，保留已有内容…" : "…"}
-              </p>
-            ) : current.loaded === false ? (
-              <p>尚未读取此目录。点击目录可加载内容。</p>
-            ) : current.kind !== "file" && !current.children.length ? (
-              <p>此目录已读取，学校未返回文件或子目录。</p>
-            ) : null}
-          </div>
-          {current.kind === "file" ? (
-            <>
               <div className="resource-detail-actions">
                 <Button
                   size="sm"
@@ -355,7 +395,7 @@ export default function ResourceExplorer({
                 </Button>
                 <ActionSwapBlurButton
                   size="sm"
-                  variant="ghost"
+                  variant="secondary"
                   cycle={false}
                   value={copiedKey === effectiveKey ? "copied" : "copy"}
                   items={[
@@ -376,68 +416,185 @@ export default function ResourceExplorer({
                   }}
                 />
               </div>
+            ) : (
+              <div className="resource-detail-actions">
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const entry = effectiveKey && byKey.get(effectiveKey);
+                    if (entry) void load(entry);
+                  }}
+                  disabled={!!effectiveKey && loadingKeys.has(effectiveKey)}
+                >
+                  {!!effectiveKey && loadingKeys.has(effectiveKey) ? (
+                    <Loader size={15} label="加载目录" />
+                  ) : (
+                    <RefreshCw size={15} />
+                  )}
+                  {!!effectiveKey && loadingKeys.has(effectiveKey)
+                    ? "加载中"
+                    : current.loaded === false
+                      ? "加载目录"
+                      : "刷新目录"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void onTreeDownload(current)}
+                  disabled={busy}
+                >
+                  <Download size={15} />
+                  递归下载
+                </Button>
+                {current.kind === "course" && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void onCalendar(current)}
+                  >
+                    <CalendarDays size={15} />
+                    教学日历
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {current.kind !== "file" ? (
+            <>
+              {effectiveKey && loadingKeys.has(effectiveKey) && (
+                <div className="resource-detail-status" role="status">
+                  <Loader size={15} label="加载目录" />
+                  正在读取子目录…
+                </div>
+              )}
+              {sortedChildren.length > 0 ? (
+                <div className="resource-children-list" role="list">
+                  {sortedChildren.map((child) =>
+                    child.node.kind !== "file" ? (
+                      <button
+                        type="button"
+                        className="resource-child-row"
+                        key={child.key}
+                        onClick={() => {
+                          if (effectiveKey && !expanded.includes(effectiveKey))
+                            setExpanded((prev) => [...prev, effectiveKey]);
+                          selectEntry(child.key);
+                        }}
+                      >
+                        <span className="resource-child-icon">
+                          {icon(child.node)}
+                        </span>
+                        <span className="resource-child-name">
+                          {child.node.name}
+                        </span>
+                        <span className="resource-child-meta">
+                          {isReplayNode(child.node)
+                            ? child.courseRoot &&
+                              replayCounts &&
+                              child.courseRoot.id in replayCounts
+                              ? `${replayCounts[child.courseRoot.id]} 节回放`
+                              : "查看回放"
+                            : `${fileCount(child.node)} 个文件`}
+                        </span>
+                        <ChevronRight
+                          size={15}
+                          className="resource-child-chevron"
+                        />
+                      </button>
+                    ) : (
+                      <div className="resource-child-row is-file" key={child.key}>
+                        <button
+                          type="button"
+                          className="resource-child-main"
+                          onClick={() => selectEntry(child.key)}
+                        >
+                          <span className="resource-child-icon">
+                            {icon(child.node)}
+                          </span>
+                          <span className="resource-child-name">
+                            {child.node.name}
+                          </span>
+                          <span className="resource-child-meta">
+                            {child.node.size || ""}
+                          </span>
+                        </button>
+                        <div className="resource-child-actions">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`预览 ${child.node.name}`}
+                            title="在线查看"
+                            onClick={() => onPreview(child.node)}
+                          >
+                            <Eye size={14} />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            aria-label={`下载 ${child.node.name}`}
+                            title="下载"
+                            onClick={() => onDownload([child.node])}
+                          >
+                            <Download size={14} />
+                          </Button>
+                        </div>
+                      </div>
+                    ),
+                  )}
+                </div>
+              ) : current.loaded === false ? (
+                <div className="resource-detail-placeholder">
+                  <p>该目录尚未读取</p>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      if (currentEntry) void load(currentEntry);
+                    }}
+                  >
+                    加载目录内容
+                  </Button>
+                </div>
+              ) : (
+                <div className="resource-detail-placeholder">
+                  <p>此目录暂无文件</p>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <div className="resource-file-meta-card">
+                <div className="resource-file-meta-row">
+                  <span>所属课程</span>
+                  <strong>{current.course || "未提供"}</strong>
+                </div>
+                <div className="resource-file-meta-row">
+                  <span>文件大小</span>
+                  <strong>{current.size || "未知"}</strong>
+                </div>
+              </div>
+              {selected[current.id] && (
+                <div className="resource-detail-selected">
+                  <Check size={14} />
+                  已加入批量选择
+                </div>
+              )}
               <button
+                type="button"
                 className="resource-detail-more"
                 onClick={() => onDetail(current)}
               >
                 查看文件详情与原始链接
               </button>
             </>
-          ) : (
-            <div className="resource-detail-actions">
-              <Button
-                size="sm"
-                onClick={() => {
-                  const entry = effectiveKey && byKey.get(effectiveKey);
-                  if (entry) void load(entry);
-                }}
-                disabled={!!effectiveKey && loadingKeys.has(effectiveKey)}
-              >
-                {!!effectiveKey && loadingKeys.has(effectiveKey) ? (
-                  <Loader size={15} label="加载目录" />
-                ) : (
-                  <RefreshCw size={15} />
-                )}
-                {!!effectiveKey && loadingKeys.has(effectiveKey)
-                  ? "加载中"
-                  : current.loaded === false
-                    ? "加载目录"
-                    : "刷新目录"}
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={() => void onTreeDownload(current)}
-                disabled={busy}
-              >
-                <Download size={15} />
-                递归下载
-              </Button>
-              {current.kind === "course" && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => void onCalendar(current)}
-                >
-                  <CalendarDays size={15} />
-                  教学日历
-                </Button>
-              )}
-            </div>
-          )}
-          {current.kind === "file" && selected[current.id] && (
-            <div className="resource-detail-selected">
-              <Check size={14} />
-              已加入批量选择
-            </div>
           )}
         </>
       ) : (
         <div className="resource-detail-empty">
           <FolderOpen size={32} strokeWidth={1.5} aria-hidden="true" />
-          <strong>选择课程，浏览资料</strong>
-          <p>展开左侧目录后，点击文件查看预览、下载与详情。</p>
-          <small>需要批量下载时，点击上方“选择文件”。</small>
+          <strong>选择课程或目录</strong>
+          <p>在左侧目录树中选择课程、文件夹或文件，即可浏览内容与快捷操作。</p>
         </div>
       )}
     </article>
@@ -448,17 +605,14 @@ export default function ResourceExplorer({
       className={`surface resource-explorer ${compact ? "compact" : ""} ${selectionMode ? "is-selecting" : ""}`}
     >
       <div className="resource-explorer-toolbar">
-        <div>
-          <h2>课程文件</h2>
-          <p>
-            {roots.length} 门课程
-            {files.length > 0 ? ` · ${files.length} 个文件已加载` : ""}
-          </p>
+        <div className="resource-explorer-summary">
+          <strong>{roots.length} 门课程</strong>
+          {files.length > 0 && <span>· {files.length} 个已加载文件</span>}
         </div>
         <div className="resource-explorer-toolbar-actions">
           {!phone && (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               disabled={!expanded.length || !!query}
               onClick={() => {
@@ -539,11 +693,6 @@ export default function ResourceExplorer({
               height={2}
             />
           )}
-          <div className="resource-explorer-caption">
-            {selectionMode
-              ? "选择目录会读取其中的全部文件"
-              : "点击课程展开资料目录"}
-          </div>
           {tree.length ? (
             <FileTree
               ariaLabel="课程资料目录"
@@ -554,7 +703,12 @@ export default function ResourceExplorer({
               onExpandedChange={changeExpanded}
               renderAccessory={(key) => {
                 const entry = byKey.get(key);
-                if (!entry || (!phone && !selectionMode)) return null;
+                if (
+                  !entry ||
+                  isReplayNode(entry.node) ||
+                  (!phone && !selectionMode)
+                )
+                  return null;
                 const descendants = descendantFiles(entry.node);
                 const count = descendants.filter(
                   (file) => !!selected[file.id],

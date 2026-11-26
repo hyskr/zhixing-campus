@@ -327,6 +327,7 @@ export function SelectContent({ className, children }: SelectContentProps) {
   const ctx = useSelectContext("SelectContent");
   const panelRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
+  const [alignEnd, setAlignEnd] = useState(false);
   const { open, progress, reduce, setPlacement } = ctx;
 
   // Keep descendants laid out while hidden: display:none resets nested
@@ -354,7 +355,7 @@ export function SelectContent({ className, children }: SelectContentProps) {
     return () => observer.disconnect();
   }, [present]);
 
-  // On open, flip upward when there isn't room below and there's more above.
+  // On open, flip upward when there isn't room below and align right if wider panel overflows viewport right edge.
   useLayoutEffect(() => {
     if (!open) return;
     const trigger = document.getElementById(ctx.triggerId);
@@ -362,9 +363,13 @@ export function SelectContent({ className, children }: SelectContentProps) {
     if (!trigger || !node) return;
     const rect = trigger.getBoundingClientRect();
     const h = node.offsetHeight;
+    const w = node.offsetWidth;
     const below = window.innerHeight - rect.bottom;
     const above = rect.top;
     setPlacement(below < h + 16 && above > below ? "top" : "bottom");
+    setAlignEnd(
+      rect.left + w > window.innerWidth - 12 && rect.right - w >= 12,
+    );
   }, [open, ctx.triggerId, setPlacement]);
 
   const isTop = ctx.placement === "top";
@@ -426,7 +431,8 @@ export function SelectContent({ className, children }: SelectContentProps) {
       // flush against the trigger, then separates into its own rounded pill;
       // sits above or below depending on available space
       className={cn(
-        "absolute left-0 right-0 z-20 overflow-hidden border border-border bg-background shadow-lg",
+        "absolute z-30 min-w-full w-max max-w-[min(320px,calc(100vw-24px))] overflow-hidden border border-border bg-background shadow-lg",
+        alignEnd ? "right-0" : "left-0",
         isTop ? "bottom-full" : "top-full",
         className,
       )}
@@ -480,7 +486,7 @@ export function SelectItem({
         disabled={disabled}
         onClick={() => ctx.select(value)}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors",
+          "flex w-full items-center justify-between gap-2 whitespace-nowrap rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors",
           selected
             ? "bg-muted text-foreground"
             : "text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:bg-muted",

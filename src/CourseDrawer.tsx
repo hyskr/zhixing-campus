@@ -39,6 +39,21 @@ export default function CourseDrawer({
   const [tab, setTab] = useState("课程信息");
   const same = (value: string) => sameCourseName(value, name);
   const sessions = data.courses.filter((c) => same(c.name));
+  const mergedSessions = Array.from(
+    sessions
+      .reduce((map, c) => {
+        const key = `${c.day}|${c.period}|${c.weeks}|${c.place}|${c.teacher}`;
+        const existing = map.get(key);
+        const label = c.selection ? "选课任务" : "本学期";
+        if (existing) {
+          if (!existing.labels.includes(label)) existing.labels.push(label);
+        } else {
+          map.set(key, { ...c, labels: [label] });
+        }
+        return map;
+      }, new Map<string, Course & { labels: string[] }>())
+      .values(),
+  );
   const grades = data.grades.filter((g) => same(g.name));
   const assignments = data.homework.filter((h) => same(h.course));
   const noticeCourses = new Set([
@@ -49,30 +64,41 @@ export default function CourseDrawer({
     (h) =>
       homeworkState(h) === "pending" && !data.ignoredHomework?.includes(h.id),
   );
+  const teacher = mergedSessions[0]?.teacher || grades[0]?.teacher;
+  const subtitle = [
+    teacher,
+    `${mergedSessions.length} 个上课时段`,
+    pending.length ? `${pending.length} 项待完成作业` : "暂无待完成作业",
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const panels = [
     {
       id: "课程信息",
       label: "课程信息",
       icon: <BookOpen size={16} />,
       content: (
-        <div>
-          {sessions.map((c: Course) => (
-            <div className="course-session-detail" key={c.id}>
-              <div>
-                <strong>{c.selection ? "选课任务" : "本学期"}</strong>
-                <span>{c.weeks}</span>
-              </div>
-              <DetailRow label="上课时间">
-                周{["一", "二", "三", "四", "五", "六", "日"][c.day - 1]} · 第{" "}
-                {c.period} 节 · {periodTimes[c.period - 1]}
-              </DetailRow>
-              <DetailRow label="上课地点">
-                <MapPin size={13} /> {c.place}
-              </DetailRow>
-              <DetailRow label="任课教师">{c.teacher}</DetailRow>
+        <div className="course-info-panel">
+          {mergedSessions.length > 0 ? (
+            <div className="course-session-grid">
+              {mergedSessions.map((c) => (
+                <div className="course-session-detail" key={c.id}>
+                  <div>
+                    <strong>{c.labels.join(" · ")}</strong>
+                    <span>{c.weeks}</span>
+                  </div>
+                  <DetailRow label="上课时间">
+                    周{["一", "二", "三", "四", "五", "六", "日"][c.day - 1]} · 第{" "}
+                    {c.period} 节 · {periodTimes[c.period - 1]}
+                  </DetailRow>
+                  <DetailRow label="上课地点">
+                    <MapPin size={13} /> {c.place}
+                  </DetailRow>
+                  <DetailRow label="任课教师">{c.teacher}</DetailRow>
+                </div>
+              ))}
             </div>
-          ))}
-          {!sessions.length && (
+          ) : (
             <p className="quiet-empty">当前课表中没有这门课的上课安排。</p>
           )}
           {Array.from(noticeCourses).map(id => (
@@ -124,23 +150,11 @@ export default function CourseDrawer({
   return (
     <Modal
       title={name}
-      subtitle="课程空间 · 把相关内容放在一起"
+      subtitle={subtitle}
       onClose={onClose}
       side
+      pageable="always"
     >
-      <div className="course-drawer-summary">
-        <span className="detail-course-icon blue">
-          <BookOpen size={30} />
-        </span>
-        <div>
-          <strong>
-            {sessions[0]?.teacher || grades[0]?.teacher || "我的课程"}
-          </strong>
-          <p>
-            {sessions.length} 个上课时段 · {pending.length} 项待完成作业
-          </p>
-        </div>
-      </div>
       <Tabs
         value={tab}
         onValueChange={setTab}

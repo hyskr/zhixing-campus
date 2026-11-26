@@ -2,10 +2,9 @@ import { teachingMonday } from "./CalendarExport";
 import type { CampusData } from "./types";
 import { usePageRefresh } from "./MobileRefreshSurface";
 import { useCompactLayout } from "./platform";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { RefreshCw, Search, ChevronRight, MapPin } from "lucide-react";
-import { Button } from "@/components/motion/button";
+import { Search, ChevronRight, MapPin } from "lucide-react";
 import { Input } from "@/components/motion/input";
 import { Checkbox } from "@/components/motion/checkbox";
 import {
@@ -43,10 +42,10 @@ function Choice({
   options: { id: string; name: string }[];
 }) {
   return (
-    <label className="room-choice">
-      <span>{label}</span>
+    <div className="room-choice">
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger className="rooms-select" aria-label={label}>
+          <span className="sr-only">{label}：</span>
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -57,7 +56,7 @@ function Choice({
           ))}
         </SelectContent>
       </Select>
-    </label>
+    </div>
   );
 }
 function demo(week: number, building: string): ClassroomPage {
@@ -116,6 +115,7 @@ export default function Classrooms({
     [revision, setRevision] = useState(0),
     [selected, setSelected] = useState<Classroom | null>(null);
   const [, setError] = useErrorState();
+  const refreshResolvers = useRef<(() => void)[]>([]);
   const monday = teachingMonday(Date.now());
   const key = JSON.stringify([semester, week, building]);
   const cached = cache?.monday === monday ? cache.pages[key] : undefined;
@@ -153,14 +153,20 @@ export default function Classrooms({
       })
       .finally(() => {
         if (active) setBusy(false);
+        const pending = refreshResolvers.current.splice(0);
+        pending.forEach((resolve) => resolve());
       });
     return () => {
       active = false;
     };
   }, [account.id, week, building, semester, revision, monday]);
-  usePageRefresh(async () => {
-    setRevision((v) => v + 1);
-  });
+  usePageRefresh(
+    async () =>
+      new Promise<void>((resolve) => {
+        refreshResolvers.current.push(resolve);
+        setRevision((v) => v + 1);
+      }),
+  );
   const periods =
     period === "all" ? [0, 1, 2, 3, 4, 5, 6] : [Number(period) - 1];
   const rooms = (page?.rooms ?? []).filter(
@@ -179,7 +185,7 @@ export default function Classrooms({
         eyebrow="CLASSROOMS"
         description="按教学周、教学楼和时段查找空闲教室，点击教室查看整周。"
       />
-      <div className="rooms-toolbar">
+      <div className="rooms-controls">
         <Choice
           label="教学周"
           value={week}
@@ -208,24 +214,6 @@ export default function Classrooms({
             ...(page?.semesters ?? []),
           ]}
         />
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={busy}
-          onClick={() => setRevision((value) => value + 1)}
-        >
-          <RefreshCw size={14} className={busy ? "spin" : ""} />
-          刷新占用
-        </Button>
-      </div>
-      <div className="rooms-filters">
-        <Input
-          aria-label="搜索教室"
-          placeholder="搜索教室编号"
-          leftIcon={<Search size={14} />}
-          value={query}
-          onChange={setQuery}
-        />
         <Choice
           label="星期"
           value={day}
@@ -247,14 +235,30 @@ export default function Classrooms({
             })),
           ]}
         />
-        <Input
-          type="number"
-          aria-label="最低座位数"
-          placeholder="最低座位数"
-          value={minimum}
-          onChange={setMinimum}
+        <div className="rooms-search-input">
+          <Input
+            aria-label="搜索教室"
+            placeholder="搜索教室编号"
+            leftIcon={<Search size={14} />}
+            value={query}
+            onChange={setQuery}
+          />
+        </div>
+        <div className="rooms-seats-input">
+          <Input
+            type="number"
+            aria-label="最低座位数"
+            placeholder="最低座位数"
+            value={minimum}
+            onChange={setMinimum}
+          />
+        </div>
+        <Checkbox
+          className="rooms-free-checkbox"
+          label="仅空闲"
+          checked={free}
+          onCheckedChange={setFree}
         />
-        <Checkbox label="仅空闲" checked={free} onCheckedChange={setFree} />
       </div>
       <div className="rooms-summary">
         <span>

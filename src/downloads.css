@@ -3,16 +3,15 @@
   display: grid;
   gap: 14px;
   align-content: start;
-  max-width: 1100px;
+  width: 100%;
+  max-width: none;
   min-width: 0;
   margin-inline: auto;
   color: var(--foreground);
 }
 
-.transfer-workspace > h1 {
-  margin: 0 0 2px;
-  font-size: 22px;
-  font-weight: 650;
+.transfer-workspace > .page-heading {
+  margin-bottom: 2px;
 }
 
 .transfer-overview {
@@ -44,11 +43,11 @@
 
 .transfer-toolbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: end;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 8px 14px 12px;
+  gap: 12px;
+  padding: 6px 16px 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -60,16 +59,16 @@
 }
 .transfer-toolbar [role="tab"] {
   white-space: nowrap;
+  padding-bottom: 12px;
 }
 .transfer-tools {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 0 1 280px;
-}
-.transfer-tools > :first-child {
-  flex: 1;
-  min-width: 0;
+  justify-content: flex-end;
+  gap: 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding-bottom: 6px;
 }
 .transfer-tools > button {
   flex: none;
@@ -90,9 +89,9 @@
 
 .transfer-row {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 38px minmax(0, 1fr) 156px;
   gap: 10px 12px;
-  align-items: start;
+  align-items: center;
   padding: 14px 16px;
 }
 .transfer-row + .transfer-row {
@@ -101,6 +100,8 @@
 .transfer-file-icon {
   display: grid;
   place-items: center;
+  align-self: start;
+  margin-top: 2px;
   width: 38px;
   height: 38px;
   border-radius: 9px;
@@ -255,9 +256,9 @@
   display: flex;
   align-items: center;
   align-self: center;
-  justify-content: end;
-  flex-wrap: wrap;
-  gap: 4px;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 6px;
 }
 .transfer-actions > button {
   flex: none;
@@ -265,16 +266,11 @@
   border-radius: 7px;
 }
 
-@container transfers (max-width: 680px) {
-  .transfer-toolbar > div:first-child {
-    width: 100%;
-  }
-  .transfer-tools {
-    flex: 1 1 100%;
-  }
-}
-
 @container transfers (max-width: 530px) {
+  .transfer-toolbar {
+    flex-wrap: wrap;
+    padding-inline: 10px;
+  }
   .transfer-row {
     grid-template-columns: 32px minmax(0, 1fr);
     gap: 6px 9px;
@@ -293,9 +289,6 @@
   }
   .transfer-details summary {
     min-height: 38px;
-  }
-  .transfer-toolbar {
-    padding-inline: 10px;
   }
   .transfer-toolbar [role="tab"] {
     min-height: 44px !important;

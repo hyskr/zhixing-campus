@@ -1,4 +1,5 @@
 import { useErrorState } from "./ui";
+import { usePageRefresh } from "./MobileRefreshSurface";
 import { Input } from "@/components/motion/input";
 import { Checkbox } from "@/components/motion/checkbox";
 // 参考来源：用户提供的《校园网设备管理器》HTML（已粘贴的文本.txt）。
@@ -7,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/motion/button";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { LogOut, RefreshCw, Wifi } from "lucide-react";
+import { LogOut, Wifi } from "lucide-react";
 import { Empty, Modal } from "./ui";
 import { usePreferences } from "./preferences";
 import { withCampusSession } from "./service";
@@ -96,6 +97,7 @@ export default function DeviceManager({
       setLoading(false);
     }
   }
+  usePageRefresh(refresh);
   useEffect(() => {
     void refresh();
   }, [account.id, refreshKey]);
@@ -187,25 +189,15 @@ export default function DeviceManager({
   }
   return (
     <section className="surface device-manager">
-      <div className="device-heading">
-        <div>
-          <Wifi size={21} />
-          <h2>校园网在线设备</h2>
-          <span>{account.studentId} · 当前账号</span>
+      <div className="device-header-bar">
+        <div className="device-heading">
+          <div>
+            <Wifi size={20} />
+            <h2>校园网在线设备</h2>
+            <span>{account.studentId} · 当前账号</span>
+          </div>
         </div>
-        <Button
-          size="sm"
-          variant="secondary"
-          disabled={loading || running}
-          onClick={refresh}
-        >
-          <RefreshCw size={14} className={loading ? "spin" : ""} />
-          刷新设备
-        </Button>
       </div>
-      <p className="setting-foot">
-        连接校园网后可查询设备。下线会中断所选设备的网络连接；返回其他页面时停止尚未完成的批量操作。
-      </p>
       {preferences.networkReconnect && (
         <p className="setting-foot">
           自动重连已开启，当前设备下线后可能自动恢复连接。

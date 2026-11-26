@@ -3,55 +3,56 @@
  */
 :root[data-appearance="claude"] {
   --background: #faf9f5;
-  --foreground: #302e2a;
-  --card: #fffefa;
-  --primary: #a34b31;
-  --primary-foreground: #fffaf6;
-  --secondary: #efede6;
-  --secondary-foreground: #393730;
-  --muted: #efede6;
-  --muted-foreground: #6e6a62;
-  --accent: #e9e5dc;
-  --accent-foreground: #35322c;
-  --border: #e1ddd4;
-  --input: #e1ddd4;
-  --ring: #a34b31;
-  --canvas: #faf9f5;
-  --text: #302e2a;
-  --sub: #6e6a62;
+  --foreground: #141413;
+  --card: #faf9f5;
+  --primary: #d97757;
+  --primary-foreground: #ffffff;
+  --secondary: #eeece2;
+  --secondary-foreground: #262522;
+  --muted: #f0eee6;
+  --muted-foreground: #6b685f;
+  --accent: #eae6da;
+  --accent-foreground: #141413;
+  --border: #e3dfd3;
+  --input: #e3dfd3;
+  --ring: #d97757;
+  --canvas: #f5f4ed;
+  --text: #141413;
+  --sub: #6b685f;
   --color-popover: var(--card);
   --color-ring: var(--ring);
-  --sidebar-background: #f1efe8;
+  --sidebar-background: #eeece2;
 }
 [data-appearance="claude"] body,
 [data-appearance="claude"] .app-shell,
 [data-appearance="claude"] .main-shell,
 [data-appearance="claude"] .main-content {
-  background: var(--background);
+  background: var(--canvas);
   color: var(--foreground);
 }
 [data-appearance="claude"] .campus-sidebar-panel,
 [data-appearance="claude"] .campus-sidebar-header,
 [data-appearance="claude"] .campus-sidebar-footer {
-  background: #f1efe8 !important;
+  background: #eeece2 !important;
   border-color: var(--border) !important;
 }
 [data-appearance="claude"] .campus-nav-link {
-  color: #625f56 !important;
-  border-radius: 7px;
+  color: #5c5950 !important;
+  border-radius: var(--campus-radius-sm);
 }
 [data-appearance="claude"] .campus-nav-link[data-active="true"],
 [data-appearance="claude"] .campus-nav-link[aria-current="page"] {
-  background: #e5e1d7 !important;
-  color: #332f29 !important;
+  background: #e5e1d4 !important;
+  color: #141413 !important;
 }
 [data-appearance="claude"] .campus-nav-link:hover {
-  background: #eae6dd !important;
+  background: #e9e6db !important;
+  color: #141413 !important;
 }
 [data-appearance="claude"] .brand-symbol {
-  background: #a34b31;
-  color: #fffaf6;
-  border-radius: 8px;
+  background: #d97757;
+  color: #ffffff;
+  border-radius: var(--campus-radius-sm);
 }
 [data-appearance="claude"] .topbar {
   background: var(--background);
@@ -128,12 +129,12 @@
   background: var(--primary);
 }
 [data-appearance="claude"] .dashboard-category.mail {
-  background: #f4e2d8;
-  color: #98452e;
+  background: #f6e4dc;
+  color: #b85637;
 }
 [data-appearance="claude"]
   :is(.dashboard-rows > button:hover, .dashboard-footer) {
-  background: #f2efe8;
+  background: #f0eee6;
 }
 [data-appearance="claude"]
   :is(
@@ -144,8 +145,8 @@
     .period-head,
     .table-corner
   ) {
-  background: #f2f0e9 !important;
-  color: #5e594f !important;
+  background: #eeece2 !important;
+  color: #5c5950 !important;
   border-color: var(--border);
 }
 [data-appearance="claude"]
@@ -153,15 +154,11 @@
   color: var(--muted-foreground);
 }
 [data-appearance="claude"] .nav-count {
-  background: #e4ddd1;
-  color: #694c36;
-}
-[data-appearance="claude"] .mail-count {
-  background: #e7d1c5;
-  color: #873e2b;
+  background: var(--muted);
+  color: var(--muted-foreground);
 }
 [data-appearance="claude"] .status-dot {
-  background: #a34b31;
+  background: #d97757;
 }
 [data-appearance="claude"] .settings-pane-heading h2 {
   font-size: 18px;

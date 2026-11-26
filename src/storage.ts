@@ -1,3 +1,4 @@
+import { isMockMode, makeMockStore } from "./demo";
 import { emptyData } from "./types";
 import type { AppStore, CampusData, Change, SyncResult } from "./types";
 const key = "zhixing.campus.v1";
@@ -61,6 +62,7 @@ let savedIndex: Index | undefined;
 let savedData: AppStore["data"] = {};
 
 export function loadStore(): AppStore {
+  if (isMockMode()) return makeMockStore();
   const raw = localStorage.getItem(indexKey);
   if (!raw) return loadLegacy();
   let index: Index;
@@ -88,6 +90,7 @@ export function loadStore(): AppStore {
 }
 
 export function saveStore(store: AppStore) {
+  if (isMockMode()) return;
   const modules: Index["modules"] = {};
   for (const [id, data] of Object.entries(store.data)) {
     const slots: Record<string, number> = {};

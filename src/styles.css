@@ -6596,16 +6596,18 @@ body,
   background: #eeefeb;
 }
 .appearance-option.claude .appearance-mini {
-  background: #faf9f5;
+  background: #f5f4ed;
+  border-color: #e3dfd3;
 }
 .appearance-option.claude .appearance-mini > i {
-  background: #eeeae0;
+  background: #eeece2;
+  border-right-color: #e3dfd3;
 }
 .appearance-option.claude .appearance-mini b {
-  background: #c16a4d;
+  background: #d97757;
 }
 .appearance-option.claude .appearance-mini em {
-  background: #e9e3d6;
+  background: #e5e1d4;
 }
 .changes-modal button.change-row {
   width: 100%;

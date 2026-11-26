@@ -313,7 +313,7 @@ function Preview({
     }
   }
   return (
-    <Modal title={name} subtitle="文件在线查看" onClose={onClose} wide>
+    <Modal title={name} subtitle="文件在线查看" onClose={onClose} wide pageable="always">
       <div className="file-viewer" ref={viewer}>
         <div className="file-viewer-toolbar">
           <strong>{name}</strong>

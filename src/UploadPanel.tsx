@@ -209,6 +209,15 @@ export default function UploadPanel({
           <div
             className="uploaded-row"
             key={file.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => preview(file, account)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                preview(file, account);
+              }
+            }}
             onContextMenu={(event) => {
               if (compactLayout) {
                 event.preventDefault();
@@ -217,11 +226,13 @@ export default function UploadPanel({
             }}
           >
             {onSelection && (
-              <Checkbox
-                aria-label={`选择附件 ${file.name}`}
-                checked={!!selection?.some((f) => f.id === file.id)}
-                onCheckedChange={() => toggle(file)}
-              />
+              <span onClick={(event) => event.stopPropagation()}>
+                <Checkbox
+                  aria-label={`选择附件 ${file.name}`}
+                  checked={!!selection?.some((f) => f.id === file.id)}
+                  onCheckedChange={() => toggle(file)}
+                />
+              </span>
             )}
             <FileText size={18} />
             <div className="file-row-info">
@@ -233,7 +244,10 @@ export default function UploadPanel({
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => preview(file, account)}
+              onClick={(event) => {
+                event.stopPropagation();
+                preview(file, account);
+              }}
             >
               查看
             </Button>
@@ -243,20 +257,23 @@ export default function UploadPanel({
                 variant="ghost"
                 className="mobile-file-more"
                 aria-label={`文件操作 ${file.name}`}
-                onClick={() => setMoreFile(file)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMoreFile(file);
+                }}
               >
                 <MoreVertical size={19} />
               </Button>
             ) : (
               <>
-                {" "}
                 <Button
                   size="sm"
                   variant="ghost"
                   aria-label={`复制 ${file.name} 链接`}
-                  onClick={() =>
-                    action(() => copyLinks(account, [file]), "链接已复制")
-                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void action(() => copyLinks(account, [file]), "链接已复制");
+                  }}
                 >
                   <Copy size={14} />
                 </Button>
@@ -264,9 +281,10 @@ export default function UploadPanel({
                   size="sm"
                   variant="ghost"
                   aria-label={`下载 ${file.name}`}
-                  onClick={() =>
-                    action(() => downloadFiles(account, [file]), "")
-                  }
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void action(() => downloadFiles(account, [file]), "");
+                  }}
                 >
                   <Download size={14} />
                 </Button>
@@ -274,14 +292,9 @@ export default function UploadPanel({
                   size="sm"
                   variant="ghost"
                   aria-label={`移除 ${file.name} 的本地记录`}
-                  onClick={() => {
-                    update(
-                      files.filter((f) => f.id !== file.id),
-                      preferences.saveUploads,
-                    );
-                    onSelection?.(
-                      (selection ?? []).filter((f) => f.id !== file.id),
-                    );
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    removeRecord(file);
                   }}
                 >
                   <Trash2 size={14} />

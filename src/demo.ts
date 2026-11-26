@@ -1,5 +1,109 @@
-import type { MailMessage } from "./types";
-import type { CampusData, Course, Resource } from "./types";
+import type { AppStore, CampusData, Course, DownloadTask, MailMessage, Resource } from "./types";
+
+export function isMockMode(): boolean {
+  try {
+    return (
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("mock") === "1"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function makeMockStore(): AppStore {
+  const linData = makeDemoData(false);
+  linData.balances = { card: "128.50", network: "35.00" };
+  const chenData = makeDemoData(true);
+  chenData.balances = { card: "86.20", network: "20.00" };
+  return {
+    activeId: "demo-lin",
+    accounts: [
+      {
+        id: "demo-lin",
+        name: "林同学",
+        studentId: "22281001",
+        department: "计算机科学与技术学院",
+        identity: "本科生",
+        color: "teal",
+        demo: true,
+      },
+      {
+        id: "demo-chen",
+        name: "陈同学",
+        studentId: "22281042",
+        department: "电子信息工程学院",
+        identity: "研究生",
+        color: "blue",
+        demo: true,
+      },
+    ],
+    data: {
+      "demo-lin": linData,
+      "demo-chen": chenData,
+    },
+  };
+}
+
+export function makeMockDownloads(): Record<string, DownloadTask> {
+  const now = Date.now();
+  return {
+    "mock-dl-1": {
+      id: "mock-dl-1",
+      accountId: "demo-lin",
+      name: "计算机网络 · 第七讲 · 传输层协议.mp4",
+      item: { id: "mock-dl-1", name: "计算机网络 · 第七讲 · 传输层协议.mp4", kind: "replay" },
+      state: "downloading",
+      loaded: 42_000_000,
+      total: 105_000_000,
+      speed: 5_242_880,
+      eta: 12,
+      path: "/Users/student/Downloads/计算机网络-第七讲.mp4",
+      createdAt: now - 35_000,
+      startedAt: now - 30_000,
+      updatedAt: now,
+    },
+    "mock-dl-2": {
+      id: "mock-dl-2",
+      accountId: "demo-lin",
+      name: "操作系统 · 实验二指导书.pdf",
+      item: { id: "mock-dl-2", name: "操作系统 · 实验二指导书.pdf", kind: "resource" },
+      state: "completed",
+      loaded: 4_920_000,
+      total: 4_920_000,
+      path: "/Users/student/Downloads/操作系统-实验二指导书.pdf",
+      createdAt: now - 3_600_000,
+      startedAt: now - 3_600_000,
+      finishedAt: now - 3_592_000,
+      updatedAt: now - 3_592_000,
+    },
+    "mock-dl-3": {
+      id: "mock-dl-3",
+      accountId: "demo-lin",
+      name: "数据库原理 · 第六章关系理论.pptx",
+      item: { id: "mock-dl-3", name: "数据库原理 · 第六章关系理论.pptx", kind: "resource" },
+      state: "paused",
+      loaded: 1_850_000,
+      total: 6_400_000,
+      path: "/Users/student/Downloads/数据库原理-第六章.pptx",
+      createdAt: now - 900_000,
+      startedAt: now - 890_000,
+      updatedAt: now - 850_000,
+    },
+    "mock-dl-4": {
+      id: "mock-dl-4",
+      accountId: "demo-lin",
+      name: "软件工程 · 课程设计模板.zip",
+      item: { id: "mock-dl-4", name: "软件工程 · 课程设计模板.zip", kind: "resource" },
+      state: "failed",
+      loaded: 0,
+      total: 2_100_000,
+      error: "连接校园网超时，请稍后重试",
+      createdAt: now - 7_200_000,
+      updatedAt: now - 7_190_000,
+    },
+  };
+}
 
 const courses: Course[] = [
   {

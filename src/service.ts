@@ -259,12 +259,14 @@ export function openSchoolPage(
   username: string,
   target: string,
   messageId?: string,
+  folderId?: number,
 ): Promise<void> {
   return withCampusSession(username, () =>
     invoke<void>("open_school_page", {
       username,
       target,
       messageId: messageId ?? null,
+      ...(folderId !== undefined ? { folderId } : {}),
     }),
   );
 }

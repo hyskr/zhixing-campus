@@ -15,12 +15,13 @@ import {
   type MailDetail,
   type MailDraft,
 } from "./mailbox";
+import { usePreferences } from "./preferences";
 import { useFeedback } from "./ui";
 import { useFilePreview } from "./FilePreview";
 import { downloadFiles } from "./learning";
 import { Checkbox } from "@/components/motion/checkbox";
 import { Loader } from "@/components/motion/loader";
-import { PenLine, Reply, Download, Eye, MailCheck, Send } from "lucide-react";
+import { PenLine, Reply, Download, Eye, ListChecks, MailCheck, Send } from "lucide-react";
 import { useErrorState } from "./ui";
 // 页面布局参考：https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail.tsx
 // 邮件列表与阅读区参考：https://github.com/msnabiel/shadcn-mail/blob/ca5faac5ecb0adb9e3b1147b1346a2b033a0a22a/components/ui/mail-list.tsx
@@ -33,14 +34,12 @@ import {
   Inbox,
   Mail as MailIcon,
   Paperclip,
-  RefreshCw,
   Search,
 } from "lucide-react";
 import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Button } from "@/components/motion/button";
 import { Input } from "@/components/motion/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { Tooltip } from "@/components/motion/tooltip";
 import type { Account, MailMessage } from "./types";
 import { PageHeading } from "./Pages";
 import { Empty, fullDate } from "./ui";
@@ -114,6 +113,7 @@ export default function Mail({
   const [mobileReading, setMobileReading] = useState(!!target);
   const [selecting, setSelecting] = useState(false);
   const [swipeOpen, setSwipeOpen] = useState<SwipeableListValue | null>(null);
+  const [recipientsExpanded, setRecipientsExpanded] = useState(false);
   useEffect(() => {
     const reset = (event: Event) => {
       if ((event as CustomEvent).detail !== "mail") return;
@@ -149,6 +149,7 @@ export default function Mail({
   const [busy, setBusy] = useState(false);
   const [opening, setOpening] = useState(false);
   const [error, setError] = useErrorState();
+  const { preferences } = usePreferences();
   const feedback = useFeedback();
   const preview = useFilePreview();
   const [checked, setChecked] = useState<string[]>([]);
@@ -222,6 +223,9 @@ export default function Mail({
   );
   const selected = sourceRows.find((item) => item.id === selectedId);
   useEffect(() => {
+    setRecipientsExpanded(false);
+  }, [selected?.id]);
+  useEffect(() => {
     if (!selected || (compactLayout && !mobileReading)) return;
     let active = true;
     setReading(true);
@@ -287,7 +291,12 @@ export default function Mail({
     try {
       if (account.demo) throw Error("请连接校园账号后打开学校邮箱。");
       setOpening(true);
-      await openSchoolPage(account.id, "mail", message?.id);
+      await openSchoolPage(
+        account.id,
+        "mail",
+        message?.id,
+        isSent ? 3 : 1,
+      );
     } catch (reason) {
       setError(String(reason));
       if (
@@ -317,12 +326,16 @@ export default function Mail({
 
   usePageRefresh(refresh);
   function messageRow(message: MailMessage) {
+    const isChecked = checked.includes(message.id);
     return (
-      <div className="mail-selectable-row" key={message.id}>
-        {!isSent && (!compactLayout || selecting) && (
+      <div
+        className={`mail-selectable-row ${isChecked ? "is-checked" : ""}`}
+        key={message.id}
+      >
+        {!isSent && selecting && (
           <Checkbox
             aria-label={`选择邮件 ${message.subject}`}
-            checked={checked.includes(message.id)}
+            checked={isChecked}
             onCheckedChange={(value) =>
               setChecked((ids) =>
                 value
@@ -388,35 +401,33 @@ export default function Mail({
           {composing ? "准备中…" : "写信"}
         </Button>
       )}
-      <PageHeading
-        eyebrow="MAIL"
-        title="校园邮箱"
-        description="完整阅读、写信与已读状态同步"
-      />
+      {compactLayout && (
+        <div className="mail-page-header">
+          <PageHeading
+            eyebrow="MAIL"
+            title="校园邮箱"
+            description="完整阅读、写信与已读状态同步"
+          />
+        </div>
+      )}
       <section
         className={`mail-workspace ${mobileReading ? "mobile-reading" : ""} ${selecting ? "is-selecting" : ""}`}
         aria-label="校园邮箱工作区"
       >
         <aside className="mail-folder-rail" aria-label="邮箱导航">
-          <div className="mail-folder-account">
-            <span className="mail-folder-avatar">
-              <MailIcon size={17} />
-            </span>
-            <span>
-              <strong>校园邮箱</strong>
-              <small>{account.demo ? "演示账户" : account.studentId}</small>
-            </span>
-          </div>
-          <Button
-            className="mail-new-button"
-            size="sm"
-            disabled={composing}
-            onClick={() => void compose()}
-          >
-            <PenLine size={14} />
-            {composing ? "准备写信…" : "写邮件"}
-          </Button>
-          <span className="mail-folder-label">邮箱</span>
+          {!compactLayout ? (
+            <Button
+              className="mail-rail-compose"
+              size="sm"
+              disabled={composing}
+              onClick={() => void compose()}
+            >
+              <PenLine size={14} />
+              {composing ? "准备写信…" : "写邮件"}
+            </Button>
+          ) : (
+            <span className="mail-folder-label">邮箱</span>
+          )}
           <button
             className={`mail-folder-item ${!isSent && filter === "all" ? "active" : ""}`}
             onClick={() => chooseFolder("inbox")}
@@ -469,12 +480,17 @@ export default function Mail({
                     next === "unread" ? "unread" : "all",
                   )
                 }
-                variant="segment"
+                variant="underline"
                 className="mobile-mail-folders"
               >
                 <TabsList aria-label="邮件文件夹">
                   <TabsTrigger value="all">收件箱</TabsTrigger>
-                  <TabsTrigger value="unread">未读 {unread || ""}</TabsTrigger>
+                  <TabsTrigger value="unread">
+                    未读
+                    {unread > 0 && (
+                      <span className="mail-tab-count">{unread}</span>
+                    )}
+                  </TabsTrigger>
                   <TabsTrigger value="sent">已发送</TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -505,23 +521,29 @@ export default function Mail({
             </div>
           )}
           <div className="mail-index-heading">
-            <div>
-              <span className="home-section-kicker">
-                {isSent ? "SENT" : "INBOX"}
-              </span>
-              <h2>{isSent ? "已发送" : "收件箱"}</h2>
-            </div>
-            <Tooltip content={isSent ? "刷新已发送" : "刷新收件箱"}>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label={isSent ? "刷新已发送" : "刷新收件箱"}
-                disabled={busy}
-                onClick={() => void refresh()}
-              >
-                <RefreshCw size={16} className={busy ? "spin" : ""} />
-              </Button>
-            </Tooltip>
+            <h2>
+              {isSent
+                ? "已发送"
+                : filter === "unread"
+                  ? "未读邮件"
+                  : "收件箱"}
+            </h2>
+            {!isSent && !compactLayout && (
+              <div className="mail-index-heading-actions">
+                <Button
+                  className="mail-manage-button"
+                  variant={selecting ? "primary" : "secondary"}
+                  size="sm"
+                  onClick={() => {
+                    setSelecting(!selecting);
+                    setChecked([]);
+                  }}
+                >
+                  <ListChecks size={13} />
+                  {selecting ? "完成" : "多选"}
+                </Button>
+              </div>
+            )}
           </div>
           <div className="mail-index-search">
             <Input
@@ -536,56 +558,41 @@ export default function Mail({
               leftIcon={<Search size={15} />}
             />
           </div>
-          {!isSent && !compactLayout && (
-            <Tabs
-              value={filter}
-              onValueChange={setFilter}
-              variant="underline"
-              className="mail-filter-tabs"
-            >
-              <TabsList>
-                <TabsTrigger value="all">全部邮件</TabsTrigger>
-                <TabsTrigger value="unread">
-                  未读 <span className="mail-tab-count">{unread}</span>
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-          {!isSent && (!compactLayout || selecting) && (
+          {!isSent && selecting && (
             <div className="mail-batch-toolbar">
               <Checkbox
+                label={checked.length ? `已选 ${checked.length} 封` : "全选"}
                 aria-label="选择当前列表邮件"
                 checked={
                   items.length > 0 &&
                   items.every((item) => checked.includes(item.id))
                 }
+                indeterminate={
+                  checked.length > 0 &&
+                  !items.every((item) => checked.includes(item.id))
+                }
                 onCheckedChange={(value) =>
                   setChecked(value ? items.map((item) => item.id) : [])
                 }
               />
-              <span>
-                {checked.length ? `已选 ${checked.length} 封` : "选择邮件"}
-              </span>
-              {checked.length > 0 && (
-                <>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={marking}
-                    onClick={() => void mark(checked, true)}
-                  >
-                    标为已读
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={marking}
-                    onClick={() => void mark(checked, false)}
-                  >
-                    标为未读
-                  </Button>
-                </>
-              )}
+              <div className="mail-batch-actions">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!checked.length || marking}
+                  onClick={() => void mark(checked, true)}
+                >
+                  标为已读
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={!checked.length || marking}
+                  onClick={() => void mark(checked, false)}
+                >
+                  标为未读
+                </Button>
+              </div>
             </div>
           )}
           {isSent && (
@@ -673,7 +680,6 @@ export default function Mail({
                   <ChevronLeft size={18} />
                   邮箱
                 </Button>
-                <span className="home-section-kicker">MESSAGE</span>
                 <AnimatedBadge
                   status={selected.read ? "neutral" : "info"}
                   size="sm"
@@ -682,11 +688,10 @@ export default function Mail({
                   {isSent ? "已发送" : selected.read ? "已读" : "未读"}
                 </AnimatedBadge>
                 {!isSent && (
-                  <>
-                    {" "}
+                  <div className="mail-reader-actions">
                     <Button
                       size="sm"
-                      variant="ghost"
+                      variant="secondary"
                       disabled={marking}
                       onClick={() => void mark([selected.id], !selected.read)}
                     >
@@ -695,14 +700,13 @@ export default function Mail({
                     </Button>
                     <Button
                       size="sm"
-                      variant="ghost"
                       disabled={reading || !detail || composing}
                       onClick={() => detail && void compose(detail)}
                     >
                       <Reply size={14} />
                       回复
                     </Button>
-                  </>
+                  </div>
                 )}
               </div>
               <h2>{selected.subject || "无主题"}</h2>
@@ -724,14 +728,32 @@ export default function Mail({
                   </AnimatedBadge>
                 )}
               </div>
-              {detail && (
-                <div className="mail-recipient-line">
-                  收件人：{detail.to.join("；") || "未提供"}
-                  {detail.cc.length > 0 && (
-                    <span> · 抄送：{detail.cc.join("；")}</span>
-                  )}
-                </div>
-              )}
+              {detail && (() => {
+                const recipientSummary = `收件人：${detail.to.join("；") || "未提供"}${detail.cc.length > 0 ? ` · 抄送：${detail.cc.join("；")}` : ""}`;
+                const hasManyRecipients =
+                  detail.to.length + detail.cc.length > 2 ||
+                  recipientSummary.length > 64;
+                return (
+                  <div
+                    className={`mail-recipient-line ${recipientsExpanded ? "is-expanded" : ""}`}
+                  >
+                    <span className="mail-recipient-text">
+                      {recipientSummary}
+                    </span>
+                    {hasManyRecipients && (
+                      <button
+                        type="button"
+                        className="mail-recipient-toggle"
+                        onClick={() =>
+                          setRecipientsExpanded((value) => !value)
+                        }
+                      >
+                        {recipientsExpanded ? "收起" : "展开"}
+                      </button>
+                    )}
+                  </div>
+                );
+              })()}
               <div className="mail-reader-body">
                 {reading ? (
                   <div className="mail-body-loading">
@@ -742,7 +764,20 @@ export default function Mail({
                   <iframe
                     title="完整邮件正文"
                     sandbox="allow-popups allow-popups-to-escape-sandbox"
-                    srcDoc={body}
+                    srcDoc={(() => {
+                      const themeCss =
+                        preferences.appearance === "night"
+                          ? "html{color-scheme:dark;background:#1c201e}body{background:#1c201e !important;color:#ecefe9 !important;margin:0 !important;padding:4px 0 !important}a{color:#5fb88e !important}"
+                          : preferences.appearance === "claude"
+                            ? "html{background:#faf9f5}body{background:#faf9f5;color:#141413;margin:0 !important;padding:4px 0 !important}a{color:#d97757}"
+                            : preferences.appearance === "slate"
+                              ? "html{background:#ffffff}body{background:#ffffff;color:#1e293b;margin:0 !important;padding:4px 0 !important}a{color:#245685}"
+                              : "html{background:#ffffff}body{background:#ffffff;color:#242a27;margin:0 !important;padding:4px 0 !important}a{color:#294a3c}";
+                      const inject = `<style>${themeCss}</style>`;
+                      return body.includes("</head>")
+                        ? body.replace("</head>", `${inject}</head>`)
+                        : `${inject}${body}`;
+                    })()}
                   />
                 ) : (
                   <Button
@@ -758,35 +793,44 @@ export default function Mail({
                 <div className="mail-attachments">
                   <strong>附件 · {detail.attachments.length}</strong>
                   {detail.attachments.map((file) => (
-                    <div key={file.id}>
-                      <Paperclip size={14} />
-                      <span>{file.name}</span>
-                      <small>{Math.ceil(file.size / 1024)} KB</small>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          preview(
-                            { ...file, id: `${selected.id}-${file.id}` },
-                            account,
-                          )
-                        }
-                      >
-                        <Eye size={13} />
-                        预览
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          void downloadFiles(account, [file]).catch((error) =>
-                            setError(String(error)),
-                          )
-                        }
-                      >
-                        <Download size={13} />
-                        下载
-                      </Button>
+                    <div className="mail-attachment-item" key={file.id}>
+                      <Paperclip
+                        size={14}
+                        className="mail-attachment-icon"
+                      />
+                      <span className="mail-attachment-name" title={file.name}>
+                        {file.name}
+                      </span>
+                      <small className="mail-attachment-size">
+                        {Math.max(1, Math.ceil(file.size / 1024))} KB
+                      </small>
+                      <div className="mail-attachment-actions">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            preview(
+                              { ...file, id: `${selected.id}-${file.id}` },
+                              account,
+                            )
+                          }
+                        >
+                          <Eye size={13} />
+                          预览
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            void downloadFiles(account, [file]).catch((error) =>
+                              setError(String(error)),
+                            )
+                          }
+                        >
+                          <Download size={13} />
+                          下载
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

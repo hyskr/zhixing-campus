@@ -85,7 +85,7 @@ export default function ReplayViewer({
         <Tabs
           value={multiple ? "multiple" : "single"}
           onValueChange={(value) => setMultiple(value === "multiple")}
-          variant="segment"
+          variant="underline"
           className="replay-mode-tabs"
         >
           <TabsList aria-label="播放方式">

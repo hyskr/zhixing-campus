@@ -284,11 +284,28 @@ fn build_school_browser(
     }
     builder.build().map_err(|e| e.to_string())
 }
+fn mail_open_url(sid: &str, message_id: Option<&str>, folder_id: Option<u32>) -> String {
+    let mut url = Url::parse("https://mail.bjtu.edu.cn/coremail/XT/index.jsp").unwrap();
+    url.query_pairs_mut().append_pair("sid", sid);
+    let base = url.to_string();
+    if let Some(mid) = message_id.map(str::trim).filter(|value| !value.is_empty()) {
+        let payload = json!({
+            "fid": folder_id.unwrap_or(1),
+            "mid": mid,
+            "mboxa": ""
+        })
+        .to_string();
+        return format!("{base}#mail.read|{payload}");
+    }
+    base
+}
+
 #[tauri::command]
 pub async fn open_school_page(
     username: String,
     target: String,
     message_id: Option<String>,
+    folder_id: Option<u32>,
     app: tauri::AppHandle,
     state: tauri::State<'_, CampusState>,
 ) -> Result<(), String> {
@@ -299,14 +316,7 @@ pub async fn open_school_page(
     refresh_school_session(&session, &target).await?;
     let address = if target == "mail" {
         let sid = mail_session(&session).await?;
-        let mut url = Url::parse("https://mail.bjtu.edu.cn/coremail/main.jsp").unwrap();
-        url.query_pairs_mut().append_pair("sid", &sid);
-        if let Some(mid) = message_id {
-            url = Url::parse("https://mail.bjtu.edu.cn/coremail/XT/jsp/readMessage.jsp").unwrap();
-            url.query_pairs_mut()
-                .extend_pairs([("sid", sid.as_str()), ("mid", mid.as_str())]);
-        }
-        url.to_string()
+        mail_open_url(&sid, message_id.as_deref(), folder_id)
     } else {
         shortcut(&target).ok_or("未知校园入口")?.into()
     };
@@ -689,6 +699,16 @@ mod tests {
         assert_eq!(v["rows"][0]["summary"], "本周教学安排");
         assert_eq!(v["rows"][0]["attached"], true);
         assert_eq!(v["unread"], 1);
+    }
+    #[test]
+    fn mail_open_url_targets_coremail_web_reader() {
+        let home = mail_open_url("sid-123", None, None);
+        assert_eq!(home, "https://mail.bjtu.edu.cn/coremail/XT/index.jsp?sid=sid-123");
+        let read = mail_open_url("sid-123", Some("msg-1"), Some(3));
+        assert!(read.starts_with("https://mail.bjtu.edu.cn/coremail/XT/index.jsp?sid=sid-123#mail.read|"));
+        assert!(!read.contains("readMessage.jsp"));
+        assert!(read.contains("\"fid\":3"));
+        assert!(read.contains("\"mid\":\"msg-1\""));
     }
     #[tokio::test]
     #[ignore = "读取本人校园邮箱、余额与教学日历，不更改校园数据"]

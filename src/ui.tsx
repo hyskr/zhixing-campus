@@ -1,6 +1,8 @@
+import { createPortal } from "react-dom";
 import { schoolTime } from "./schoolTime";
 import MobileDetailPage from "./MobileDetailPage";
 import { useCompactLayout } from "./platform";
+import { usePreferences } from "./preferences";
 import {
   AnimatedToastStack,
   useAnimatedToastStack,
@@ -22,6 +24,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  ArrowLeft,
   ArrowUpRight,
   BookOpen,
   CalendarDays,
@@ -115,18 +118,120 @@ export function SectionTitle({
 export function Empty({
   title = "这里还没有内容",
   detail = "同步校园数据后，内容会显示在这里。",
+  icon,
 }: {
   title?: string;
   detail?: string;
+  icon?: ReactNode;
 }) {
   return (
     <div className="empty">
-      <BookOpen size={34} strokeWidth={1.4} />
+      {icon ?? <BookOpen size={34} strokeWidth={1.4} />}
       <h3>{title}</h3>
       <p>{detail}</p>
     </div>
   );
 }
+const desktopDetailStack: symbol[] = [];
+
+function useNarrowDesktop() {
+  const [narrow, setNarrow] = useState(() =>
+    typeof window !== "undefined" &&
+    window.matchMedia("(max-width: 1179px)").matches,
+  );
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 1179px)");
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  return narrow;
+}
+
+function DesktopDetailPage({
+  title,
+  subtitle,
+  onClose,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const closeRef = useRef(onClose);
+  const idRef = useRef<symbol | null>(null);
+  if (!idRef.current) idRef.current = Symbol();
+  useLayoutEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+  useLayoutEffect(() => {
+    const id = idRef.current!;
+    desktopDetailStack.push(id);
+    const page = ref.current;
+    const focused = document.activeElement as HTMLElement | null;
+    page
+      ?.querySelector<HTMLButtonElement>(".desktop-detail-back")
+      ?.focus({ preventScroll: true });
+    const onNavigate = () => {
+      closeRef.current();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (desktopDetailStack.at(-1) !== id) return;
+      if (document.fullscreenElement) return;
+      const openOverlay = [
+        ...document.querySelectorAll<HTMLElement>(
+          '[role="dialog"], [role="listbox"], [role="menu"]',
+        ),
+      ].some((el) => el.getClientRects().length > 0);
+      if (openOverlay) return;
+      event.preventDefault();
+      closeRef.current();
+    };
+    window.addEventListener("campus:navigate", onNavigate);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("campus:navigate", onNavigate);
+      window.removeEventListener("keydown", onKeyDown);
+      const idx = desktopDetailStack.indexOf(id);
+      if (idx >= 0) desktopDetailStack.splice(idx, 1);
+      if (focused?.isConnected) focused.focus({ preventScroll: true });
+    };
+  }, []);
+  const target = document.querySelector(".main-stage") ?? document.body;
+  return createPortal(
+    <section
+      ref={ref}
+      className="desktop-detail-page"
+      role="region"
+      aria-label={title}
+    >
+      <header className="desktop-detail-header">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="desktop-detail-back"
+          onClick={onClose}
+        >
+          <ArrowLeft size={15} />
+          返回
+        </Button>
+        <div className="desktop-detail-titles">
+          <h2>{title}</h2>
+          {subtitle && <p>{subtitle}</p>}
+        </div>
+      </header>
+      <div className="desktop-detail-body">
+        <div className="desktop-detail-inner">{children}</div>
+      </div>
+    </section>,
+    target,
+  );
+}
+
 export function Modal({
   title,
   subtitle,
@@ -135,6 +240,7 @@ export function Modal({
   wide = false,
   side = false,
   presentation = "page",
+  pageable = false,
 }: {
   title: string;
   subtitle?: string;
@@ -143,8 +249,11 @@ export function Modal({
   wide?: boolean;
   side?: boolean;
   presentation?: "page" | "dialog";
+  pageable?: boolean | "always";
 }) {
   const compact = useCompactLayout();
+  const narrowDesktop = useNarrowDesktop();
+  const { preferences } = usePreferences();
   const closeRef = useRef(onClose);
   useLayoutEffect(() => {
     closeRef.current = onClose;
@@ -157,6 +266,19 @@ export function Modal({
       <MobileDetailPage title={title} subtitle={subtitle} onBack={onClose}>
         {children}
       </MobileDetailPage>
+    );
+  const useDesktopPage =
+    !compact &&
+    presentation === "page" &&
+    !!pageable &&
+    (preferences.detailPresentation === "page" ||
+      (preferences.detailPresentation === "auto" &&
+        (pageable === "always" || narrowDesktop)));
+  if (useDesktopPage)
+    return (
+      <DesktopDetailPage title={title} subtitle={subtitle} onClose={onClose}>
+        {children}
+      </DesktopDetailPage>
     );
   const content = (
     <div className="modal-inner">

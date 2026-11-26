@@ -20,7 +20,6 @@ import {
   MultiSelectItem,
   MultiSelectEmpty,
 } from "@/components/motion/multi-select";
-import { AnimatedBadge } from "@/components/motion/animated-badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import {
   Select,
@@ -39,12 +38,12 @@ import {
   Archive,
   Download,
   X,
-  Check,
   ChevronDown,
   ChevronRight,
   Clock3,
   FileText,
   RefreshCw,
+  Search,
 } from "lucide-react";
 import type { Account, CampusData, Homework } from "./types";
 import { byDeadline, homeworkState, timeRemaining, useNow } from "./homework";
@@ -72,8 +71,8 @@ export default function Assignments({
   courseName?: string;
 }) {
   const [type, setType] = useState("全部任务");
+  const [keyword, setKeyword] = useState("");
   const [chosenCourses, setChosenCourses] = useState<string[]>([]);
-  const [filter, setFilter] = useState("全部状态");
   const [opened, setOpened] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<Homework | null>(null);
   const [retrying, setRetrying] = useState("");
@@ -93,16 +92,42 @@ export default function Assignments({
           .slice(0, 10)
       : "";
   }
-  const deadlineDay = dateMode === "今天" ? localDay(now) : customDate;
+  function matchesDate(deadline: string) {
+    if (dateMode === "全部日期") return true;
+    const ms = schoolTime(deadline);
+    if (!Number.isFinite(ms)) return false;
+    if (dateMode === "今天") return localDay(ms) === localDay(now);
+    if (dateMode === "指定日期")
+      return !customDate || localDay(ms) === customDate;
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
+    const days = dateMode === "3 天内" ? 3 : 7;
+    return ms >= todayStart.getTime() && ms <= now + days * 86400000;
+  }
+  const hasActiveFilter =
+    type !== "全部任务" ||
+    Boolean(keyword.trim()) ||
+    chosenCourses.length > 0 ||
+    dateMode !== "全部日期";
+  function resetFilters() {
+    setType("全部任务");
+    setKeyword("");
+    setChosenCourses([]);
+    setDateMode("全部日期");
+    setCustomDate("");
+  }
+  const searchTerm = `${query} ${keyword}`.trim().toLowerCase();
   const courses = [...new Set(data.homework.map((h) => h.course))];
   const rows = data.homework.filter(
     (h) =>
-      (dateMode === "全部日期" ||
-        (!!deadlineDay && localDay(schoolTime(h.deadline)) === deadlineDay)) &&
+      matchesDate(h.deadline) &&
       (!courseName || sameCourseName(h.course, courseName)) &&
       (type === "全部任务" || h.type === type) &&
       (!chosenCourses.length || chosenCourses.includes(h.course)) &&
-      `${h.course}${h.title}`.includes(query),
+      (!searchTerm ||
+        `${h.course} ${h.title} ${h.content}`
+          .toLowerCase()
+          .includes(searchTerm)),
   );
   const groups = [
     { id: "pending", label: "待完成", color: "orange" },
@@ -112,6 +137,24 @@ export default function Assignments({
   ] as const;
   const submitted = rows.filter((h) => homeworkState(h, now) === "submitted");
   const archiveItems = submitted.filter((h) => checked.includes(h.id));
+  const grouped = groups.map((group) => ({
+    group,
+    items: rows
+      .filter(
+        (h) =>
+          (data.ignoredHomework?.includes(h.id) &&
+          homeworkState(h, now) !== "submitted"
+            ? "ignored"
+            : homeworkState(h, now)) === group.id,
+      )
+      .sort(byDeadline),
+  }));
+  const visibleGroups = grouped.filter(
+    ({ group, items }) =>
+      !hasActiveFilter ||
+      items.length > 0 ||
+      (group.id === "submitted" && archiveMode),
+  );
   async function archive() {
     setArchiving(true);
     try {
@@ -124,7 +167,7 @@ export default function Assignments({
         invoke<boolean>("archive_homework", { username: account.id, items }),
       );
       if (saved) {
-        feedback(`已归档 ${items.length} 项作业`);
+        feedback(`已导出 ${items.length} 项作业`);
         setArchiveMode(false);
         setChecked([]);
       }
@@ -151,6 +194,7 @@ export default function Assignments({
         <PageHeading
           eyebrow="ASSIGNMENTS"
           title="课程作业"
+          description="按课程、类型与截止时间追踪待办任务。"
         />
       )}
       <div className="assignment-toolbar">
@@ -158,7 +202,7 @@ export default function Assignments({
           value={type}
           onValueChange={(next) => setType(next)}
           variant="underline"
-          className=""
+          className="assignment-type-tabs"
         >
           <TabsList>
             {["全部任务", "作业", "实验", "课程设计"].map((t) => (
@@ -169,6 +213,16 @@ export default function Assignments({
           </TabsList>
         </Tabs>
         <div className="assignment-filters">
+          <div className="assignment-search-box">
+            <Input
+              type="search"
+              value={keyword}
+              onChange={setKeyword}
+              placeholder="搜索作业标题、课程或内容"
+              aria-label="搜索作业"
+              leftIcon={<Search size={15} />}
+            />
+          </div>
           {!courseName && (
             <MultiSelect
               value={chosenCourses}
@@ -182,7 +236,7 @@ export default function Assignments({
                 />
                 <MultiSelectInput
                   aria-label="按课程筛选作业"
-                  placeholder="全部课程 · 搜索"
+                  placeholder="筛选课程"
                 />
               </MultiSelectTrigger>
               <MultiSelectContent>
@@ -198,32 +252,15 @@ export default function Assignments({
             </MultiSelect>
           )}
           <Select
-            className="assignment-status-select"
-            value={String(filter)}
-            onValueChange={(value) => {
-              setFilter(value);
-              setArchiveMode(false);
-              setChecked([]);
-            }}
+            className="assignment-date-select"
+            value={dateMode}
+            onValueChange={setDateMode}
           >
-            <SelectTrigger>
-              <span className="sr-only">{"按状态筛选作业"}：</span>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {["全部状态", "待完成", "已提交", "已逾期", "已忽略"].map((s) => (
-                <SelectItem value={s} key={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={dateMode} onValueChange={setDateMode}>
             <SelectTrigger aria-label="按截止日期筛选">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["全部日期", "今天", "指定日期"].map((d) => (
+              {["全部日期", "3 天内", "7 天内", "今天", "指定日期"].map((d) => (
                 <SelectItem key={d} value={d}>
                   {d}
                 </SelectItem>
@@ -238,6 +275,17 @@ export default function Assignments({
               value={customDate}
               onChange={setCustomDate}
             />
+          )}
+          {hasActiveFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="assignment-reset-btn"
+              onClick={resetFilters}
+            >
+              <X size={14} />
+              清空筛选
+            </Button>
           )}
         </div>
       </div>
@@ -279,183 +327,187 @@ export default function Assignments({
         </div>
       )}
 
-      {groups
-        .filter((group) => filter === "全部状态" || filter === group.label)
-        .map((group) => {
-          const items = rows
-            .filter(
-              (h) =>
-                (data.ignoredHomework?.includes(h.id) &&
-                homeworkState(h, now) !== "submitted"
-                  ? "ignored"
-                  : homeworkState(h, now)) === group.id,
-            )
-            .sort(byDeadline);
-          const expanded =
-            opened[group.id] ??
-            (group.id === "pending" || filter !== "全部状态");
-          return (
-            <Collapsible
-              className={`assignment-group ${group.color}`}
-              key={group.id}
-              open={expanded}
-              onOpenChange={(open) =>
-                setOpened((current) => ({ ...current, [group.id]: open }))
-              }
-            >
-              <div className="assignment-group-titlebar">
-                <CollapsibleTrigger className="assignment-group-heading">
-                  {expanded ? (
-                    <ChevronDown size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
-                  )}
-                  <strong>{group.label}</strong>
-                  <span className="count-pill">{items.length}</span>
-                  <small>
-                    {group.id === "pending"
-                      ? "按截止时间排列"
-                      : expanded
-                        ? "点击收起"
-                        : "点击展开"}
-                  </small>
-                </CollapsibleTrigger>
-                {group.id === "submitted" &&
-                  (items.length > 0 || archiveMode) && (
-                    <Button
-                      className="campus-toolbar-action"
-                      variant="ghost"
-                      size="sm"
-                      aria-label={archiveMode ? "退出归档" : "归档已交作业"}
-                      disabled={archiving}
-                      onClick={() => {
-                        setArchiveMode(!archiveMode);
-                        setChecked([]);
-                        if (!archiveMode)
-                          setOpened((v) => ({ ...v, submitted: true }));
+      {visibleGroups.map(({ group, items }) => {
+        const expanded =
+          opened[group.id] ?? (group.id === "pending" || hasActiveFilter);
+        return (
+          <Collapsible
+            className={`assignment-group ${group.color}`}
+            key={group.id}
+            open={expanded}
+            onOpenChange={(open) =>
+              setOpened((current) => ({ ...current, [group.id]: open }))
+            }
+          >
+            <div className="assignment-group-titlebar">
+              <CollapsibleTrigger className="assignment-group-heading">
+                {expanded ? (
+                  <ChevronDown size={16} />
+                ) : (
+                  <ChevronRight size={16} />
+                )}
+                <strong>{group.label}</strong>
+                <span className="count-pill">{items.length}</span>
+              </CollapsibleTrigger>
+              {group.id === "submitted" &&
+                (items.length > 0 || archiveMode) && (
+                  <Button
+                    className="campus-toolbar-action"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={
+                      archiveMode ? "退出导出" : "批量导出已交作业"
+                    }
+                    disabled={archiving}
+                    onClick={() => {
+                      setArchiveMode(!archiveMode);
+                      setChecked([]);
+                      if (!archiveMode)
+                        setOpened((v) => ({ ...v, submitted: true }));
+                    }}
+                  >
+                    {archiveMode ? <X size={15} /> : <Archive size={15} />}
+                    {archiveMode ? "取消" : "导出已交"}
+                  </Button>
+                )}
+            </div>
+            <CollapsibleContent>
+              {group.id === "submitted" && archiveMode && (
+                <div
+                  className="assignment-selection-bar"
+                  role="group"
+                  aria-label="作业导出"
+                >
+                  <Checkbox
+                    label="全选"
+                    disabled={!items.length || archiving}
+                    checked={
+                      !!items.length && archiveItems.length === items.length
+                    }
+                    indeterminate={
+                      archiveItems.length > 0 &&
+                      archiveItems.length < items.length
+                    }
+                    onCheckedChange={(select) =>
+                      setChecked(select ? items.map((h) => h.id) : [])
+                    }
+                  />
+                  <span className="selection-status" role="status">
+                    已选 {archiveItems.length} 项
+                  </span>
+                  <Button
+                    className="campus-toolbar-action"
+                    size="sm"
+                    disabled={!archiveItems.length || archiving}
+                    onClick={() => void archive()}
+                  >
+                    <Download size={15} />
+                    {archiving ? "导出中…" : "导出 ZIP"}
+                  </Button>
+                </div>
+              )}
+              <div className="homework-grid">
+                {items.map((h) => {
+                  const hasSubmitCount =
+                    h.submitCount !== undefined || h.allCount !== undefined;
+                  const showReview =
+                    Boolean(h.reviewStatus) &&
+                    (group.id === "submitted" || h.reviewStatus !== "未批改");
+                  return (
+                    <article
+                      className="homework-card"
+                      key={h.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelected(h)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setSelected(h);
+                        }
                       }}
                     >
-                      {archiveMode ? <X size={15} /> : <Archive size={15} />}
-                      {archiveMode ? "取消" : "归档"}
-                    </Button>
-                  )}
-              </div>
-              <CollapsibleContent>
-                {group.id === "submitted" && archiveMode && (
-                  <div
-                    className="assignment-selection-bar"
-                    role="group"
-                    aria-label="作业归档"
-                  >
-                    <Checkbox
-                      label="全选"
-                      disabled={!items.length || archiving}
-                      checked={
-                        !!items.length && archiveItems.length === items.length
-                      }
-                      indeterminate={
-                        archiveItems.length > 0 &&
-                        archiveItems.length < items.length
-                      }
-                      onCheckedChange={(select) =>
-                        setChecked(select ? items.map((h) => h.id) : [])
-                      }
-                    />
-                    <span className="selection-status" role="status">
-                      已选 {archiveItems.length} 项
-                    </span>
-                    <Button
-                      className="campus-toolbar-action"
-                      size="sm"
-                      disabled={!archiveItems.length || archiving}
-                      onClick={() => void archive()}
-                    >
-                      <Download size={15} />
-                      {archiving ? "导出中…" : "导出 ZIP"}
-                    </Button>
-                  </div>
-                )}
-                <div className="homework-grid">
-                  {items.map((h) => (
-                    <article className="surface homework-card" key={h.id}>
                       <div className="homework-card-top">
                         {group.id === "submitted" && archiveMode && (
-                          <Checkbox
-                            aria-label={`选择 ${h.title}`}
-                            disabled={archiving}
-                            checked={checked.includes(h.id)}
-                            onCheckedChange={(select) =>
-                              setChecked((previous) =>
-                                select
-                                  ? [...previous, h.id]
-                                  : previous.filter((id) => id !== h.id),
-                              )
-                            }
-                          />
+                          <span onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              aria-label={`选择 ${h.title}`}
+                              disabled={archiving}
+                              checked={checked.includes(h.id)}
+                              onCheckedChange={(select) =>
+                                setChecked((previous) =>
+                                  select
+                                    ? [...previous, h.id]
+                                    : previous.filter((id) => id !== h.id),
+                                )
+                              }
+                            />
+                          </span>
                         )}
-                        <span className="homework-type blue">
-                          <FileText size={16} />
+                        <span className="homework-type">
+                          <FileText size={15} />
                           {h.type}
                         </span>
-                        <AnimatedBadge
-                          status={
-                            group.id === "submitted"
-                              ? "success"
-                              : group.id === "overdue"
-                                ? "danger"
-                                : "warning"
-                          }
-                          size="sm"
-                          showIcon={false}
-                        >
-                          {group.label}
-                        </AnimatedBadge>
                       </div>
                       <button
+                        type="button"
                         className="course-name-link homework-course"
-                        onClick={() => onCourse(h.course)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCourse(h.course);
+                        }}
                       >
                         {h.course}
                         <ChevronRight size={12} />
                       </button>
-                      <button
-                        className="homework-title-button"
-                        onClick={() => setSelected(h)}
-                      >
+                      <div className="homework-title-block">
                         <h2>{h.title}</h2>
                         <p className="homework-excerpt">
                           {h.content || "查看任务的时间和提交状态"}
                         </p>
-                      </button>
-                      <div className="homework-extra-meta">
-                        <span>
-                          {h.submitCount ?? "—"}/{h.allCount ?? "—"} 人提交
-                        </span>
-                        <span>{h.reviewStatus || "未批改"}</span>
-                        {h.score && <span>{h.score}</span>}
                       </div>
+                      {(hasSubmitCount || showReview || h.score) && (
+                        <div className="homework-extra-meta">
+                          {hasSubmitCount && (
+                            <span>
+                              {h.submitCount ?? "—"}/{h.allCount ?? "—"} 人提交
+                            </span>
+                          )}
+                          {h.score ? (
+                            <span className="homework-score-tag">
+                              成绩 {h.score}
+                            </span>
+                          ) : (
+                            showReview && <span>{h.reviewStatus}</span>
+                          )}
+                        </div>
+                      )}
                       <div className="homework-card-bottom">
                         <span>
-                          <Clock3 size={14} />
+                          <Clock3 size={13} />
                           {fullDate(h.deadline)}
                         </span>
-                        <span
-                          className={
-                            group.id === "pending" &&
-                            schoolTime(h.deadline) - now < 86400000
-                              ? "orange-text"
-                              : ""
-                          }
-                        >
-                          {group.id === "pending"
-                            ? timeRemaining(h.deadline, now)
-                            : group.label}
-                        </span>
+                        {group.id === "pending" && (
+                          <span
+                            className={
+                              schoolTime(h.deadline) - now < 86400000
+                                ? "orange-text"
+                                : "homework-countdown"
+                            }
+                          >
+                            {timeRemaining(h.deadline, now)}
+                          </span>
+                        )}
+                        {group.id === "overdue" && (
+                          <span className="homework-overdue-text">已逾期</span>
+                        )}
                         {group.id !== "submitted" && (
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => {
+                            className="homework-ignore-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
                               const ignored = group.id !== "ignored";
                               onIgnore(h.id, ignored);
                               if (ignored)
@@ -465,24 +517,29 @@ export default function Assignments({
                                 });
                             }}
                           >
-                            {group.id === "ignored" ? "恢复到列表" : "忽略"}
+                            {group.id === "ignored" ? "恢复" : "忽略"}
                           </Button>
                         )}
                       </div>
                     </article>
-                  ))}
+                  );
+                })}
+              </div>
+              {!items.length && (
+                <div className="group-empty">
+                  {group.id === "pending" ? "没有待完成的任务" : "暂无相关作业"}
                 </div>
-                {!items.length && (
-                  <div className="group-empty">
-                    {group.id === "pending"
-                      ? "没有待完成的任务"
-                      : "暂无相关作业"}
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-          );
-        })}
+              )}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+      {data.homework.length > 0 && visibleGroups.length === 0 && (
+        <Empty
+          title="没有匹配的作业"
+          detail="试试调整搜索关键词、课程或截止日期筛选。"
+        />
+      )}
       {!data.homework.length && (
         <Empty
           title="暂无作业数据"

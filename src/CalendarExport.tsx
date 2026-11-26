@@ -113,7 +113,7 @@ export function CalendarExport({
         variant="secondary"
         title="导出整学期课表"
         aria-label="导出整学期课表"
-        className="calendar-export-trigger campus-toolbar-action"
+        className="calendar-export-trigger"
         disabled={!courses.length}
         onClick={() => {
           setMonday(

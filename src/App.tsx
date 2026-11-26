@@ -30,14 +30,6 @@ import {
   AnimatedSidebarProvider,
   AnimatedSidebarTrigger,
 } from "@/components/motion/animated-sidebar";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/motion/breadcrumb";
 import { Input } from "@/components/motion/input";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "@/components/motion/button";
@@ -150,6 +142,7 @@ export default function App() {
   const refreshAttempts = useRef(new Map<string, number>());
   const startupAccount = useRef(new Set<string>());
   const [mobileRefreshing, setMobileRefreshing] = useState(false);
+  const [pageRefreshing, setPageRefreshing] = useState(false);
   const [syncLabel, setSyncLabel] = useState("");
   const [accountMenu, setAccountMenu] = useState(false);
   const [login, setLogin] = useState<{ studentId?: string } | null>(null);
@@ -239,7 +232,10 @@ export default function App() {
         void document.exitFullscreen();
         return true;
       }
-      if (document.querySelector('[role="dialog"]')) {
+      if (
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector(".desktop-detail-page")
+      ) {
         document.dispatchEvent(
           new KeyboardEvent("keydown", { key: "Escape", bubbles: true }),
         );
@@ -275,6 +271,8 @@ export default function App() {
       else previousPages.current.push(page);
     }
     setMailTarget(null);
+    setCourseName(null);
+    window.dispatchEvent(new CustomEvent("campus:navigate"));
     setPage(next);
     setQuery("");
     window.scrollTo(0, 0);
@@ -338,6 +336,30 @@ export default function App() {
     } finally {
       setMobileRefreshing(false);
     }
+  }
+  async function refreshDesktopPage() {
+    if (
+      page === "mail" ||
+      (page === "services" && deviceView) ||
+      !pageScope
+    ) {
+      if (pageRefreshing) return;
+      const refresh = pageRefreshHandler();
+      if (!refresh) {
+        if (pageScope) await sync();
+        return;
+      }
+      setPageRefreshing(true);
+      try {
+        await refresh();
+      } catch (error) {
+        setToast(String(error), "error");
+      } finally {
+        setPageRefreshing(false);
+      }
+      return;
+    }
+    await sync();
   }
   useEffect(() => {
     if (!isTauri()) return;
@@ -851,6 +873,21 @@ export default function App() {
       },
     })),
   ];
+  const activeNav = navItems.find((item) => item.id === page);
+  const activePageTitle =
+    page === "settings"
+      ? "设置"
+      : page === "accounts"
+        ? "账号与数据"
+        : (activeNav?.label ?? "校园概览");
+  const ActivePageIcon =
+    page === "settings"
+      ? icons.settings
+      : page === "accounts"
+        ? icons.user
+        : activeNav
+          ? icons[activeNav.icon as keyof typeof icons]
+          : icons.house;
   return (
     <AnimatedSidebarProvider
       className="app-shell"
@@ -920,31 +957,12 @@ export default function App() {
               >
                 <PanelLeft size={18} aria-hidden="true" />
               </AnimatedSidebarTrigger>
-              <Breadcrumb className="workspace-breadcrumb">
-                <BreadcrumbList maxItems={3}>
-                  <BreadcrumbItem>
-                    <BreadcrumbLink
-                      href="#overview"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        navigate("overview");
-                      }}
-                    >
-                      工作空间
-                    </BreadcrumbLink>
-                  </BreadcrumbItem>
-                  <BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbPage>
-                      {page === "settings"
-                        ? "设置"
-                        : page === "accounts"
-                          ? "账号与数据"
-                          : navItems.find((item) => item.id === page)?.label}
-                    </BreadcrumbPage>
-                  </BreadcrumbItem>
-                </BreadcrumbList>
-              </Breadcrumb>
+              <div className="topbar-title">
+                <span className="topbar-title-icon" aria-hidden="true">
+                  <ActivePageIcon size={16} />
+                </span>
+                <h1>{activePageTitle}</h1>
+              </div>
             </div>
             <div className="topbar-actions">
               <MorphingSearch
@@ -1023,12 +1041,14 @@ export default function App() {
                     连接校园账号
                   </Button>
                 )}
-                {pageScope && (
+                {(pageScope ||
+                  page === "classrooms" ||
+                  (page === "services" && deviceView)) && (
                   <SyncButton
                     idleLabel={pageScope === "all" ? "全部同步" : "刷新本页"}
-                    syncing={syncing}
-                    label={syncLabel}
-                    onPress={() => void sync()}
+                    syncing={syncing || pageRefreshing}
+                    label={pageRefreshing ? "刷新中…" : syncLabel}
+                    onPress={() => void refreshDesktopPage()}
                   />
                 )}
               </span>
@@ -1043,6 +1063,7 @@ export default function App() {
             </div>
           </header>
         )}
+        <div className="main-stage">
         <MobileRefreshSurface
           main
           className="main-content"
@@ -1245,6 +1266,7 @@ export default function App() {
             </div>
           )}
         </MobileRefreshSurface>
+        </div>
       </div>
       {courseName && account && (
         <CourseDrawer onIgnore={ignoreHomework}

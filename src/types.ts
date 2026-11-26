@@ -261,8 +261,11 @@ export interface SpaceFile {
   size: string;
   inputTime: string;
 }
+export type AppearanceTheme = "classic" | "claude" | "slate" | "night";
+export type DetailPresentation = "auto" | "page" | "overlay";
 export interface Preferences {
-  appearance: "classic" | "claude";
+  appearance: AppearanceTheme;
+  detailPresentation: DetailPresentation;
   closeToTray: boolean;
   quickLogin: boolean;
   resourcePort: number;

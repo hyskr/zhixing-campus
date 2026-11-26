@@ -612,7 +612,7 @@ export function TabsTrigger({
             layoutId={layoutId}
             layout
             className={cn(
-              "absolute bottom-0 left-0 right-0 h-px bg-primary",
+              "absolute bottom-0 left-0 right-0 h-[2px] rounded-full bg-primary",
               indicatorClassName,
             )}
           />

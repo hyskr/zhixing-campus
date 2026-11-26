@@ -132,9 +132,8 @@ export default function HomeDashboard({
     <div className="workspace-home dashboard-home">
       <header className="home-heading">
         <div className="home-heading-copy">
-          <h1>{compact ? `${account.name}，你好` : "校园概览"}</h1>
-          <p>
-            {!compact && `${account.name} · `}
+          <p className="home-status-line">
+            {account.name} ·{" "}
             {new Intl.DateTimeFormat("zh-CN", {
               month: "long",
               day: "numeric",
@@ -317,6 +316,7 @@ export default function HomeDashboard({
             {changes.map((change) => (
               <button key={change.id} onClick={() => onChange(change)}>
                 <span
+                  data-category={change.category}
                   className={`dashboard-category ${change.category === "邮箱" ? "mail" : ""}`}
                 >
                   {change.category}

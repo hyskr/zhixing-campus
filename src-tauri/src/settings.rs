@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase", default)]
 pub struct Preferences {
     pub appearance: String,
+    pub detail_presentation: String,
     pub close_to_tray: bool,
     pub quick_login: bool,
     pub resource_port: u16,
@@ -26,6 +27,7 @@ impl Default for Preferences {
     fn default() -> Self {
         Self {
             appearance: "classic".into(),
+            detail_presentation: "auto".into(),
             close_to_tray: true,
             quick_login: true,
             resource_port: 1936,
@@ -64,8 +66,17 @@ pub fn set_preferences(
     downloads: tauri::State<'_, media::DownloadState>,
 ) -> Result<(), String> {
     let mut preferences = preferences;
-    if !matches!(preferences.appearance.as_str(), "classic" | "claude") {
+    if !matches!(
+        preferences.appearance.as_str(),
+        "classic" | "claude" | "slate" | "night"
+    ) {
         return Err("请选择有效的界面风格".into());
+    }
+    if !matches!(
+        preferences.detail_presentation.as_str(),
+        "auto" | "page" | "overlay"
+    ) {
+        return Err("请选择有效的详情打开方式".into());
     }
     if preferences.resource_port == 0 {
         return Err("请输入 1–65535 之间的端口".into());
@@ -137,5 +148,22 @@ mod tests {
                 .appearance,
             "claude"
         );
+    }
+    #[test]
+    fn detail_presentation_defaults_for_existing_settings_and_persists_selection() {
+        let old: Preferences = serde_json::from_value(json!({"appearance":"slate"})).unwrap();
+        assert_eq!(old.detail_presentation, "auto");
+        for mode in ["page", "overlay"] {
+            let mut selected = old.clone();
+            selected.detail_presentation = mode.into();
+            let saved = serde_json::to_value(&selected).unwrap();
+            assert_eq!(saved["detailPresentation"], mode);
+            assert_eq!(
+                serde_json::from_value::<Preferences>(saved)
+                    .unwrap()
+                    .detail_presentation,
+                mode
+            );
+        }
     }
 }

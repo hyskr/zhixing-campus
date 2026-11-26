@@ -9,7 +9,6 @@ import { isAndroid, useCompactLayout } from "./platform";
 import "./downloads.css";
 import { useErrorState } from "./ui";
 import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
-import { Input } from "@/components/motion/input";
 import {
   createContext,
   useContext,
@@ -21,7 +20,6 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Button } from "@/components/motion/button";
 import {
-  Activity,
   AlertCircle,
   Check,
   ChevronDown,
@@ -33,11 +31,12 @@ import {
   Pause,
   Play,
   RefreshCw,
-  Search,
   Trash2,
   X,
 } from "lucide-react";
 import type { Account, DownloadTask } from "./types";
+import { isMockMode, makeMockDownloads } from "./demo";
+import { PageHeading } from "./Pages";
 import { Empty, Modal } from "./ui";
 export function formatBytes(value: number) {
   if (value < 1024) return `${value} B`;
@@ -65,7 +64,9 @@ const Context = createContext<{
   clear: (accountId: string) => Promise<void>;
 }>({ tasks: [], error: "", clear: async () => {} });
 export function DownloadsProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Record<string, DownloadTask>>({}),
+  const [tasks, setTasks] = useState<Record<string, DownloadTask>>(() =>
+    isMockMode() && !isTauri() ? makeMockDownloads() : {},
+  ),
     [error, setError] = useErrorState();
   useEffect(() => {
     if (!isTauri()) return;
@@ -448,7 +449,6 @@ export default function Downloads({
   const compact = useCompactLayout();
   const { tasks, error: loadError, clear } = useDownloads();
   const [filter, setFilter] = useState("all");
-  const [query, setQuery] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [, setError] = useErrorState();
@@ -461,15 +461,13 @@ export default function Downloads({
   const active = all.filter(activeTask);
   const speed = active.reduce((sum, task) => sum + (task.speed ?? 0), 0);
   const removable = all.filter((task) => !activeTask(task));
-  const keyword = query.trim().toLowerCase();
   const rows = all.filter(
     (task) =>
-      task.name.toLowerCase().includes(keyword) &&
-      (filter === "all" ||
-        (filter === "active" && activeTask(task)) ||
-        (filter === "unsuccessful" &&
-          (task.state === "failed" || task.state === "cancelled")) ||
-        task.state === filter),
+      filter === "all" ||
+      (filter === "active" && activeTask(task)) ||
+      (filter === "unsuccessful" &&
+        (task.state === "failed" || task.state === "cancelled")) ||
+      task.state === filter,
   );
   const current = rows.filter(activeTask);
   const history = rows.filter((task) => !activeTask(task));
@@ -490,13 +488,12 @@ export default function Downloads({
 
   return (
     <div className="transfer-workspace">
-      {!embedded && !compact && <h1>下载管理</h1>}
-      {active.length > 0 && (
-        <div className="transfer-overview">
-          <Activity size={17} aria-hidden="true" />
-          <strong>{active.length} 个任务进行中</strong>
-          {speed > 0 && <span>{formatBytes(speed)}/s</span>}
-        </div>
+      {!embedded && !compact && (
+        <PageHeading
+          eyebrow="DOWNLOADS"
+          title="下载管理"
+          description="查看课程资料、邮件附件与回放视频的下载进度与记录。"
+        />
       )}
       <section className="transfer-panel" aria-label="下载任务">
         <div className="transfer-toolbar">
@@ -505,20 +502,19 @@ export default function Downloads({
               {filters.map(({ value, label }) => (
                 <TabsTrigger key={value} value={value}>
                   {label}
+                  {value === "active" && active.length > 0 && (
+                    <span className="transfer-tab-count">{active.length}</span>
+                  )}
                 </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
           <div className="transfer-tools">
-            <Input
-              aria-label="搜索下载记录"
-              value={query}
-              onChange={setQuery}
-              type="search"
-              enterKeyHint="search"
-              placeholder="搜索文件名"
-              leftIcon={<Search size={16} aria-hidden="true" />}
-            />
+            {active.length > 0 && speed > 0 && (
+              <span className="transfer-speed-pill">
+                {formatBytes(speed)}/s
+              </span>
+            )}
             {removable.length > 0 && (
               <Button
                 variant="ghost"
@@ -530,38 +526,28 @@ export default function Downloads({
             )}
           </div>
         </div>
-        {loadError && (
-          <p className="transfer-load-error" role="status">
-            无法读取下载记录。{loadError}
-          </p>
-        )}
-        {!rows.length ? (
-          <Empty
-            title={all.length ? "没有匹配的下载记录" : "还没有下载记录"}
-            detail={
-              all.length
-                ? "试试其他文件名或状态。"
-                : "从课程资料、邮件或回放发起下载后，任务会显示在这里。"
-            }
-          />
-        ) : filter === "all" ? (
-          <>
-            {current.length > 0 && (
-              <div className="transfer-group">
-                <h2>正在下载</h2>
-                {list(current)}
-              </div>
-            )}
-            {history.length > 0 && (
-              <div className="transfer-group">
-                <h2>下载记录</h2>
-                {list(history)}
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="transfer-group">{list(rows)}</div>
-        )}
+        <div className="transfer-scroll">
+          {loadError && (
+            <p className="transfer-load-error" role="status">
+              无法读取下载记录。{loadError}
+            </p>
+          )}
+          {!rows.length ? (
+            <Empty
+              icon={<Download size={32} strokeWidth={1.4} />}
+              title={all.length ? "没有匹配的下载记录" : "还没有下载记录"}
+              detail={
+                all.length
+                  ? "当前状态下没有下载任务。"
+                  : "从课程资料、邮件或回放发起下载后，任务会显示在这里。"
+              }
+            />
+          ) : (
+            <div className="transfer-group">
+              {list(filter === "all" ? [...current, ...history] : rows)}
+            </div>
+          )}
+        </div>
       </section>
       {confirmClear && (
         <Modal

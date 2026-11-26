@@ -135,7 +135,7 @@ export default function MobileHome({
         </header>
         <div className="mobile-home-list">
           {pending.length ? (
-            pending.slice(0, 1).map((item) => (
+            pending.slice(0, 3).map((item) => (
               <Button
                 variant="ghost"
                 key={item.id}
@@ -167,7 +167,7 @@ export default function MobileHome({
         </header>
         <div className="mobile-home-list mobile-home-updates">
           {changes.length ? (
-            changes.slice(0, 1).map((item) => (
+            changes.slice(0, 2).map((item) => (
               <Button
                 variant="ghost"
                 key={item.id}

@@ -98,11 +98,7 @@ export default function CampusSidebar({
                       onSelect={() => navigate(item.id)}
                       badge={
                         count > 0 ? (
-                          <span
-                            className={`nav-count ${id === "mail" ? "mail-count" : ""}`}
-                          >
-                            {count}
-                          </span>
+                          <span className="nav-count">{count}</span>
                         ) : undefined
                       }
                     >

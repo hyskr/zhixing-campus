@@ -12,7 +12,6 @@ import { sameCourseName } from "./courseMatching";
 import { useFeedback } from "./ui";
 import { Loader } from "@/components/motion/loader";
 import ResourceExplorer from "./ResourceExplorer";
-import { Tabs, TabsList, TabsTrigger } from "@/components/motion/tabs";
 import {
   Select,
   SelectTrigger,
@@ -38,7 +37,6 @@ import {
   Download,
   ExternalLink,
   FileText,
-  Folder,
   LoaderCircle,
   Play,
   RefreshCw,
@@ -84,10 +82,6 @@ export default function LearningResources({
   compact?: boolean;
   onReplayCache: (id: string, list: Replay[]) => void;
 }) {
-  const [active, setActive] = useState(
-    focusCourse ?? data.resources[0]?.id ?? "all",
-  );
-  const [tab, setTab] = useState<"files" | "replay">("files");
   const [selected, setSelected] = useState<Record<string, Resource>>({});
   const [detail, setDetail] = useState<Resource | null>(null);
   const [error, setError] = useErrorState();
@@ -263,27 +257,7 @@ export default function LearningResources({
           )}
         </div>
       ) : (
-        <div data-tab-swipe-surface="" style={{ display: "contents" }}>
-          <Tabs
-            value={tab}
-            onValueChange={(next) =>
-              setTab(next === "replay" ? "replay" : "files")
-            }
-            variant="underline"
-            className="learning-tabs"
-          >
-            <TabsList>
-              <TabsTrigger value={"files"}>
-                <Folder size={14} />
-                课程文件
-              </TabsTrigger>
-              <TabsTrigger value={"replay"}>
-                <Video size={14} />
-                课程回放
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
+        <div style={{ display: "contents" }}>
           {collectingLabel && (
             <p className="inline-loading">
               <Loader variant="spinner" size={15} label="正在加载" />
@@ -291,32 +265,37 @@ export default function LearningResources({
             </p>
           )}
 
-          {tab === "replay" ? (
-            <ReplayPanel
-              account={account}
-              roots={available}
-              initialCourse={active}
-              cache={data.replays ?? {}}
-              onCache={onReplayCache}
-            />
-          ) : (
-            <ResourceExplorer
-              key={`${account.id}:${roots.map((root) => root.id).join("|")}`}
-              roots={roots}
-              query={query}
-              selected={selected}
-              onSelectionChange={setSelected}
-              onLoad={onLoad}
-              onDetail={setDetail}
-              onDownload={download}
-              onCopy={copy}
-              onPreview={(node) => preview(node, account)}
-              onTreeDownload={treeDownload}
-              onCalendar={calendar}
-              busy={picking}
-              compact={compact}
-            />
-          )}
+          <ResourceExplorer
+            key={`${account.id}:${roots.map((root) => root.id).join("|")}`}
+            roots={roots}
+            query={query}
+            selected={selected}
+            onSelectionChange={setSelected}
+            onLoad={onLoad}
+            onDetail={setDetail}
+            onDownload={download}
+            onCopy={copy}
+            onPreview={(node) => preview(node, account)}
+            onTreeDownload={treeDownload}
+            onCalendar={calendar}
+            renderReplay={(courseRoot) => (
+              <CourseReplayView
+                key={courseRoot.id}
+                account={account}
+                root={courseRoot}
+                cache={data.replays ?? {}}
+                onCache={onReplayCache}
+              />
+            )}
+            replayCounts={Object.fromEntries(
+              Object.entries(data.replays ?? {}).map(([id, list]) => [
+                id,
+                list.length,
+              ]),
+            )}
+            busy={picking}
+            compact={compact}
+          />
         </div>
       )}
       {detail && (
@@ -442,23 +421,28 @@ function replayTimeRange(replay: Replay) {
     .filter(Boolean)
     .join("–");
 }
-function ReplayPanel({
+function replayDateLabel(replay: Replay) {
+  if (/^\d{4}-\d{2}-\d{2}/.test(replay.name)) return "";
+  const date = new Date(replay.startTime);
+  return Number.isNaN(date.getTime())
+    ? ""
+    : new Intl.DateTimeFormat("zh-CN", {
+        month: "short",
+        day: "numeric",
+      }).format(date);
+}
+function CourseReplayView({
   account,
-  roots,
-  initialCourse,
+  root,
   cache,
   onCache,
 }: {
   account: Account;
-  roots: Resource[];
-  initialCourse: string;
+  root: Resource;
   cache: Record<string, Replay[]>;
   onCache: (id: string, list: Replay[]) => void;
 }) {
-  const [courseId, setCourseId] = useState(
-    roots.find((root) => root.id === initialCourse)?.id ?? roots[0]?.id ?? "",
-  );
-  const [rootList, setRootList] = useState<Replay[]>([]);
+  const [rootList, setRootList] = useState<Replay[]>(() => cache[root.id] ?? []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useErrorState();
   const [refresh, setRefresh] = useState(0);
@@ -467,9 +451,8 @@ function ReplayPanel({
     links: ReplayLink[];
   } | null>(null);
   const [fetching, setFetching] = useState("");
-  const root = roots.find((r) => r.id === courseId) ?? roots[0];
+  const playableCount = rootList.filter((item) => Boolean(item.videoId)).length;
   useEffect(() => {
-    if (!root) return;
     let current = true;
     setError("");
     setRootList(cache[root.id] ?? []);
@@ -493,7 +476,7 @@ function ReplayPanel({
     return () => {
       current = false;
     };
-  }, [account.id, root?.id, refresh]);
+  }, [account.id, root.id, refresh]);
   async function play(replay: Replay) {
     if (account.demo) {
       setError("回放列表为演示数据，连接校园账号后可播放真实回放。");
@@ -511,38 +494,40 @@ function ReplayPanel({
     }
   }
   return (
-    <section className="surface replay-panel">
-      <div className="resource-header replay-filter-bar">
-        <label>
-          <span>课程</span>
-          <Select
-            value={String(root?.id ?? "")}
-            onValueChange={(e) => setCourseId(e)}
+    <>
+      <div className="resource-detail-header">
+        <div className="resource-detail-title">
+          <div className="resource-detail-icon">
+            <Video size={16} />
+          </div>
+          <div>
+            <h2>课程回放</h2>
+            <p className="resource-detail-sub">
+              {[
+                root.name,
+                rootList.length > 0
+                  ? `${rootList.length} 节回放 · ${playableCount} 节可播放`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          </div>
+        </div>
+        <div className="resource-detail-actions">
+          <Button
+            className="replay-refresh-button"
+            variant="secondary"
+            size="sm"
+            aria-label="刷新回放"
+            title="刷新回放"
+            onClick={() => setRefresh((value) => value + 1)}
+            disabled={loading}
           >
-            <SelectTrigger className="replay-course-trigger">
-              <span className="sr-only">{"选择回放课程"}：</span>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {roots.map((root) => (
-                <SelectItem value={String(root.id)} key={root.id}>
-                  {root.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </label>
-        <Button
-          className="replay-refresh-button"
-          variant="ghost"
-          size="icon"
-          aria-label="刷新回放"
-          title="刷新回放"
-          onClick={() => setRefresh((value) => value + 1)}
-          disabled={loading}
-        >
-          <RefreshCw size={19} className={loading ? "spin" : ""} />
-        </Button>
+            <RefreshCw size={14} className={loading ? "spin" : ""} />
+            刷新
+          </Button>
+        </div>
       </div>
 
       {loading && !rootList.length && (
@@ -553,39 +538,69 @@ function ReplayPanel({
       )}
       {!loading && !rootList.length && !error && (
         <Empty
+          icon={<Video size={26} />}
           title="暂无课程回放"
           detail="录制完成并发布后，回放会显示在这里。"
         />
       )}
-      <div className="replay-list">
-        {rootList.map((replay) => (
-          <Button
-            className="replay-session-row"
-            variant="ghost"
-            key={replay.id}
-            disabled={!replay.videoId || !!fetching}
-            onClick={() => void play(replay)}
-            aria-label={`播放 ${replayDisplayTitle(replay)} ${replayTimeRange(replay)}`}
-          >
-            <span className="replay-session-copy">
-              <strong>{replayDisplayTitle(replay)}</strong>
-              <span>{replayTimeRange(replay)}</span>
-              <small>
-                {[replay.room, replay.teacher].filter(Boolean).join(" · ") ||
-                  "课程回放"}
-              </small>
-            </span>
-            <span className="replay-session-play">
-              {fetching === replay.id ? (
-                <Loader variant="spinner" size={18} label="正在加载" />
-              ) : (
-                <Play size={19} />
-              )}
-            </span>
-            {!replay.videoId && <small>未发布</small>}
-          </Button>
-        ))}
-      </div>
+      {rootList.length > 0 && (
+        <div className="replay-list is-embedded">
+          {rootList.map((replay) => {
+            const playable = Boolean(replay.videoId);
+            const meta =
+              [
+                replayDateLabel(replay),
+                replayTimeRange(replay),
+                replay.room,
+                replay.teacher,
+              ]
+                .filter(Boolean)
+                .join(" · ") || "课程回放";
+            return (
+              <Button
+                className={`replay-session-row${playable ? "" : " is-unpublished"}`}
+                variant="ghost"
+                key={replay.id}
+                disabled={!playable || !!fetching}
+                onClick={() => void play(replay)}
+                aria-label={
+                  playable
+                    ? `播放 ${replayDisplayTitle(replay)} ${replayTimeRange(replay)}`
+                    : `${replayDisplayTitle(replay)} 未发布`
+                }
+              >
+                <span
+                  className={`replay-session-icon${playable ? " is-playable" : ""}`}
+                  aria-hidden="true"
+                >
+                  {playable ? <Play size={15} /> : <Video size={15} />}
+                </span>
+                <span className="replay-session-copy">
+                  <strong className="replay-session-title">
+                    {replayDisplayTitle(replay)}
+                  </strong>
+                  <span className="replay-session-meta">{meta}</span>
+                </span>
+                <span className="replay-session-action">
+                  {fetching === replay.id ? (
+                    <span className="replay-status-pill is-loading">
+                      <Loader variant="spinner" size={14} label="正在加载" />
+                      加载中
+                    </span>
+                  ) : playable ? (
+                    <span className="replay-play-pill">
+                      <Play size={13} />
+                      播放
+                    </span>
+                  ) : (
+                    <span className="replay-status-pill is-pending">未发布</span>
+                  )}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+      )}
       {player && (
         <ReplayPlayer
           account={account}
@@ -593,7 +608,7 @@ function ReplayPanel({
           onClose={() => setPlayer(null)}
         />
       )}
-    </section>
+    </>
   );
 }
 function ReplayPlayer({
@@ -671,6 +686,7 @@ function ReplayPlayer({
         .join(" · ")}
       onClose={onClose}
       wide
+      pageable="always"
     >
       <div className="replay-player-page">
         {link ? (

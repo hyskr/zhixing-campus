@@ -45,12 +45,12 @@ export interface AnimatedBadgeProps extends Omit<
 }
 
 const STATUS_CLASS: Record<AnimatedBadgeStatus, string> = {
-  neutral: "border-border bg-card text-muted-foreground",
-  info: "border-primary/30 bg-muted text-primary",
-  success: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  warning: "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  danger: "border-destructive/30 bg-destructive/10 text-destructive",
-  loading: "border-primary/30 bg-muted text-primary",
+  neutral: "border-[var(--border)] bg-[var(--muted)] text-[var(--muted-foreground)]",
+  info: "border-[color-mix(in_srgb,var(--info)_24%,transparent)] bg-[var(--info-surface)] text-[var(--info)]",
+  success: "border-[color-mix(in_srgb,var(--success)_24%,transparent)] bg-[var(--success-surface)] text-[var(--success)]",
+  warning: "border-[color-mix(in_srgb,var(--warning)_24%,transparent)] bg-[var(--warning-surface)] text-[var(--warning)]",
+  danger: "border-[color-mix(in_srgb,var(--danger)_24%,transparent)] bg-[var(--danger-surface)] text-[var(--danger)]",
+  loading: "border-[color-mix(in_srgb,var(--primary)_24%,transparent)] bg-[var(--accent)] text-[var(--primary)]",
 };
 
 const SIZE_CLASS: Record<AnimatedBadgeSize, string> = {

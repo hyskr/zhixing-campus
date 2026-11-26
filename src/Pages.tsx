@@ -33,7 +33,6 @@ import {
   FileText,
   Folder,
   GraduationCap,
-  Info,
   Mail,
   MoreHorizontal,
   Plus,
@@ -105,11 +104,10 @@ export function Schedule({
         description="按教学周查看课程，点击课程进入它的学习空间。"
       />
       <div className="page-toolbar">
-        <div className="schedule-export-row">
         <Tabs
           value={selection ? "selection" : "current"}
           onValueChange={(v) => setSelection(v === "selection")}
-          variant={compactLayout ? "segment" : "underline"}
+          variant="underline"
           className="schedule-type-tabs"
         >
           <TabsList aria-label="课表类型">
@@ -121,8 +119,6 @@ export function Schedule({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <CalendarExport courses={data.courses.filter(c => c.selection === selection)} week={data.currentWeek} anchor={data.syncedAt?.currentWeek ?? data.lastSync}/>
-        </div>
         <div className="week-controls">
           <Button
             size="icon"
@@ -150,6 +146,11 @@ export function Schedule({
           >
             本周
           </Button>
+          <CalendarExport
+            courses={data.courses.filter((c) => c.selection === selection)}
+            week={data.currentWeek}
+            anchor={data.syncedAt?.currentWeek ?? data.lastSync}
+          />
         </div>
       </div>
       {compactLayout && (
@@ -178,7 +179,7 @@ export function Schedule({
           return (
             <div key={name} className={`day-head ${active ? "today" : ""}`}>
               <span>周{name}</span>
-              <strong>{selection ? "—" : date.getDate()}</strong>
+              <strong>{date.getDate()}</strong>
             </div>
           );
         })}
@@ -258,17 +259,19 @@ export function Accounts({
   onLogout: (a: Account) => void;
 }) {
   return (
-    <>
-      <PageHeading
-        eyebrow="ACCOUNTS"
-        title="账号与本地数据"
-        description="管理校园账号及其本地数据。"
-      />
+    <div className="accounts-page">
+      <PageHeading eyebrow="ACCOUNTS" title="账号与数据" />
       <section className="surface account-panel">
-        <SectionTitle
-          title="我的账号"
-          subtitle="各账号的登录状态与缓存独立保存"
-        />
+        <div className="account-panel-header">
+          <div className="account-panel-title">
+            <h2>我的账号</h2>
+            <span className="count-pill">{accounts.length}</span>
+          </div>
+          <Button size="sm" onClick={onAdd}>
+            <Plus size={15} />
+            添加校园账号
+          </Button>
+        </div>
         <div className="account-list">
           {accounts.map((a) => (
             <div key={a.id} className="account-row">
@@ -317,50 +320,30 @@ export function Accounts({
             </div>
           ))}
         </div>
-        <Button
-          variant="secondary"
-          className="add-account-button"
-          onClick={onAdd}
-        >
-          <Plus size={16} />
-          添加校园账号
-        </Button>
       </section>
       <div className="local-note">
-        <span className="local-note-icon">
-          <ArrowDownLeft size={21} />
+        <span className="local-note-icon" aria-hidden="true">
+          <ArrowDownLeft size={16} />
         </span>
-        <div>
-          <h3>数据保存在本机</h3>
-          <p>
-            已同步的数据可离线查看。移除账号会同时清除它在本机的登录状态与缓存。
-          </p>
-        </div>
+        <p>
+          已同步的数据保存在本机，可离线查看；移除账号会同时清除对应登录状态与缓存。
+        </p>
       </div>
-    </>
+    </div>
   );
 }
 export function PageHeading({
   title,
-  description,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
 }) {
+  const compact = useCompactLayout();
+  if (!compact) return null;
   return (
     <div className="page-heading">
       <h1>{title}</h1>
-      {description && (
-        <>
-          <p>{description}</p>
-          <Tooltip content={description}>
-            <button type="button" className="page-heading-help" aria-label="页面说明">
-              <Info size={15} />
-            </button>
-          </Tooltip>
-        </>
-      )}
     </div>
   );
 }

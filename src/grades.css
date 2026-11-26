@@ -127,10 +127,10 @@
   letter-spacing: -0.5px;
 }
 .grade-result.is-high {
-  color: #3c6c52;
+  color: var(--success);
 }
 .grade-result.is-low {
-  color: #b04d3b;
+  color: var(--danger);
 }
 .grade-result.is-text strong {
   font-size: 16px;
